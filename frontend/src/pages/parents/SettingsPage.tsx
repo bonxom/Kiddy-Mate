@@ -13,18 +13,18 @@ const SettingsPage = () => {
   const tabs = [
     {
       id: 'account' as TabType,
-      label: 'Cài đặt Tài khoản',
+      label: 'Account Settings',
       icon: User,
     },
     {
       id: 'children' as TabType,
-      label: 'Quản lý Hồ sơ Bé',
+      label: 'Children Profiles',
       icon: Users,
       count: 2,
     },
     {
       id: 'notifications' as TabType,
-      label: 'Cài đặt Thông báo',
+      label: 'Notifications',
       icon: Bell,
     },
   ];
@@ -45,7 +45,7 @@ const SettingsPage = () => {
         {/* Tabs */}
         <div className="bg-white rounded-2xl shadow-soft border border-gray-100 overflow-hidden">
           {/* Tab Headers */}
-          <div className="flex border-b border-gray-100 bg-gray-50/50 overflow-x-auto scrollbar-hide">
+          <div className="flex border-b-2 border-gray-200 bg-gray-50/50 overflow-x-auto scrollbar-hide">
             {tabs.map((tab) => {
               const Icon = tab.icon;
               return (
@@ -53,14 +53,14 @@ const SettingsPage = () => {
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
                   className={`
-                    flex items-center gap-3 px-6 py-4 text-sm font-semibold transition-all relative whitespace-nowrap
+                    flex items-center gap-3 px-6 py-4 text-sm font-semibold transition-all duration-200 relative whitespace-nowrap
                     ${activeTab === tab.id
-                      ? 'text-accent-600 bg-white'
+                      ? 'text-primary-700 bg-white shadow-sm'
                       : 'text-gray-600 hover:text-gray-900 hover:bg-white/50'
                     }
                   `}
                 >
-                  <Icon className="w-5 h-5" />
+                  <Icon className={`w-5 h-5 transition-colors ${activeTab === tab.id ? 'text-primary-600' : ''}`} />
                   <span>{tab.label}</span>
                   {tab.count && (
                     <Badge 
@@ -71,9 +71,12 @@ const SettingsPage = () => {
                     </Badge>
                   )}
                   
-                  {/* Active indicator */}
+                  {/* Active indicator - gradient */}
                   {activeTab === tab.id && (
-                    <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-accent" />
+                    <div 
+                      className="absolute bottom-0 left-0 right-0 h-1 rounded-t-md" 
+                      style={{ background: 'linear-gradient(to right, #3b82f6, #8b5cf6)' }}
+                    />
                   )}
                 </button>
               );

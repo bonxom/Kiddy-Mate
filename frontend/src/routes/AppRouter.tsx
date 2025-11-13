@@ -1,9 +1,6 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import ParentLayout from '../components/layout/ParentLayout';
-import DashboardPage from '../pages/parents/DashboardPage';
-import TaskCenterPage from '../pages/parents/TaskCenterPage';
-import RewardCenterPage from '../pages/parents/RewardCenterPage';
-import SettingsPage from '../pages/parents/SettingsPage';
+import { parentRoutes } from './parentRoutes';
 // import LoginPage from '../pages/public/LoginPage';
 
 export const AppRouter = () => {
@@ -35,15 +32,19 @@ export const AppRouter = () => {
   );
 };
 
-// Một component con để quản lý các route của Parent
+// Component con quản lý route của Parent
 const ParentRoutes = () => {
   return (
     <ParentLayout>
       <Routes>
-        <Route path="dashboard" element={<DashboardPage />} />
-        <Route path="tasks" element={<TaskCenterPage />} />
-        <Route path="rewards" element={<RewardCenterPage />} />
-        <Route path="settings" element={<SettingsPage />} />
+        {parentRoutes.map((route) => (
+          // SỬA Ở ĐÂY: Render component từ tham chiếu
+          <Route 
+            key={route.path} 
+            path={route.path} 
+            element={<route.Component />} // Thay đổi từ route.element
+          />
+        ))}
         <Route path="*" element={<Navigate to="dashboard" />} />
       </Routes>
     </ParentLayout>

@@ -1,28 +1,30 @@
+// parentRoutes.tsx
 import DashboardPage from '../pages/parents/DashboardPage';
 import TaskCenterPage from '../pages/parents/TaskCenterPage';
 import RewardCenterPage from '../pages/parents/RewardCenterPage';
 import SettingsPage from '../pages/parents/SettingsPage';
+import { type ComponentType } from 'react'; 
 
 interface ParentRoute {
   path: string;
-  element: JSX.Element;
+  Component: ComponentType; 
 }
 
 export const parentRoutes: ParentRoute[] = [
   {
     path: 'dashboard',
-    element: <DashboardPage />,
+    Component: DashboardPage, 
   },
   {
     path: 'tasks',
-    element: <TaskCenterPage />,
+    Component: TaskCenterPage,
   },
   {
     path: 'rewards',
-    element: <RewardCenterPage />,
+    Component: RewardCenterPage,
   },
   {
     path: 'settings',
-    element: <SettingsPage />,
+    Component: SettingsPage,
   },
 ];

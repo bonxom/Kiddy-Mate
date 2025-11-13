@@ -71,7 +71,7 @@ const ChildProfilesTab = () => {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h2 className="text-xl font-semibold text-gray-900">
-            Quản lý và Cập nhật Thông tin của Bé
+            Manage and Update Children's Profiles
           </h2>
         </div>
         <Button
@@ -79,19 +79,26 @@ const ChildProfilesTab = () => {
           className="flex items-center gap-2"
         >
           <Plus className="w-5 h-5" />
-          Thêm Hồ sơ Bé
+          Add Child Profile
         </Button>
       </div>
 
       {/* Children Grid */}
+      <style>{`
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        {children.map((child) => (
+        {children.map((child, index) => (
           <div
             key={child.id}
-            className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow"
+            className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 border border-gray-100"
+            style={{ animation: `fadeIn 0.3s ease-in-out ${index * 0.1}s both` }}
           >
             {/* Avatar */}
-            <div className="bg-gradient-primary p-8 flex items-center justify-center">
+            <div className="p-8 flex items-center justify-center relative" style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>
               {child.avatar ? (
                 <img
                   src={child.avatar}
@@ -106,12 +113,23 @@ const ChildProfilesTab = () => {
             </div>
 
             {/* Content */}
-            <div className="p-4">
-              <h3 className="font-semibold text-lg text-gray-900 mb-1">
-                {child.nickname}
-              </h3>
-              <p className="text-sm text-gray-600 mb-4">
-                {formatDate(child.dateOfBirth, child.age)}
+            <div className="p-5 space-y-3">
+              <div className="flex items-center justify-between">
+                <h3 className="font-bold text-lg text-gray-900">
+                  {child.nickname}
+                </h3>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-lg">{child.gender === 'male' ? '👦' : '👧'}</span>
+                  <span className="px-2 py-0.5 bg-primary-100 text-primary-700 text-xs font-semibold rounded-full">
+                    {child.age} yrs
+                  </span>
+                </div>
+              </div>
+              <p className="text-sm text-gray-500">
+                {child.fullName}
+              </p>
+              <p className="text-xs text-gray-400">
+                Birthday: {formatDate(child.dateOfBirth, child.age).split(' (')[0]}
               </p>
 
               {/* Actions */}
@@ -123,7 +141,7 @@ const ChildProfilesTab = () => {
                   className="flex-1 flex items-center justify-center gap-1"
                 >
                   <Edit2 className="w-4 h-4" />
-                  Chỉnh sửa
+                  Edit
                 </Button>
                 <Button
                   size="sm"
@@ -142,9 +160,9 @@ const ChildProfilesTab = () => {
       {children.length === 0 && (
         <div className="text-center py-12 text-gray-500">
           <User className="w-16 h-16 mx-auto mb-4 text-gray-300" />
-          <p className="text-lg">Chưa có hồ sơ bé nào</p>
+          <p className="text-lg">No child profiles yet</p>
           <p className="text-sm mt-2">
-            Nhấn nút "Thêm Hồ sơ Bé" để tạo hồ sơ mới
+            Click "Add Child Profile" to create a new profile
           </p>
         </div>
       )}
@@ -153,32 +171,32 @@ const ChildProfilesTab = () => {
       <Modal
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
-        title="Thêm Hồ sơ Bé Mới"
+        title="Add New Child Profile"
         size="xl"
       >
         <div className="space-y-6">
           <div className="p-6 bg-blue-50 rounded-lg text-center">
             <p className="text-gray-700">
-              📋 Đây là nơi hiển thị toàn bộ <strong>BỘ CÂU HỎI ĐĂNG KÝ</strong> (MỤC A, B, C, D)
+              📋 This is where the complete <strong>REGISTRATION QUESTIONNAIRE</strong> (SECTION A, B, C, D) will be displayed
               <br />
-              để phụ huynh điền thông tin cho bé mới.
+              for parents to fill in information for a new child.
             </p>
             <p className="text-sm text-gray-600 mt-2">
-              (Component chi tiết sẽ được tích hợp từ phần đăng ký)
+              (Detailed component will be integrated from registration section)
             </p>
           </div>
           <div className="flex gap-3 justify-end">
             <Button variant="secondary" onClick={() => setIsAddModalOpen(false)}>
-              Hủy
+              Cancel
             </Button>
             <Button
               onClick={() => {
                 // TODO: Implement save logic
-                alert('Đã thêm hồ sơ bé mới');
+                alert('New child profile added');
                 setIsAddModalOpen(false);
               }}
             >
-              Lưu Hồ sơ
+              Save Profile
             </Button>
           </div>
         </div>
@@ -192,18 +210,18 @@ const ChildProfilesTab = () => {
             setIsEditModalOpen(false);
             setSelectedChild(null);
           }}
-          title={`Chỉnh sửa Hồ sơ - ${selectedChild.nickname}`}
+          title={`Edit Profile - ${selectedChild.nickname}`}
           size="xl"
         >
           <div className="space-y-6">
             <div className="p-6 bg-blue-50 rounded-lg text-center">
               <p className="text-gray-700">
-                📋 Đây là nơi hiển thị toàn bộ <strong>BỘ CÂU HỎI ĐĂNG KÝ</strong> (MỤC A, B, C, D)
+                📋 This is where the complete <strong>REGISTRATION QUESTIONNAIRE</strong> (SECTION A, B, C, D) will be displayed
                 <br />
-                với dữ liệu của <strong>{selectedChild.nickname}</strong> đã được điền sẵn.
+                with <strong>{selectedChild.nickname}</strong>'s data pre-filled.
               </p>
               <p className="text-sm text-gray-600 mt-2">
-                Phụ huynh có thể cập nhật lại thông tin khi bé lớn lên hoặc tính cách thay đổi.
+                Parents can update information as the child grows or their personality changes.
               </p>
             </div>
             <div className="flex gap-3 justify-end">
@@ -214,17 +232,17 @@ const ChildProfilesTab = () => {
                   setSelectedChild(null);
                 }}
               >
-                Hủy
+                Cancel
               </Button>
               <Button
                 onClick={() => {
                   // TODO: Implement update logic
-                  alert('Đã cập nhật hồ sơ');
+                  alert('Profile updated');
                   setIsEditModalOpen(false);
                   setSelectedChild(null);
                 }}
               >
-                Cập nhật Hồ sơ
+                Update Profile
               </Button>
             </div>
           </div>
@@ -239,12 +257,12 @@ const ChildProfilesTab = () => {
             setIsDeleteModalOpen(false);
             setSelectedChild(null);
           }}
-          title="Xác nhận xóa"
+          title="Confirm Deletion"
           size="sm"
         >
           <div className="space-y-4">
             <p className="text-gray-600">
-              Bạn có chắc chắn muốn xóa hồ sơ của <strong>{selectedChild.nickname}</strong> không?
+              Are you sure you want to delete <strong>{selectedChild.nickname}</strong>'s profile?
             </p>
             <div className="flex gap-3 justify-end">
               <Button
@@ -254,10 +272,10 @@ const ChildProfilesTab = () => {
                   setSelectedChild(null);
                 }}
               >
-                Hủy
+                Cancel
               </Button>
               <Button variant="danger" onClick={handleConfirmDelete}>
-                Xóa
+                Delete
               </Button>
             </div>
           </div>
