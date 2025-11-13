@@ -24,13 +24,13 @@ const Button = ({
   const baseStyles = 'inline-flex items-center justify-center gap-2 font-semibold rounded-xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed active:scale-95 btn-ripple shadow-soft hover:shadow-medium';
   
   const variantStyles = {
-    primary: 'bg-gradient-accent text-white hover:shadow-glow-accent focus:ring-accent-400 border border-accent-600',
-    secondary: 'bg-gray-100 text-gray-900 hover:bg-gray-200 focus:ring-gray-300 border border-gray-200',
-    danger: 'bg-gradient-danger text-white hover:shadow-glow focus:ring-red-400 border border-red-600',
-    success: 'bg-gradient-success text-white hover:shadow-glow-success focus:ring-success-400 border border-success-600',
-    warning: 'bg-gradient-warning text-white hover:shadow-glow focus:ring-warning-400 border border-warning-600',
-    outline: 'border-2 border-accent text-accent bg-white hover:bg-accent hover:text-white focus:ring-accent',
-    ghost: 'text-gray-700 hover:bg-gray-100 focus:ring-gray-300 border border-transparent',
+    primary: 'bg-gradient-to-r from-blue-500 to-purple-600 text-white hover:from-blue-600 hover:to-purple-700 hover:shadow-glow-accent focus:ring-blue-400 border border-blue-500',
+    secondary: 'bg-gray-100 text-gray-900 hover:bg-gray-200 hover:text-gray-950 focus:ring-gray-300 border border-gray-200',
+    danger: 'bg-gradient-to-r from-red-500 to-pink-600 text-white hover:from-red-600 hover:to-pink-700 hover:shadow-glow focus:ring-red-400 border border-red-500',
+    success: 'bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:from-green-600 hover:to-emerald-700 hover:shadow-glow-success focus:ring-green-400 border border-green-500',
+    warning: 'bg-gradient-to-r from-yellow-400 to-orange-500 text-gray-900 hover:from-yellow-500 hover:to-orange-600 hover:text-gray-950 focus:ring-yellow-400 border border-yellow-400',
+    outline: 'border-2 border-blue-500 text-blue-600 bg-white hover:bg-blue-500 hover:text-white focus:ring-blue-400',
+    ghost: 'text-gray-700 hover:bg-gray-100 hover:text-gray-950 focus:ring-gray-300 border border-transparent',
   };
 
   const sizeStyles = {

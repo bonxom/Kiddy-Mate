@@ -201,10 +201,10 @@ const AssignTaskModal = ({ isOpen, onClose, task }: AssignTaskModalProps) => {
         {/* Actions */}
         <div className="flex gap-3 pt-4">
           <Button type="button" variant="secondary" onClick={onClose} fullWidth>
-            <span className="text-gray-700 font-medium">Cancel</span>
+            Cancel
           </Button>
           <Button type="submit" fullWidth>
-            <span className="text-white font-medium">Confirm Assignment</span>
+            Confirm Assignment
           </Button>
         </div>
       </form>

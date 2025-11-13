@@ -14,13 +14,13 @@ const RewardCenterPage = () => {
   const tabs = [
     {
       id: 'shop' as TabType,
-      label: 'Cửa hàng',
+      label: 'Shop Management',
       icon: Store,
       count: 6,
     },
     {
       id: 'redemption' as TabType,
-      label: 'Yêu cầu Đổi thưởng',
+      label: 'Redemption Requests',
       icon: Gift,
       count: 4,
       badge: true,
@@ -40,54 +40,60 @@ const RewardCenterPage = () => {
               Manage rewards and approve redemption requests from your children
             </p>
           </div>
-          
-          {activeTab === 'shop' && (
-            <Button
-              onClick={() => setIsCreateModalOpen(true)}
-              icon={<Plus className="w-5 h-5" />}
-              className="shrink-0"
-            >
-              Thêm Phần thưởng
-            </Button>
-          )}
         </div>
 
         {/* Tabs */}
         <div className="bg-white rounded-2xl shadow-soft border border-gray-100 overflow-hidden">
           {/* Tab Headers */}
-          <div className="flex border-b border-gray-100 bg-gray-50/50 overflow-x-auto scrollbar-hide">
-            {tabs.map((tab) => {
-              const Icon = tab.icon;
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`
-                    flex items-center gap-3 px-6 py-4 text-sm font-semibold transition-all relative whitespace-nowrap
-                    ${activeTab === tab.id
-                      ? 'text-accent-600 bg-white'
-                      : 'text-gray-600 hover:text-gray-900 hover:bg-white/50'
-                    }
-                  `}
-                >
-                  <Icon className="w-5 h-5" />
-                  <span>{tab.label}</span>
-                  <Badge 
-                    variant={activeTab === tab.id ? 'primary' : 'default'}
-                    size="sm"
-                    dot={tab.badge && activeTab !== tab.id}
-                    pulse={tab.badge && activeTab !== tab.id}
+          <div className="flex items-center justify-between border-b-2 border-gray-200 bg-gray-50/50">
+            <div className="flex overflow-x-auto scrollbar-hide">
+              {tabs.map((tab) => {
+                const Icon = tab.icon;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`
+                      flex items-center gap-3 px-6 py-4 text-sm font-semibold transition-all relative whitespace-nowrap
+                      ${activeTab === tab.id
+                        ? 'text-primary-700 bg-white shadow-sm'
+                        : 'text-gray-600 hover:text-gray-900 hover:bg-white/50'
+                      }
+                    `}
                   >
-                    {tab.count}
-                  </Badge>
-                  
-                  {/* Active indicator */}
-                  {activeTab === tab.id && (
-                    <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-accent" />
-                  )}
-                </button>
-              );
-            })}
+                    <Icon className={`w-5 h-5 ${activeTab === tab.id ? 'text-primary-600' : ''}`} />
+                    <span>{tab.label}</span>
+                    <Badge 
+                      variant={activeTab === tab.id ? 'primary' : 'default'}
+                      size="sm"
+                      dot={tab.badge && activeTab !== tab.id}
+                      pulse={tab.badge && activeTab !== tab.id}
+                    >
+                      {tab.count}
+                    </Badge>
+                    
+                    {/* Active indicator */}
+                    {activeTab === tab.id && (
+                      <div 
+                        className="absolute bottom-0 left-0 right-0 h-1 rounded-t-md" 
+                        style={{ background: 'linear-gradient(to right, #3b82f6, #8b5cf6)' }}
+                      />
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+            {activeTab === 'shop' && (
+              <div className="px-4 py-2 shrink-0">
+                <Button
+                  onClick={() => setIsCreateModalOpen(true)}
+                  icon={<Plus className="w-5 h-5" />}
+                  size="sm"
+                >
+                  Add Reward
+                </Button>
+              </div>
+            )}
           </div>
 
           {/* Tab Content */}

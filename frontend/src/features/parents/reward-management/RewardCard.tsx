@@ -20,10 +20,10 @@ const RewardCard = ({ reward, onClick, onQuantityChange }: RewardCardProps) => {
   return (
     <div
       onClick={onClick}
-      className="group bg-white rounded-2xl shadow-soft overflow-hidden cursor-pointer hover:shadow-strong hover:-translate-y-2 transition-all duration-300 border border-gray-100 hover:border-accent-200"
+      className="group bg-white rounded-2xl shadow-lg overflow-hidden cursor-pointer hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 border border-gray-100 hover:border-primary-300"
     >
       {/* Thumbnail */}
-            <div className="relative h-52 bg-gray-100 overflow-hidden">
+      <div className="relative h-52 bg-linear-to-br from-gray-50 to-gray-100 overflow-hidden">
         <img
           src={reward.url_thumbnail}
           alt={reward.name}
@@ -34,7 +34,7 @@ const RewardCard = ({ reward, onClick, onQuantityChange }: RewardCardProps) => {
         />
         
         {/* Overlay gradient */}
-        <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+        <div className="absolute inset-0 bg-linear-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
         
         {/* Stock Status Badge */}
         <div className="absolute top-3 right-3">
@@ -58,8 +58,11 @@ const RewardCard = ({ reward, onClick, onQuantityChange }: RewardCardProps) => {
         </h3>
 
         {/* Cost */}
-        <div className="flex items-center gap-2 px-3 py-2 bg-gradient-warning rounded-xl w-fit">
-          <Star className="w-5 h-5 text-warning-700 fill-warning-500 animate-pulse" />
+        <div 
+          className="flex items-center gap-2 px-3 py-2 rounded-xl w-fit shadow-sm"
+          style={{ background: 'linear-gradient(to right, rgb(254 252 232), rgb(254 243 199))' }}
+        >
+          <Star className="w-5 h-5 text-yellow-600 fill-yellow-500" />
           <span className="font-bold text-gray-900 text-lg">{reward.cost}</span>
           <span className="text-sm text-gray-700">Stars</span>
         </div>
@@ -96,7 +99,10 @@ const RewardCard = ({ reward, onClick, onQuantityChange }: RewardCardProps) => {
       </div>
 
       {/* Hover Effect Indicator */}
-      <div className="h-1 bg-gradient-accent transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left" />
+      <div 
+        className="h-1 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left" 
+        style={{ background: 'linear-gradient(to right, #3b82f6, #8b5cf6)' }}
+      />
     </div>
   );
 };

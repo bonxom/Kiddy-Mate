@@ -97,10 +97,10 @@ const CreateTaskModal = ({ isOpen, onClose }: CreateTaskModalProps) => {
         {/* Actions */}
         <div className="flex gap-3 pt-4">
           <Button type="button" variant="secondary" onClick={onClose} fullWidth>
-            <span className="text-gray-700 font-medium">Cancel</span>
+            Cancel
           </Button>
           <Button type="submit" fullWidth>
-            <span className="text-white font-medium">Create Task</span>
+            Create Task
           </Button>
         </div>
       </form>

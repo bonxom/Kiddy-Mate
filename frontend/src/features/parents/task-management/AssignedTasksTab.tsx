@@ -437,10 +437,10 @@ const AssignedTasksTab = () => {
           </p>
           <div className="flex gap-3 justify-end">
             <Button variant="secondary" onClick={() => setDeleteModalOpen(false)}>
-              <span className="text-gray-700 font-medium">Cancel</span>
+              Cancel
             </Button>
             <Button variant="danger" onClick={handleConfirmDelete}>
-              <span className="text-white font-medium">Delete</span>
+              Delete
             </Button>
           </div>
         </div>

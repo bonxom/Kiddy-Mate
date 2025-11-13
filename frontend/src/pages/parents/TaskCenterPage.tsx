@@ -90,7 +90,7 @@ const TaskCenterPage = () => {
                 size="sm"
                 className="whitespace-nowrap"
               >
-                <span className="text-white font-medium">Add Task</span>
+                Add Task
               </Button>
             </div>
           </div>

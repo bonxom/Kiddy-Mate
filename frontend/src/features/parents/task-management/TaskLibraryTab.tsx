@@ -230,7 +230,7 @@ const TaskLibraryTab = () => {
                     onClick={() => handleAssignClick(task)}
                     className="group-hover:scale-105 transition-transform duration-200"
                   >
-                    <span className="text-white font-medium">Assign Task</span>
+                    Assign Task
                   </Button>
                 </td>
               </tr>
