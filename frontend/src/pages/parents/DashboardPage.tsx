@@ -1,9 +1,9 @@
-import StatsCards from '../../features/parent/dashboard/StatsCards';
-import CompletionLineChart from '../../features/parent/dashboard/CompletionLineChart';
-import EmotionPieChart from '../../features/parent/dashboard/EmotionPieChart';
-import TaskCategoryBarChart from '../../features/parent/dashboard/TaskCategoryBarChart';
-import ActivityTimeline from '../../features/parent/dashboard/ActivityTimeline';
-import DashboardSidebar from '../../features/parent/dashboard/DashboardSidebar';
+import StatsCards from '../../features/parents/dashboard/StatsCards';
+import CompletionLineChart from '../../features/parents/dashboard/CompletionLineChart';
+import EmotionPieChart from '../../features/parents/dashboard/EmotionPieChart';
+import TaskCategoryBarChart from '../../features/parents/dashboard/TaskCategoryBarChart';
+import ActivityTimeline from '../../features/parents/dashboard/ActivityTimeline';
+import DashboardSidebar from '../../features/parents/dashboard/DashboardSidebar';
 
 const DashboardPage = () => {
   return (

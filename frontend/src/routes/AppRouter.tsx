@@ -1,10 +1,10 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import ParentLayout from '../components/layout/ParentLayout';
 import DashboardPage from '../pages/parents/DashboardPage';
+import TaskCenterPage from '../pages/parents/TaskCenterPage';
 // import LoginPage from '../pages/public/LoginPage';
 
 // Temporary placeholder components
-const TaskCenterPage = () => <div>Task Center Page</div>;
 const RewardCenterPage = () => <div>Reward Center Page</div>;
 const SettingsPage = () => <div>Settings Page</div>;
 
