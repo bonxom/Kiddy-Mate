@@ -5,7 +5,7 @@ interface StatCard {
   title: string;
   value: string;
   iconColor: string;
-  bgColor: string;
+  bgGradient: string;
 }
 
 const StatsCards = () => {
@@ -14,56 +14,61 @@ const StatsCards = () => {
       icon: TrendingUp,
       title: 'Level',
       value: '12',
-      iconColor: 'text-blue-500',
-      bgColor: 'bg-blue-50',
+      iconColor: 'text-info-600',
+      bgGradient: 'bg-gradient-to-br from-info-50 to-info-100',
     },
     {
       icon: Star,
       title: 'Total Stars',
       value: '1,450',
-      iconColor: 'text-yellow-500',
-      bgColor: 'bg-yellow-50',
+      iconColor: 'text-warning-600',
+      bgGradient: 'bg-gradient-to-br from-warning-50 to-warning-100',
     },
     {
       icon: Trophy,
       title: 'Achievements',
       value: '5',
-      iconColor: 'text-purple-500',
-      bgColor: 'bg-purple-50',
+      iconColor: 'text-purple-600',
+      bgGradient: 'bg-gradient-to-br from-purple-50 to-purple-100',
     },
     {
       icon: CheckCircle,
       title: 'Completion',
       value: '85%',
-      iconColor: 'text-green-500',
-      bgColor: 'bg-green-50',
+      iconColor: 'text-success-600',
+      bgGradient: 'bg-gradient-to-br from-success-50 to-success-100',
     },
   ];
 
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
       {stats.map((stat, index) => {
         const Icon = stat.icon;
+        
         return (
           <div
             key={index}
-            className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 hover:shadow-md hover:border-gray-200 transition-all duration-200"
+            className="bg-white rounded-2xl shadow-lg border border-gray-100 p-5 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 cursor-pointer group"
           >
-            <div className="flex items-center gap-3">
-              {/* Column 1: Icon */}
-              <div className={`${stat.bgColor} p-2.5 rounded-lg flex-shrink-0`}>
-                <Icon className={`w-5 h-5 ${stat.iconColor}`} strokeWidth={2.5} />
+            <div className="grid grid-cols-2 gap-4">
+              {/* Column 1 */}
+              <div className="flex flex-col gap-2">
+                {/* Icon */}
+                <div className={`${stat.bgGradient} p-3.5 rounded-2xl w-fit group-hover:scale-110 transition-transform duration-300`}>
+                  <Icon className={`w-9 h-9 ${stat.iconColor}`} strokeWidth={2} />
+                </div>
               </div>
-              
-              {/* Column 2: Title and Value */}
-              <div className="flex flex-col min-w-0">
-                {/* Row 1: Title */}
-                <p className="text-xs font-medium text-gray-500 mb-1">
-                  {stat.title}
-                </p>
-                {/* Row 2: Value */}
-                <p className="text-2xl font-bold text-gray-900 truncate">
+
+              {/* Column 2 */}
+              <div className="flex flex-col gap-2 items-end justify-between">
+                {/* Value */}
+                <p className="text-4xl font-bold text-gray-900">
                   {stat.value}
+                </p>
+                
+                {/* Title */}
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                  {stat.title}
                 </p>
               </div>
             </div>

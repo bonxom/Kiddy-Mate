@@ -91,7 +91,7 @@ const ChildProfilesTab = () => {
             className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow"
           >
             {/* Avatar */}
-            <div className="bg-gradient-to-br from-accent to-primary p-8 flex items-center justify-center">
+            <div className="bg-gradient-primary p-8 flex items-center justify-center">
               {child.avatar ? (
                 <img
                   src={child.avatar}

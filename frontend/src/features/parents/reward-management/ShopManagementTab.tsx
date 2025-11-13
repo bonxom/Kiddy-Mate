@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { Reward } from '../../../types/reward.types';
-import RewardCard from './RewardCard';
-import RewardModal from './RewardModal';
+import RewardCard from './RewardCard.tsx';
+import RewardModal from './RewardModal.tsx';
 
 // Mock data
 const mockRewards: Reward[] = [

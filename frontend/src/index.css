@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-/* Hide scrollbar utility */
+/* ===== SCROLLBAR UTILITIES ===== */
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
 }
@@ -10,18 +10,197 @@
   scrollbar-width: none;
 }
 
-/* Toast notification animation */
-@keyframes slide-up {
-  from {
-    transform: translateY(100%);
-    opacity: 0;
+/* Custom scrollbar styling */
+.scrollbar-thin::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 10px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 10px;
+  transition: background 0.2s;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* ===== GLASSMORPHISM ===== */
+.glass {
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.glass-dark {
+  background: rgba(6, 50, 90, 0.8);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* ===== SMOOTH TRANSITIONS ===== */
+* {
+  transition-property: background-color, border-color, color, fill, stroke, opacity, box-shadow, transform;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+}
+
+/* ===== FOCUS STYLES ===== */
+*:focus {
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+}
+
+*:focus-visible {
+  outline: 2px solid #3498db;
+  outline-offset: 2px;
+  border-radius: 0.25rem;
+}
+
+/* ===== BUTTON RIPPLE EFFECT ===== */
+.btn-ripple {
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-ripple::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.5);
+  transform: translate(-50%, -50%);
+  transition: width 0.6s, height 0.6s;
+}
+
+.btn-ripple:active::after {
+  width: 300px;
+  height: 300px;
+}
+
+/* ===== SKELETON LOADER ===== */
+@keyframes skeleton-loading {
+  0% {
+    background-position: -200px 0;
   }
-  to {
-    transform: translateY(0);
-    opacity: 1;
+  100% {
+    background-position: calc(200px + 100%) 0;
   }
 }
 
-.animate-slide-up {
-  animation: slide-up 0.3s ease-out;
+.skeleton {
+  background-color: #e2e8f0;
+  background-image: linear-gradient(
+    90deg,
+    #e2e8f0 0px,
+    #f1f5f9 40px,
+    #e2e8f0 80px
+  );
+  background-size: 200px 100%;
+  animation: skeleton-loading 1.5s ease-in-out infinite;
+}
+
+/* ===== GRADIENT TEXT ===== */
+.text-gradient-primary {
+  background: linear-gradient(135deg, #06325a 0%, #3498db 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.text-gradient-accent {
+  background: linear-gradient(135deg, #3498db 0%, #60a5fa 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ===== HOVER EFFECTS ===== */
+.hover-lift {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.hover-lift:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 10px 40px 0 rgba(0, 0, 0, 0.15);
+}
+
+.hover-scale {
+  transition: transform 0.2s ease;
+}
+
+.hover-scale:hover {
+  transform: scale(1.05);
+}
+
+.hover-glow {
+  transition: box-shadow 0.3s ease;
+}
+
+.hover-glow:hover {
+  box-shadow: 0 0 20px rgba(52, 152, 219, 0.4);
+}
+
+/* ===== CARD SHINE EFFECT ===== */
+@keyframes card-shine {
+  0% {
+    left: -100%;
+  }
+  100% {
+    left: 100%;
+  }
+}
+
+.card-shine {
+  position: relative;
+  overflow: hidden;
+}
+
+.card-shine::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.3),
+    transparent
+  );
+  transition: left 0.5s;
+}
+
+.card-shine:hover::before {
+  animation: card-shine 0.8s;
+}
+
+/* ===== RESPONSIVE UTILITIES ===== */
+@media (max-width: 768px) {
+  .mobile-hide {
+    display: none;
+  }
+  
+  .mobile-full {
+    width: 100%;
+  }
+}
+
+/* ===== PRINT STYLES ===== */
+@media print {
+  .no-print {
+    display: none !important;
+  }
 }
