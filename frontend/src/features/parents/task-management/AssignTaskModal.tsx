@@ -2,7 +2,7 @@ import { useState } from 'react';
 import Modal from '../../../components/ui/Modal';
 import Input from '../../../components/ui/Input';
 import Button from '../../../components/ui/Button';
-import { Star } from 'lucide-react';
+import { Star, Target, Brain, Dumbbell, Palette, Users, BookOpen } from 'lucide-react';
 import type { LibraryTask } from '../../../types/task.types';
 
 interface AssignTaskModalProps {
@@ -15,9 +15,40 @@ const AssignTaskModal = ({ isOpen, onClose, task }: AssignTaskModalProps) => {
   const [formData, setFormData] = useState({
     childId: '',
     taskName: task.task,
+    category: task.category,
+    priority: 'medium' as 'high' | 'medium' | 'low',
     reward: task.suggestedReward || 10,
     dueDate: '',
   });
+
+  const getCategoryIcon = (category: string) => {
+    const iconClass = "w-4 h-4";
+    switch (category) {
+      case 'self-discipline':
+        return <Target className={iconClass} />;
+      case 'logic':
+        return <Brain className={iconClass} />;
+      case 'physical':
+        return <Dumbbell className={iconClass} />;
+      case 'creativity':
+        return <Palette className={iconClass} />;
+      case 'social':
+        return <Users className={iconClass} />;
+      case 'academic':
+        return <BookOpen className={iconClass} />;
+      default:
+        return <Target className={iconClass} />;
+    }
+  };
+
+  const categoryLabels: Record<string, string> = {
+    'self-discipline': 'Independence',
+    'logic': 'Logic',
+    'physical': 'Physical',
+    'creativity': 'Creativity',
+    'social': 'Social',
+    'academic': 'Academic',
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,7 +61,7 @@ const AssignTaskModal = ({ isOpen, onClose, task }: AssignTaskModalProps) => {
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Giao Nhiệm vụ" size="md">
+    <Modal isOpen={isOpen} onClose={onClose} title="Assign Task" size="md">
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* Task Info */}
         <div className="p-4 bg-blue-50 rounded-lg">
@@ -41,7 +72,7 @@ const AssignTaskModal = ({ isOpen, onClose, task }: AssignTaskModalProps) => {
         {/* Child Selection */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Chọn bé <span className="text-red-500">*</span>
+            Select Child <span className="text-red-500">*</span>
           </label>
           <select
             value={formData.childId}
@@ -49,7 +80,7 @@ const AssignTaskModal = ({ isOpen, onClose, task }: AssignTaskModalProps) => {
             className="w-full px-4 py-2 border border-gray-300 rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
             required
           >
-            <option value="">-- Chọn bé --</option>
+            <option value="">-- Select Child --</option>
             <option value="1">Minh An</option>
             <option value="2">Thu Hà</option>
           </select>
@@ -57,19 +88,85 @@ const AssignTaskModal = ({ isOpen, onClose, task }: AssignTaskModalProps) => {
 
         {/* Task Name (Editable) */}
         <Input
-          label="Tên nhiệm vụ"
+          label="Task Name"
           type="text"
-          placeholder="Chỉnh sửa tên nhiệm vụ nếu cần"
+          placeholder="Edit task name if needed"
           value={formData.taskName}
           onChange={(e) => setFormData({ ...formData, taskName: e.target.value })}
           required
           fullWidth
         />
 
+        {/* Category */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Category <span className="text-red-500">*</span>
+          </label>
+          <div className="grid grid-cols-2 gap-2">
+            {Object.entries(categoryLabels).map(([value, label]) => (
+              <button
+                key={value}
+                type="button"
+                onClick={() => setFormData({ ...formData, category: value as any })}
+                className={`flex items-center gap-2 px-3 py-2 rounded-lg border-2 transition-all duration-200 ${
+                  formData.category === value
+                    ? 'border-primary-500 bg-primary-50 text-primary-700'
+                    : 'border-gray-200 bg-white text-gray-700 hover:border-primary-300'
+                }`}
+              >
+                {getCategoryIcon(value)}
+                <span className="text-sm font-semibold">{label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Priority */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Priority <span className="text-red-500">*</span>
+          </label>
+          <div className="grid grid-cols-3 gap-2">
+            <button
+              type="button"
+              onClick={() => setFormData({ ...formData, priority: 'high' })}
+              className={`px-3 py-2 rounded-lg border-2 text-sm font-semibold transition-all duration-200 ${
+                formData.priority === 'high'
+                  ? 'border-red-500 bg-red-50 text-red-700'
+                  : 'border-gray-200 bg-white text-gray-700 hover:border-red-300'
+              }`}
+            >
+              High
+            </button>
+            <button
+              type="button"
+              onClick={() => setFormData({ ...formData, priority: 'medium' })}
+              className={`px-3 py-2 rounded-lg border-2 text-sm font-semibold transition-all duration-200 ${
+                formData.priority === 'medium'
+                  ? 'border-yellow-500 bg-yellow-50 text-yellow-700'
+                  : 'border-gray-200 bg-white text-gray-700 hover:border-yellow-300'
+              }`}
+            >
+              Medium
+            </button>
+            <button
+              type="button"
+              onClick={() => setFormData({ ...formData, priority: 'low' })}
+              className={`px-3 py-2 rounded-lg border-2 text-sm font-semibold transition-all duration-200 ${
+                formData.priority === 'low'
+                  ? 'border-gray-500 bg-gray-50 text-gray-700'
+                  : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              Low
+            </button>
+          </div>
+        </div>
+
         {/* Reward */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Phần thưởng (Sao) <span className="text-red-500">*</span>
+            Reward (Stars) <span className="text-red-500">*</span>
           </label>
           <div className="flex items-center gap-3">
             <input
@@ -88,13 +185,13 @@ const AssignTaskModal = ({ isOpen, onClose, task }: AssignTaskModalProps) => {
             </div>
           </div>
           <p className="text-xs text-gray-500 mt-1">
-            Đề xuất: {task.suggestedReward} sao
+            Suggested: {task.suggestedReward} stars
           </p>
         </div>
 
         {/* Due Date */}
         <Input
-          label="Ngày hết hạn (Tùy chọn)"
+          label="Due Date (Optional)"
           type="date"
           value={formData.dueDate}
           onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
@@ -104,10 +201,10 @@ const AssignTaskModal = ({ isOpen, onClose, task }: AssignTaskModalProps) => {
         {/* Actions */}
         <div className="flex gap-3 pt-4">
           <Button type="button" variant="secondary" onClick={onClose} fullWidth>
-            Hủy
+            <span className="text-gray-700 font-medium">Cancel</span>
           </Button>
           <Button type="submit" fullWidth>
-            Xác nhận Giao
+            <span className="text-white font-medium">Confirm Assignment</span>
           </Button>
         </div>
       </form>

@@ -15,13 +15,13 @@ const TaskCenterPage = () => {
   const tabs = [
     {
       id: 'assigned' as TabType,
-      label: 'Nhiệm vụ Đã giao',
+      label: 'Assigned Tasks',
       icon: ListTodo,
       count: 12,
     },
     {
       id: 'library' as TabType,
-      label: 'Thư viện Nhiệm vụ',
+      label: 'Task Library',
       icon: Library,
       count: 24,
     },
@@ -31,29 +31,20 @@ const TaskCenterPage = () => {
     <div className="min-h-screen overflow-y-auto p-4 md:p-6 lg:p-8 scrollbar-thin">
       <div className="max-w-7xl mx-auto space-y-6 animate-fade-in">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">
-              Task Center 📋
-            </h1>
-            <p className="text-gray-600">
-              Manage and create tasks to help your children develop great habits
-            </p>
-          </div>
-          
-          <Button
-            onClick={() => setIsCreateModalOpen(true)}
-            icon={<Plus className="w-5 h-5" />}
-            className="shrink-0"
-          >
-            Tạo Nhiệm vụ Mới
-          </Button>
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+            Task Center 📋
+          </h1>
+          <p className="text-gray-600">
+            Manage and create tasks to help your children develop great habits
+          </p>
         </div>
 
         {/* Tabs */}
         <div className="bg-white rounded-2xl shadow-soft border border-gray-100 overflow-hidden">
           {/* Tab Headers */}
-          <div className="flex border-b border-gray-100 bg-gray-50/50 overflow-x-auto scrollbar-hide">
+          <div className="flex items-center justify-between border-b-2 border-gray-200 bg-gray-50/50">
+            <div className="flex overflow-x-auto scrollbar-hide">
             {tabs.map((tab) => {
               const Icon = tab.icon;
               return (
@@ -63,12 +54,14 @@ const TaskCenterPage = () => {
                   className={`
                     flex items-center gap-3 px-6 py-4 text-sm font-semibold transition-all relative whitespace-nowrap
                     ${activeTab === tab.id
-                      ? 'text-accent-600 bg-white'
+                      ? 'text-primary-700 bg-white shadow-sm'
                       : 'text-gray-600 hover:text-gray-900 hover:bg-white/50'
                     }
                   `}
                 >
-                  <Icon className="w-5 h-5" />
+                  <Icon className={`w-5 h-5 transition-colors ${
+                    activeTab === tab.id ? 'text-primary-600' : ''
+                  }`} />
                   <span>{tab.label}</span>
                   <Badge 
                     variant={activeTab === tab.id ? 'primary' : 'default'}
@@ -79,11 +72,27 @@ const TaskCenterPage = () => {
                   
                   {/* Active indicator */}
                   {activeTab === tab.id && (
-                    <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-accent" />
+                    <div 
+                      className="absolute bottom-0 left-0 right-0 h-1 rounded-t-md"
+                      style={{ background: 'linear-gradient(to right, #3b82f6, #8b5cf6)' }}
+                    />
                   )}
                 </button>
               );
             })}
+            </div>
+            
+            {/* Create Task Button */}
+            <div className="px-4 py-2 shrink-0">
+              <Button
+                onClick={() => setIsCreateModalOpen(true)}
+                icon={<Plus className="w-4 h-4" />}
+                size="sm"
+                className="whitespace-nowrap"
+              >
+                <span className="text-white font-medium">Add Task</span>
+              </Button>
+            </div>
           </div>
 
           {/* Tab Content */}

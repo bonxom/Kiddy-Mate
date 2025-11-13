@@ -32,12 +32,12 @@ const CreateTaskModal = ({ isOpen, onClose }: CreateTaskModalProps) => {
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Tạo Nhiệm vụ Mới" size="md">
+    <Modal isOpen={isOpen} onClose={onClose} title="Create New Task" size="md">
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* Child Selection */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Chọn bé <span className="text-red-500">*</span>
+            Select Child <span className="text-red-500">*</span>
           </label>
           <select
             value={formData.childId}
@@ -45,7 +45,7 @@ const CreateTaskModal = ({ isOpen, onClose }: CreateTaskModalProps) => {
             className="w-full px-4 py-2 border border-gray-300 rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
             required
           >
-            <option value="">-- Chọn bé --</option>
+            <option value="">-- Select Child --</option>
             <option value="1">Minh An</option>
             <option value="2">Thu Hà</option>
           </select>
@@ -53,9 +53,9 @@ const CreateTaskModal = ({ isOpen, onClose }: CreateTaskModalProps) => {
 
         {/* Task Name */}
         <Input
-          label="Tên nhiệm vụ"
+          label="Task Name"
           type="text"
-          placeholder="VD: Dọn phòng ngủ"
+          placeholder="e.g., Clean bedroom"
           value={formData.taskName}
           onChange={(e) => setFormData({ ...formData, taskName: e.target.value })}
           required
@@ -65,7 +65,7 @@ const CreateTaskModal = ({ isOpen, onClose }: CreateTaskModalProps) => {
         {/* Reward */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Phần thưởng (Sao) <span className="text-red-500">*</span>
+            Reward (Stars) <span className="text-red-500">*</span>
           </label>
           <div className="flex items-center gap-3">
             <input
@@ -87,7 +87,7 @@ const CreateTaskModal = ({ isOpen, onClose }: CreateTaskModalProps) => {
 
         {/* Due Date */}
         <Input
-          label="Ngày hết hạn (Tùy chọn)"
+          label="Due Date (Optional)"
           type="date"
           value={formData.dueDate}
           onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
@@ -97,10 +97,10 @@ const CreateTaskModal = ({ isOpen, onClose }: CreateTaskModalProps) => {
         {/* Actions */}
         <div className="flex gap-3 pt-4">
           <Button type="button" variant="secondary" onClick={onClose} fullWidth>
-            Hủy
+            <span className="text-gray-700 font-medium">Cancel</span>
           </Button>
           <Button type="submit" fullWidth>
-            Tạo nhiệm vụ
+            <span className="text-white font-medium">Create Task</span>
           </Button>
         </div>
       </form>
