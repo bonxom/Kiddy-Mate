@@ -2,11 +2,9 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import ParentLayout from '../components/layout/ParentLayout';
 import DashboardPage from '../pages/parents/DashboardPage';
 import TaskCenterPage from '../pages/parents/TaskCenterPage';
+import RewardCenterPage from '../pages/parents/RewardCenterPage';
+import SettingsPage from '../pages/parents/SettingsPage';
 // import LoginPage from '../pages/public/LoginPage';
-
-// Temporary placeholder components
-const RewardCenterPage = () => <div>Reward Center Page</div>;
-const SettingsPage = () => <div>Settings Page</div>;
 
 export const AppRouter = () => {
   // Giả sử chúng ta có logic check auth ở đây
