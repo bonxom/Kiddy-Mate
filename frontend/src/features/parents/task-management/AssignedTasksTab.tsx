@@ -4,6 +4,7 @@ import Input from '../../../components/ui/Input';
 import Badge from '../../../components/ui/Badge';
 import Modal from '../../../components/ui/Modal';
 import Button from '../../../components/ui/Button';
+import TaskDetailModal from './TaskDetailModal';
 import type { AssignedTask, TaskStatus } from '../../../types/task.types';
 
 // Mock data
@@ -171,6 +172,8 @@ const AssignedTasksTab = () => {
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [taskToDelete, setTaskToDelete] = useState<string | null>(null);
+  const [detailModalOpen, setDetailModalOpen] = useState(false);
+  const [selectedTask, setSelectedTask] = useState<ExtendedAssignedTask | null>(null);
 
   // Filter and sort
   const filteredTasks = useMemo(() => {
@@ -216,6 +219,19 @@ const AssignedTasksTab = () => {
       setTaskToDelete(null);
       setDeleteModalOpen(false);
     }
+  };
+
+  const handleRowClick = (task: ExtendedAssignedTask) => {
+    setSelectedTask(task);
+    setDetailModalOpen(true);
+  };
+
+  const handleSaveTask = (updatedTask: ExtendedAssignedTask) => {
+    setTasks(tasks.map(t => t.id === updatedTask.id ? updatedTask : t));
+  };
+
+  const handleDeleteTask = (taskId: string) => {
+    setTasks(tasks.filter(t => t.id !== taskId));
   };
 
   const getStatusBadge = (status: TaskStatus) => {
@@ -312,7 +328,8 @@ const AssignedTasksTab = () => {
             {filteredTasks.map((task, index) => (
               <tr 
                 key={task.id} 
-                className="hover:shadow-md transition-all duration-200 group"
+                className="hover:shadow-md transition-all duration-200 group cursor-pointer"
+                onClick={() => handleRowClick(task)}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.background = 'linear-gradient(to right, rgba(239, 246, 255, 0.3), rgba(250, 245, 255, 0.3))';
                 }}
@@ -445,6 +462,20 @@ const AssignedTasksTab = () => {
           </div>
         </div>
       </Modal>
+
+      {/* Task Detail Modal */}
+      {selectedTask && (
+        <TaskDetailModal
+          isOpen={detailModalOpen}
+          onClose={() => {
+            setDetailModalOpen(false);
+            setSelectedTask(null);
+          }}
+          task={selectedTask}
+          onSave={handleSaveTask}
+          onDelete={handleDeleteTask}
+        />
+      )}
     </div>
   );
 };

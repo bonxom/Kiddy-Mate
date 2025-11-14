@@ -13,6 +13,7 @@ const mockLibraryTasks: LibraryTask[] = [
     category: 'academic',
     description: 'Khuyến khích thói quen đọc sách mỗi ngày',
     suggestedReward: 8,
+    suggestedChild: 'Minh An',
   },
   {
     id: 'lib2',
@@ -20,6 +21,7 @@ const mockLibraryTasks: LibraryTask[] = [
     category: 'self-discipline',
     description: 'Rèn luyện kỹ năng tự lập và giữ gìn không gian sống',
     suggestedReward: 10,
+    suggestedChild: 'Thu Hà',
   },
   {
     id: 'lib3',
@@ -27,6 +29,7 @@ const mockLibraryTasks: LibraryTask[] = [
     category: 'logic',
     description: 'Phát triển tư duy logic và giải quyết vấn đề',
     suggestedReward: 12,
+    suggestedChild: 'Minh An',
   },
   {
     id: 'lib4',
@@ -34,6 +37,7 @@ const mockLibraryTasks: LibraryTask[] = [
     category: 'creativity',
     description: 'Khuyến khích sự sáng tạo và thể hiện cảm xúc',
     suggestedReward: 10,
+    suggestedChild: 'Thu Hà',
   },
   {
     id: 'lib5',
@@ -41,6 +45,7 @@ const mockLibraryTasks: LibraryTask[] = [
     category: 'social',
     description: 'Phát triển kỹ năng làm việc nhóm và giao tiếp',
     suggestedReward: 15,
+    suggestedChild: 'Minh An',
   },
   {
     id: 'lib6',
@@ -48,6 +53,7 @@ const mockLibraryTasks: LibraryTask[] = [
     category: 'physical',
     description: 'Rèn luyện sức khỏe thể chất',
     suggestedReward: 10,
+    suggestedChild: 'Thu Hà',
   },
 ];
 
@@ -171,6 +177,9 @@ const TaskLibraryTab = () => {
           <thead style={{ background: 'linear-gradient(to right, rgb(249 250 251), rgb(243 244 246))' }}>
             <tr>
               <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                Suggested Child
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                 Task Name
               </th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
@@ -191,7 +200,8 @@ const TaskLibraryTab = () => {
             {filteredTasks.map((task, index) => (
               <tr 
                 key={task.id} 
-                className="hover:shadow-md transition-all duration-200 group"
+                className="hover:shadow-md transition-all duration-200 group cursor-pointer"
+                onClick={() => handleAssignClick(task)}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.background = 'linear-gradient(to right, rgba(239, 246, 255, 0.3), rgba(250, 245, 255, 0.3))';
                 }}
@@ -202,6 +212,11 @@ const TaskLibraryTab = () => {
                   animation: `fadeIn 0.3s ease-in-out ${index * 0.05}s both`
                 }}
               >
+                <td className="px-4 py-4">
+                  <span className="text-sm font-medium text-gray-700">
+                    {task.suggestedChild || '-'}
+                  </span>
+                </td>
                 <td className="px-4 py-4">
                   <span className="text-sm font-semibold text-gray-900 group-hover:text-primary-600 transition-colors">
                     {task.task}
@@ -227,7 +242,10 @@ const TaskLibraryTab = () => {
                 <td className="px-4 py-4 text-center">
                   <Button
                     size="sm"
-                    onClick={() => handleAssignClick(task)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleAssignClick(task);
+                    }}
                     className="group-hover:scale-105 transition-transform duration-200"
                   >
                     Assign Task

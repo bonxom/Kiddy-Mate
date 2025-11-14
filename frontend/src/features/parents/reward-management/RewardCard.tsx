@@ -52,19 +52,22 @@ const RewardCard = ({ reward, onClick, onQuantityChange }: RewardCardProps) => {
 
       {/* Content */}
       <div className="p-5 space-y-4">
-        {/* Name */}
-                <h3 className="font-bold text-gray-900 text-lg line-clamp-2 min-h-14 group-hover:text-accent-600 transition-colors">
-          {reward.name}
-        </h3>
+        {/* Name and Cost Row */}
+        <div className="flex items-start justify-between gap-3">
+          {/* Name - Column 1 */}
+          <h3 className="font-bold text-gray-900 text-lg line-clamp-2 flex-1 group-hover:text-accent-600 transition-colors">
+            {reward.name}
+          </h3>
 
-        {/* Cost */}
-        <div 
-          className="flex items-center gap-2 px-3 py-2 rounded-xl w-fit shadow-sm"
-          style={{ background: 'linear-gradient(to right, rgb(254 252 232), rgb(254 243 199))' }}
-        >
-          <Star className="w-5 h-5 text-yellow-600 fill-yellow-500" />
-          <span className="font-bold text-gray-900 text-lg">{reward.cost}</span>
-          <span className="text-sm text-gray-700">Stars</span>
+          {/* Cost - Column 2 */}
+          <div 
+            className="flex items-center gap-2 px-3 py-2 rounded-xl shadow-sm shrink-0"
+            style={{ background: 'linear-gradient(to right, rgb(254 252 232), rgb(254 243 199))' }}
+          >
+            <Star className="w-5 h-5 text-yellow-600 fill-yellow-500" />
+            <span className="font-bold text-gray-900 text-lg">{reward.cost}</span>
+            <span className="text-sm text-gray-700">Stars</span>
+          </div>
         </div>
 
         {/* Remain with Quick Edit */}

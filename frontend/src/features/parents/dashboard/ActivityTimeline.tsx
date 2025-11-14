@@ -151,7 +151,7 @@ const ActivityTimeline = () => {
               {/* Child Header */}
               <div className="flex items-center justify-between pb-2 border-b-2 border-primary-100">
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-linear-to-br from-primary-400 to-primary-600 flex items-center justify-center text-white font-semibold text-sm shadow-md">
+                  <div className="w-8 h-8 rounded-full bg-linear-to-br from-primary-400 to-primary-600 flex items-center justify-center text-gray-900 font-semibold text-sm shadow-md">
                     {firstActivity.childAvatar}
                   </div>
                   <div>

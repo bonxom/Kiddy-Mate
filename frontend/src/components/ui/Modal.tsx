@@ -98,7 +98,7 @@ const Modal = ({
         )}
 
         {/* Body */}
-        <div className="px-6 py-5 overflow-y-auto max-h-[calc(90vh-8rem)] scrollbar-thin">
+        <div className="px-6 py-5 overflow-y-auto max-h-[calc(90vh-8rem)] scrollbar-hide">
           {children}
         </div>
       </div>

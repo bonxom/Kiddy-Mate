@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Target, Brain, Dumbbell, Palette, Users, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Target, Brain, Dumbbell, Palette, Users, BookOpen, ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface TaskCategory {
   name: string;
@@ -40,20 +40,28 @@ const TaskProgressRings = () => {
       bgColor: 'bg-green-50',
     },
     {
-      name: 'Creative',
+      name: 'Creativity',
       icon: Palette,
       completed: 7,
       total: 10,
-      color: '#f59e0b',
-      bgColor: 'bg-amber-50',
+      color: '#ec4899',
+      bgColor: 'bg-pink-50',
     },
     {
       name: 'Social',
       icon: Users,
       completed: 5,
       total: 10,
-      color: '#ec4899',
-      bgColor: 'bg-pink-50',
+      color: '#f59e0b',
+      bgColor: 'bg-amber-50',
+    },
+    {
+      name: 'Academic',
+      icon: BookOpen,
+      completed: 8,
+      total: 10,
+      color: '#6366f1',
+      bgColor: 'bg-indigo-50',
     },
   ];
 

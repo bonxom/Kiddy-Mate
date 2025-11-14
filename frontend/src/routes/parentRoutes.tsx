@@ -1,4 +1,3 @@
-// parentRoutes.tsx
 import DashboardPage from '../pages/parents/DashboardPage';
 import TaskCenterPage from '../pages/parents/TaskCenterPage';
 import RewardCenterPage from '../pages/parents/RewardCenterPage';
