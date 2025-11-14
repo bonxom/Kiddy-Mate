@@ -1,4 +1,5 @@
-import { Star, Plus, Minus } from 'lucide-react';
+import { Star, Plus, Minus, Package } from 'lucide-react';
+import Badge from '../../../components/ui/Badge';
 import type { Reward } from '../../../types/reward.types';
 
 interface RewardCardProps {
@@ -9,64 +10,102 @@ interface RewardCardProps {
 
 const RewardCard = ({ reward, onClick, onQuantityChange }: RewardCardProps) => {
   const handleQuantityClick = (e: React.MouseEvent, delta: number) => {
-    e.stopPropagation(); // Prevent card click event
+    e.stopPropagation();
     onQuantityChange(reward.id, delta);
   };
+
+  const isLowStock = reward.remain < 5 && reward.remain > 0;
+  const isOutOfStock = reward.remain === 0;
 
   return (
     <div
       onClick={onClick}
-      className="bg-white rounded-lg shadow-md overflow-hidden cursor-pointer hover:shadow-xl hover:scale-[1.02] transition-all duration-200"
+      className="group bg-white rounded-2xl shadow-lg overflow-hidden cursor-pointer hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 border border-gray-100 hover:border-primary-300"
     >
       {/* Thumbnail */}
-      <div className="relative h-48 bg-gray-200">
+      <div className="relative h-52 bg-linear-to-br from-gray-50 to-gray-100 overflow-hidden">
         <img
           src={reward.url_thumbnail}
           alt={reward.name}
-          className="w-full h-full object-cover"
+          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
           onError={(e) => {
             e.currentTarget.src = 'https://via.placeholder.com/400x300?text=No+Image';
           }}
         />
+        
+        {/* Overlay gradient */}
+        <div className="absolute inset-0 bg-linear-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+        
+        {/* Stock Status Badge */}
+        <div className="absolute top-3 right-3">
+          {isOutOfStock ? (
+            <Badge variant="danger" size="sm">
+              Out of Stock
+            </Badge>
+          ) : isLowStock ? (
+            <Badge variant="warning" size="sm" dot pulse>
+              Low Stock
+            </Badge>
+          ) : null}
+        </div>
       </div>
 
       {/* Content */}
-      <div className="p-4">
-        {/* Name */}
-        <h3 className="font-semibold text-gray-900 mb-2 line-clamp-2 min-h-12">
-          {reward.name}
-        </h3>
+      <div className="p-5 space-y-4">
+        {/* Name and Cost Row */}
+        <div className="flex items-start justify-between gap-3">
+          {/* Name - Column 1 */}
+          <h3 className="font-bold text-gray-900 text-lg line-clamp-2 flex-1 group-hover:text-accent-600 transition-colors">
+            {reward.name}
+          </h3>
 
-        {/* Cost */}
-        <div className="flex items-center gap-1 mb-3">
-          <span className="text-sm text-gray-600">Giá:</span>
-          <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
-          <span className="font-semibold text-gray-900">{reward.cost}</span>
+          {/* Cost - Column 2 */}
+          <div 
+            className="flex items-center gap-2 px-3 py-2 rounded-xl shadow-sm shrink-0"
+            style={{ background: 'linear-gradient(to right, rgb(254 252 232), rgb(254 243 199))' }}
+          >
+            <Star className="w-5 h-5 text-yellow-600 fill-yellow-500" />
+            <span className="font-bold text-gray-900 text-lg">{reward.cost}</span>
+            <span className="text-sm text-gray-700">Stars</span>
+          </div>
         </div>
 
         {/* Remain with Quick Edit */}
-        <div className="flex items-center justify-between">
-          <span className="text-sm text-gray-600">Còn lại:</span>
-          <div className="flex items-center gap-2">
+        <div className="flex items-center justify-between pt-3 border-t border-gray-100">
+          <div className="flex items-center gap-2 text-gray-600">
+            <Package className="w-4 h-4" />
+            <span className="text-sm font-medium">Stock:</span>
+          </div>
+          <div className="flex items-center gap-2 bg-gray-50 rounded-lg px-2 py-1">
             <button
               onClick={(e) => handleQuantityClick(e, -1)}
-              className="p-1 rounded-md hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="p-1.5 rounded-lg hover:bg-white hover:shadow-soft transition-all disabled:opacity-30 disabled:cursor-not-allowed active:scale-95"
               disabled={reward.remain === 0}
+              aria-label="Decrease quantity"
             >
-              <Minus className="w-4 h-4 text-gray-600" />
+              <Minus className="w-4 h-4 text-gray-700" strokeWidth={2.5} />
             </button>
-            <span className="font-semibold text-gray-900 min-w-8 text-center">
+            <span className={`font-bold min-w-8 text-center text-lg ${
+              isOutOfStock ? 'text-danger-600' : isLowStock ? 'text-warning-600' : 'text-gray-900'
+            }`}>
               {reward.remain}
             </span>
             <button
               onClick={(e) => handleQuantityClick(e, 1)}
-              className="p-1 rounded-md hover:bg-gray-100 transition-colors"
+              className="p-1.5 rounded-lg hover:bg-white hover:shadow-soft transition-all active:scale-95"
+              aria-label="Increase quantity"
             >
-              <Plus className="w-4 h-4 text-gray-600" />
+              <Plus className="w-4 h-4 text-gray-700" strokeWidth={2.5} />
             </button>
           </div>
         </div>
       </div>
+
+      {/* Hover Effect Indicator */}
+      <div 
+        className="h-1 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left" 
+        style={{ background: 'linear-gradient(to right, #3b82f6, #8b5cf6)' }}
+      />
     </div>
   );
 };

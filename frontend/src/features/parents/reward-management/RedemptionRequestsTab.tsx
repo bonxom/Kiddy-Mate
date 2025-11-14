@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Check, X } from 'lucide-react';
+import { Check, X, Star } from 'lucide-react';
 import Button from '../../../components/ui/Button';
 import Badge from '../../../components/ui/Badge';
 import type { RedemptionRequest, RedemptionStatus } from '../../../types/reward.types';
@@ -10,7 +10,7 @@ const mockRequests: RedemptionRequest[] = [
     id: '1',
     child: 'Minh An',
     childId: '1',
-    rewardName: '30 phút chơi game',
+    rewardName: '30 minutes gaming time',
     rewardId: '1',
     dateCreated: '2025-11-10',
     cost: 50,
@@ -20,7 +20,7 @@ const mockRequests: RedemptionRequest[] = [
     id: '2',
     child: 'Thu Hà',
     childId: '2',
-    rewardName: 'Sách truyện mới',
+    rewardName: 'New storybook',
     rewardId: '6',
     dateCreated: '2025-11-11',
     cost: 40,
@@ -30,7 +30,7 @@ const mockRequests: RedemptionRequest[] = [
     id: '3',
     child: 'Minh An',
     childId: '1',
-    rewardName: 'Pizza tự chọn',
+    rewardName: 'Custom pizza',
     rewardId: '4',
     dateCreated: '2025-11-12',
     cost: 80,
@@ -40,7 +40,7 @@ const mockRequests: RedemptionRequest[] = [
     id: '4',
     child: 'Thu Hà',
     childId: '2',
-    rewardName: 'Đi công viên',
+    rewardName: 'Park visit',
     rewardId: '5',
     dateCreated: '2025-11-13',
     cost: 60,
@@ -55,6 +55,7 @@ const RedemptionRequestsTab = () => {
     message: string;
     type: 'success' | 'error';
   }>({ show: false, message: '', type: 'success' });
+  const [filterStatus, setFilterStatus] = useState<'all' | RedemptionStatus>('all');
 
   const showToast = (message: string, type: 'success' | 'error') => {
     setToast({ show: true, message, type });
@@ -69,7 +70,7 @@ const RedemptionRequestsTab = () => {
         r.id === requestId ? { ...r, status: 'approved' as RedemptionStatus } : r
       )
     );
-    showToast('Đã chấp thuận yêu cầu đổi thưởng', 'success');
+    showToast('Redemption request approved', 'success');
   };
 
   const handleReject = (requestId: string) => {
@@ -78,110 +79,163 @@ const RedemptionRequestsTab = () => {
         r.id === requestId ? { ...r, status: 'rejected' as RedemptionStatus } : r
       )
     );
-    showToast('Đã từ chối yêu cầu đổi thưởng', 'success');
+    showToast('Redemption request rejected', 'success');
   };
 
   const getStatusBadge = (status: RedemptionStatus) => {
     const statusConfig = {
-      pending: { variant: 'warning' as const, label: 'Chờ duyệt' },
-      approved: { variant: 'success' as const, label: 'Đã chấp thuận' },
-      rejected: { variant: 'danger' as const, label: 'Đã từ chối' },
+      pending: { variant: 'warning' as const, label: 'Pending' },
+      approved: { variant: 'success' as const, label: 'Approved' },
+      rejected: { variant: 'danger' as const, label: 'Rejected' },
     };
 
     const config = statusConfig[status];
     return <Badge variant={config.variant}>{config.label}</Badge>;
   };
 
+  const [hoveredRow, setHoveredRow] = useState<string | null>(null);
+
+  // Filter requests
+  const filteredRequests = requests.filter((request) => 
+    filterStatus === 'all' ? true : request.status === filterStatus
+  );
+
   return (
     <div>
-      {/* Description */}
-      <p className="text-gray-600 mb-4">Các yêu cầu đổi thưởng đang chờ duyệt</p>
+      {/* Filter */}
+      <div className="mb-4 flex items-center gap-3">
+        <span className="text-sm font-medium text-gray-700">Filter by status:</span>
+        <div className="flex gap-2">
+          {[{ value: 'all', label: 'All' }, { value: 'pending', label: 'Pending' }, { value: 'approved', label: 'Approved' }, { value: 'rejected', label: 'Rejected' }].map((filter) => (
+            <button
+              key={filter.value}
+              onClick={() => setFilterStatus(filter.value as typeof filterStatus)}
+              className={`px-3 py-1.5 text-sm font-medium rounded-lg border transition-all ${
+                filterStatus === filter.value
+                  ? 'border-primary-500 bg-primary-50 text-primary-700'
+                  : 'border-gray-300 bg-white text-gray-600 hover:border-primary-300'
+              }`}
+            >
+              {filter.label}
+            </button>
+          ))}
+        </div>
+        <span className="text-sm text-gray-500 ml-auto">
+          {filteredRequests.length} request{filteredRequests.length !== 1 ? 's' : ''}
+        </span>
+      </div>
 
       {/* Table */}
-      <div className="overflow-x-auto border border-gray-200 rounded-lg">
+      <div className="overflow-x-auto border border-gray-200 rounded-lg shadow-sm">
+        <style>{`
+          @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+          }
+        `}</style>
         <table className="w-full">
-          <thead className="bg-gray-50">
+          <thead style={{ background: 'linear-gradient(to right, rgb(249 250 251), rgb(243 244 246))' }}>
             <tr>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 ID
               </th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Tên bé
+                Child Name
               </th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Phần thưởng
+                Reward
               </th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Ngày yêu cầu
+                Request Date
               </th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Số Sao
+                Cost
               </th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Trạng thái
+                Status
               </th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Hành động
+                Actions
               </th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {requests.map((request) => (
-              <tr
-                key={request.id}
-                className={`${
-                  request.status !== 'pending'
-                    ? 'opacity-50 bg-gray-50'
-                    : 'hover:bg-gray-50'
-                }`}
-              >
-                <td className="px-4 py-3 text-sm text-gray-900">{request.id}</td>
-                <td className="px-4 py-3 text-sm font-medium text-gray-900">
-                  {request.child}
-                </td>
-                <td className="px-4 py-3 text-sm text-gray-900">
-                  {request.rewardName}
-                </td>
-                <td className="px-4 py-3 text-sm text-gray-500">
-                  {request.dateCreated}
-                </td>
-                <td className="px-4 py-3 text-sm font-semibold text-gray-900">
-                  {request.cost}
-                </td>
-                <td className="px-4 py-3">{getStatusBadge(request.status)}</td>
-                <td className="px-4 py-3">
-                  {request.status === 'pending' ? (
-                    <div className="flex gap-2">
-                      <Button
-                        size="sm"
-                        onClick={() => handleApprove(request.id)}
-                        className="flex items-center gap-1"
+            {filteredRequests.map((request, index) => (
+                <tr
+                  key={request.id}
+                  onMouseEnter={() => setHoveredRow(request.id)}
+                  onMouseLeave={() => setHoveredRow(null)}
+                  className={`transition-all ${
+                    request.status !== 'pending' ? 'opacity-50' : ''
+                  }`}
+                  style={{
+                    background: hoveredRow === request.id && request.status === 'pending'
+                      ? 'linear-gradient(to right, rgba(239, 246, 255, 0.3), rgba(250, 245, 255, 0.3))'
+                      : request.status !== 'pending' ? 'rgb(249 250 251)' : 'transparent',
+                    animation: `fadeIn 0.3s ease-in-out ${index * 0.05}s both`
+                  }}
+                >
+                  <td className="px-4 py-3 text-sm text-gray-900">{request.id}</td>
+                  <td className="px-4 py-3 text-sm font-medium text-gray-900">
+                    {request.child}
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-900">
+                    {request.rewardName}
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-500">
+                    {request.dateCreated}
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-sm font-semibold text-gray-900">{request.cost}</span>
+                      <div 
+                        className="flex items-center justify-center w-6 h-6 rounded-md" 
+                        style={{ background: 'linear-gradient(to right, rgb(254 252 232), rgb(254 243 199))' }}
                       >
-                        <Check className="w-4 h-4" />
-                        Chấp thuận
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="danger"
-                        onClick={() => handleReject(request.id)}
-                        className="flex items-center gap-1"
-                      >
-                        <X className="w-4 h-4" />
-                        Từ chối
-                      </Button>
+                        <Star className="w-3.5 h-3.5 text-yellow-600 fill-yellow-500" />
+                      </div>
                     </div>
-                  ) : (
-                    <span className="text-sm text-gray-500">Đã xử lý</span>
-                  )}
-                </td>
-              </tr>
+                  </td>
+                  <td className="px-4 py-3">{getStatusBadge(request.status)}</td>
+                  <td className="px-4 py-3">
+                    {request.status === 'pending' ? (
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          onClick={() => handleApprove(request.id)}
+                          className="flex items-center gap-1"
+                        >
+                          <Check className="w-4 h-4" />
+                          Approve
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="danger"
+                          onClick={() => handleReject(request.id)}
+                          className="flex items-center gap-1"
+                        >
+                          <X className="w-4 h-4" />
+                          Reject
+                        </Button>
+                      </div>
+                    ) : (
+                      <span className="text-sm text-gray-500">Processed</span>
+                    )}
+                  </td>
+                </tr>
             ))}
           </tbody>
         </table>
 
+        {filteredRequests.length === 0 && requests.length > 0 && (
+          <div className="text-center py-8 text-gray-500">
+            No requests match your filter
+          </div>
+        )}
+        
         {requests.length === 0 && (
           <div className="text-center py-8 text-gray-500">
-            Không có yêu cầu đổi thưởng nào
+            No redemption requests
           </div>
         )}
       </div>

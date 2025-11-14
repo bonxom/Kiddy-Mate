@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Check, X, AlertTriangle } from 'lucide-react';
 import Card from '../../../components/ui/Card';
 import Input from '../../../components/ui/Input';
 import Button from '../../../components/ui/Button';
@@ -16,6 +17,7 @@ const mockUserProfile: UserProfile = {
 const AccountSettingsTab = () => {
   const [profile, setProfile] = useState<UserProfile>(mockUserProfile);
   const [displayName, setDisplayName] = useState(profile.displayName);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [passwordData, setPasswordData] = useState<PasswordChangeData>({
     currentPassword: '',
     newPassword: '',
@@ -23,21 +25,68 @@ const AccountSettingsTab = () => {
   });
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [toast, setToast] = useState<{
+    show: boolean;
+    message: string;
+    type: 'success' | 'error';
+  }>({ show: false, message: '', type: 'success' });
+
+  const showToast = (message: string, type: 'success' | 'error') => {
+    setToast({ show: true, message, type });
+    setTimeout(() => {
+      setToast({ show: false, message: '', type: 'success' });
+    }, 3000);
+  };
+
+  // Keyboard shortcut: Ctrl+S to save
+  useState(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+        e.preventDefault();
+        if (hasUnsavedChanges) {
+          handleSaveProfile();
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  });
+
+  const getPasswordStrength = (password: string): { strength: number; label: string; color: string } => {
+    if (!password) return { strength: 0, label: '', color: '' };
+    let strength = 0;
+    if (password.length >= 8) strength++;
+    if (password.length >= 12) strength++;
+    if (/[a-z]/.test(password) && /[A-Z]/.test(password)) strength++;
+    if (/[0-9]/.test(password)) strength++;
+    if (/[^a-zA-Z0-9]/.test(password)) strength++;
+    
+    if (strength <= 2) return { strength: (strength / 5) * 100, label: 'Weak', color: 'bg-red-500' };
+    if (strength <= 3) return { strength: (strength / 5) * 100, label: 'Medium', color: 'bg-yellow-500' };
+    return { strength: (strength / 5) * 100, label: 'Strong', color: 'bg-green-500' };
+  };
+
+  const passwordStrength = getPasswordStrength(passwordData.newPassword);
 
   const handleSaveProfile = () => {
     setProfile({ ...profile, displayName });
-    alert('Đã lưu thay đổi thông tin cá nhân');
+    setHasUnsavedChanges(false);
+    showToast('Personal information saved successfully', 'success');
   };
 
   const handleUpdatePassword = (e: React.FormEvent) => {
     e.preventDefault();
     if (passwordData.newPassword !== passwordData.confirmPassword) {
-      alert('Mật khẩu mới không khớp!');
+      showToast('New passwords do not match!', 'error');
+      return;
+    }
+    if (passwordData.newPassword.length < 8) {
+      showToast('Password must be at least 8 characters', 'error');
       return;
     }
     // TODO: Implement API call
     console.log('Update password:', passwordData);
-    alert('Đã cập nhật mật khẩu thành công');
+    showToast('Password updated successfully', 'success');
     setPasswordData({
       currentPassword: '',
       newPassword: '',
@@ -49,104 +98,144 @@ const AccountSettingsTab = () => {
     if (deleteConfirmText === 'DELETE') {
       // TODO: Implement API call
       console.log('Delete account');
-      alert('Tài khoản đã được xóa');
+      showToast('Account has been deleted', 'success');
       setIsDeleteModalOpen(false);
       setDeleteConfirmText('');
     } else {
-      alert('Vui lòng gõ chính xác "DELETE" để xác nhận');
+      showToast('Please type "DELETE" exactly to confirm', 'error');
     }
   };
 
   return (
-    <div className="space-y-6 max-w-3xl">
+    <div className="space-y-6 max-w-6xl">
+      {/* Unsaved Changes Warning */}
+      {hasUnsavedChanges && (
+        <div className="p-4 rounded-lg border-2 border-yellow-300 flex items-center gap-3 animate-slide-down" style={{ background: 'linear-gradient(to right, rgb(254 252 232), rgb(254 243 199))' }}>
+          <AlertTriangle className="w-5 h-5 text-yellow-600 shrink-0" />
+          <div className="flex-1">
+            <p className="font-medium text-yellow-800">You have unsaved changes</p>
+            <p className="text-sm text-yellow-700">Press "Save Changes" or Ctrl+S to save</p>
+          </div>
+        </div>
+      )}
+
       {/* Title */}
       <div>
         <h2 className="text-xl font-semibold text-gray-900">
-          Thông tin Tài khoản Phụ huynh
+          Parent Account Information
         </h2>
       </div>
 
-      {/* Block 1: Personal Information */}
-      <Card title="Thông tin Cá nhân" padding="md">
-        <div className="space-y-4">
-          <Input
-            label="Tên hiển thị"
-            type="text"
-            value={displayName}
-            onChange={(e) => setDisplayName(e.target.value)}
-            placeholder="VD: Phụ huynh bé Bắp"
-            fullWidth
-          />
-          <Input
-            label="Email"
-            type="email"
-            value={profile.email}
-            disabled
-            fullWidth
-            helperText="Email đăng nhập không thể thay đổi"
-          />
-          <div className="pt-2">
-            <Button onClick={handleSaveProfile}>Lưu Thay đổi</Button>
+      {/* Two Column Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Column 1: Personal Information */}
+        <Card title="Personal Information" padding="md">
+          <div className="space-y-4">
+            <Input
+              label="Display Name"
+              type="text"
+              value={displayName}
+              onChange={(e) => {
+                setDisplayName(e.target.value);
+                setHasUnsavedChanges(true);
+              }}
+              placeholder="e.g., Parent of Baby Bap"
+              fullWidth
+            />
+            <Input
+              label="Email"
+              type="email"
+              value={profile.email}
+              disabled
+              fullWidth
+              helperText="Login email cannot be changed"
+            />
+            <div className="pt-2">
+              <Button onClick={handleSaveProfile}>Save Changes</Button>
+            </div>
           </div>
-        </div>
-      </Card>
+        </Card>
 
-      {/* Block 2: Security */}
-      <Card title="Bảo mật" subtitle="Đổi mật khẩu" padding="md">
-        <form onSubmit={handleUpdatePassword} className="space-y-4">
-          <Input
-            label="Mật khẩu hiện tại"
-            type="password"
-            value={passwordData.currentPassword}
-            onChange={(e) =>
-              setPasswordData({ ...passwordData, currentPassword: e.target.value })
-            }
-            required
-            fullWidth
-          />
-          <Input
-            label="Mật khẩu mới"
-            type="password"
-            value={passwordData.newPassword}
-            onChange={(e) =>
-              setPasswordData({ ...passwordData, newPassword: e.target.value })
-            }
-            required
-            fullWidth
-          />
-          <Input
-            label="Xác nhận mật khẩu mới"
-            type="password"
-            value={passwordData.confirmPassword}
-            onChange={(e) =>
-              setPasswordData({ ...passwordData, confirmPassword: e.target.value })
-            }
-            required
-            fullWidth
-          />
-          <div className="pt-2">
-            <Button type="submit">Cập nhật Mật khẩu</Button>
-          </div>
-        </form>
-      </Card>
+        {/* Column 2: Security */}
+        <Card title="Security" subtitle="Change Password" padding="md">
+          <form onSubmit={handleUpdatePassword} className="space-y-4">
+            <Input
+              label="Current Password"
+              type="password"
+              value={passwordData.currentPassword}
+              onChange={(e) =>
+                setPasswordData({ ...passwordData, currentPassword: e.target.value })
+              }
+              required
+              fullWidth
+            />
+            <div>
+              <Input
+                label="New Password"
+                type="password"
+                value={passwordData.newPassword}
+                onChange={(e) =>
+                  setPasswordData({ ...passwordData, newPassword: e.target.value })
+                }
+                required
+                fullWidth
+              />
+              {/* Password Strength Indicator */}
+              {passwordData.newPassword && (
+                <div className="mt-2 space-y-1">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-gray-600">Password Strength:</span>
+                    <span className={`font-medium ${
+                      passwordStrength.label === 'Weak' ? 'text-red-600' :
+                      passwordStrength.label === 'Medium' ? 'text-yellow-600' :
+                      'text-green-600'
+                    }`}>
+                      {passwordStrength.label}
+                    </span>
+                  </div>
+                  <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full transition-all duration-300 ${passwordStrength.color}`}
+                      style={{ width: `${passwordStrength.strength}%` }}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+            <Input
+              label="Confirm New Password"
+              type="password"
+              value={passwordData.confirmPassword}
+              onChange={(e) =>
+                setPasswordData({ ...passwordData, confirmPassword: e.target.value })
+              }
+              required
+              fullWidth
+            />
+            <div className="pt-2">
+              <Button type="submit">Update Password</Button>
+            </div>
+          </form>
+        </Card>
+      </div>
 
       {/* Block 3: Danger Zone */}
-      <Card padding="md" className="border-2 border-red-200">
+      <Card padding="md" className="border-2 border-red-200 bg-red-50/30">
         <div className="space-y-4">
           <div>
             <h3 className="text-lg font-semibold text-red-600 mb-2">
-              Xóa Tài khoản
+              Delete Account
             </h3>
             <p className="text-sm text-gray-600">
-              Hành động này không thể hoàn tác. Toàn bộ dữ liệu của bạn và các bé sẽ
-              bị xóa vĩnh viễn.
+              This action cannot be undone. All your data and children's data will be
+              permanently deleted.
             </p>
           </div>
           <Button
             variant="danger"
             onClick={() => setIsDeleteModalOpen(true)}
           >
-            Xóa vĩnh viễn tài khoản
+            Delete Account Permanently
           </Button>
         </div>
       </Card>
@@ -158,21 +247,26 @@ const AccountSettingsTab = () => {
           setIsDeleteModalOpen(false);
           setDeleteConfirmText('');
         }}
-        title="Xác nhận Xóa Tài khoản"
+        title="Confirm Account Deletion"
         size="md"
       >
         <div className="space-y-4">
-          <div className="p-4 bg-red-50 rounded-lg">
-            <p className="text-red-800 font-medium mb-2">⚠️ Cảnh báo nghiêm trọng</p>
-            <p className="text-sm text-red-700">
-              Hành động này sẽ xóa vĩnh viễn tài khoản của bạn và toàn bộ dữ liệu liên
-              quan. Bạn sẽ không thể khôi phục lại.
-            </p>
+          <div className="p-4 rounded-lg border-2 border-red-300" style={{ background: 'linear-gradient(to right, rgb(254 242 242), rgb(254 226 226))' }}>
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="w-6 h-6 text-red-600 shrink-0 mt-0.5" />
+              <div>
+                <p className="text-red-800 font-semibold mb-1">Critical Warning</p>
+                <p className="text-sm text-red-700">
+                  This action will permanently delete your account and all related data.
+                  You will not be able to recover it.
+                </p>
+              </div>
+            </div>
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Gõ <span className="font-bold text-red-600">DELETE</span> để xác nhận:
+              Type <span className="font-bold text-red-600">DELETE</span> to confirm:
             </label>
             <Input
               type="text"
@@ -191,18 +285,38 @@ const AccountSettingsTab = () => {
                 setDeleteConfirmText('');
               }}
             >
-              Hủy
+              Cancel
             </Button>
             <Button
               variant="danger"
               onClick={handleDeleteAccount}
               disabled={deleteConfirmText !== 'DELETE'}
             >
-              Xóa vĩnh viễn
+              Delete Permanently
             </Button>
           </div>
         </div>
       </Modal>
+
+      {/* Toast Notification */}
+      {toast.show && (
+        <div className="fixed bottom-6 right-6 z-50 animate-slide-up">
+          <div
+            className={`px-6 py-4 rounded-lg shadow-lg flex items-center gap-3 ${
+              toast.type === 'success'
+                ? 'bg-green-500 text-white'
+                : 'bg-red-500 text-white'
+            }`}
+          >
+            {toast.type === 'success' ? (
+              <Check className="w-5 h-5" />
+            ) : (
+              <X className="w-5 h-5" />
+            )}
+            <span className="font-medium">{toast.message}</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

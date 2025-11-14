@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { Plus } from 'lucide-react';
+import { Plus, Store, Gift } from 'lucide-react';
 import Button from '../../components/ui/Button';
-import ShopManagementTab from '../../features/parents/reward-management/ShopManagementTab';
-import RedemptionRequestsTab from '../../features/parents/reward-management/RedemptionRequestsTab';
+import Badge from '../../components/ui/Badge';
+import ShopManagementTab from '../../features/parents/reward-management/ShopManagementTab.tsx';
+import RedemptionRequestsTab from '../../features/parents/reward-management/RedemptionRequestsTab.tsx';
 
 type TabType = 'shop' | 'redemption';
 
@@ -10,65 +11,103 @@ const RewardCenterPage = () => {
   const [activeTab, setActiveTab] = useState<TabType>('shop');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
+  const tabs = [
+    {
+      id: 'shop' as TabType,
+      label: 'Shop Management',
+      icon: Store,
+      count: 6,
+    },
+    {
+      id: 'redemption' as TabType,
+      label: 'Redemption Requests',
+      icon: Gift,
+      count: 4,
+      badge: true,
+    },
+  ];
+
   return (
-    <div className="h-screen overflow-y-auto p-6 bg-gray-50">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen overflow-y-auto p-4 md:p-6 lg:p-8 scrollbar-thin">
+      <div className="max-w-7xl mx-auto space-y-6 animate-fade-in">
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">Reward Center</h1>
-          
-          {/* Add Reward Button - Only show on Shop tab */}
-          {activeTab === 'shop' && (
-            <Button
-              onClick={() => setIsCreateModalOpen(true)}
-              className="flex items-center gap-2"
-            >
-              <Plus className="w-5 h-5" />
-              Thêm Phần thưởng
-            </Button>
-          )}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">
+              Reward Center 🎁
+            </h1>
+            <p className="text-gray-600">
+              Manage rewards and approve redemption requests from your children
+            </p>
+          </div>
         </div>
 
         {/* Tabs */}
-        <div className="bg-white rounded-lg shadow-sm">
+        <div className="bg-white rounded-2xl shadow-soft border border-gray-100 overflow-hidden">
           {/* Tab Headers */}
-          <div className="flex border-b border-gray-200">
-            <button
-              onClick={() => setActiveTab('shop')}
-              className={`
-                px-6 py-4 text-sm font-medium transition-colors relative
-                ${activeTab === 'shop'
-                  ? 'text-accent border-b-2 border-accent'
-                  : 'text-gray-600 hover:text-gray-900'
-                }
-              `}
-            >
-              Cửa hàng
-            </button>
-            <button
-              onClick={() => setActiveTab('redemption')}
-              className={`
-                px-6 py-4 text-sm font-medium transition-colors relative
-                ${activeTab === 'redemption'
-                  ? 'text-accent border-b-2 border-accent'
-                  : 'text-gray-600 hover:text-gray-900'
-                }
-              `}
-            >
-              Yêu cầu Đổi thưởng
-            </button>
+          <div className="flex items-center justify-between border-b-2 border-gray-200 bg-gray-50/50">
+            <div className="flex overflow-x-auto scrollbar-hide">
+              {tabs.map((tab) => {
+                const Icon = tab.icon;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`
+                      flex items-center gap-3 px-6 py-4 text-sm font-semibold transition-all relative whitespace-nowrap
+                      ${activeTab === tab.id
+                        ? 'text-primary-700 bg-white shadow-sm'
+                        : 'text-gray-600 hover:text-gray-900 hover:bg-white/50'
+                      }
+                    `}
+                  >
+                    <Icon className={`w-5 h-5 ${activeTab === tab.id ? 'text-primary-600' : ''}`} />
+                    <span>{tab.label}</span>
+                    <Badge 
+                      variant={activeTab === tab.id ? 'primary' : 'default'}
+                      size="sm"
+                      dot={tab.badge && activeTab !== tab.id}
+                      pulse={tab.badge && activeTab !== tab.id}
+                    >
+                      {tab.count}
+                    </Badge>
+                    
+                    {/* Active indicator */}
+                    {activeTab === tab.id && (
+                      <div 
+                        className="absolute bottom-0 left-0 right-0 h-1 rounded-t-md" 
+                        style={{ background: 'linear-gradient(to right, #3b82f6, #8b5cf6)' }}
+                      />
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+            {activeTab === 'shop' && (
+              <div className="px-4 py-2 shrink-0">
+                <Button
+                  onClick={() => setIsCreateModalOpen(true)}
+                  icon={<Plus className="w-5 h-5" />}
+                  size="sm"
+                >
+                  Add Reward
+                </Button>
+              </div>
+            )}
           </div>
 
           {/* Tab Content */}
           <div className="p-6">
-            {activeTab === 'shop' ? (
-              <ShopManagementTab 
-                isCreateModalOpen={isCreateModalOpen}
-                setIsCreateModalOpen={setIsCreateModalOpen}
-              />
-            ) : (
-              <RedemptionRequestsTab />
-            )}
+            <div className="animate-fade-in">
+              {activeTab === 'shop' ? (
+                <ShopManagementTab 
+                  isCreateModalOpen={isCreateModalOpen}
+                  setIsCreateModalOpen={setIsCreateModalOpen}
+                />
+              ) : (
+                <RedemptionRequestsTab />
+              )}
+            </div>
           </div>
         </div>
       </div>
