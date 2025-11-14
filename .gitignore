@@ -1,5 +1,5 @@
 app/.venv
 app/.env
-_pycache_/
+__pycache__/
 frontend/node_modules
 frontend/build
