@@ -70,7 +70,7 @@ const RewardModal = ({
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* URL Thumbnail */}
           <Input
-            label="URL Hình ảnh"
+            label="Image URL"
             type="text"
             placeholder="https://example.com/image.jpg"
             value={formData.url_thumbnail}
@@ -83,7 +83,7 @@ const RewardModal = ({
 
           {/* Preview Image */}
           {formData.url_thumbnail && (
-            <div className="rounded-lg overflow-hidden border border-gray-200">
+            <div className="rounded-lg overflow-hidden border border-gray-200 shadow-sm">
               <img
                 src={formData.url_thumbnail}
                 alt="Preview"
@@ -97,9 +97,9 @@ const RewardModal = ({
 
           {/* Name */}
           <Input
-            label="Tên Phần thưởng"
+            label="Reward Name"
             type="text"
-            placeholder="VD: 30 phút chơi game"
+            placeholder="e.g., 30 minutes gaming time"
             value={formData.name}
             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
             required
@@ -109,7 +109,7 @@ const RewardModal = ({
           {/* Cost and Remain - Side by side */}
           <div className="grid grid-cols-2 gap-4">
             <Input
-              label="Giá (Sao)"
+              label="Cost (Stars)"
               type="number"
               min="0"
               placeholder="0"
@@ -121,7 +121,7 @@ const RewardModal = ({
               fullWidth
             />
             <Input
-              label="Số lượng còn lại"
+              label="Stock Quantity"
               type="number"
               min="0"
               placeholder="0"
@@ -137,16 +137,16 @@ const RewardModal = ({
           {/* Description */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Mô tả
+              Description
             </label>
             <textarea
               value={formData.description}
               onChange={(e) =>
                 setFormData({ ...formData, description: e.target.value })
               }
-              placeholder="Mô tả chi tiết về phần thưởng..."
+              placeholder="Detailed description of the reward..."
               rows={4}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent resize-none"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none"
             />
           </div>
 
@@ -158,14 +158,16 @@ const RewardModal = ({
                 variant="danger"
                 onClick={() => setShowDeleteConfirm(true)}
               >
-                Xóa
+                Delete
               </Button>
             )}
             <div className="flex-1" />
             <Button type="button" variant="secondary" onClick={onClose}>
-              Hủy
+              Cancel
             </Button>
-            <Button type="submit">Lưu</Button>
+            <Button type="submit">
+              Save
+            </Button>
           </div>
         </form>
       </Modal>
@@ -174,22 +176,22 @@ const RewardModal = ({
       <Modal
         isOpen={showDeleteConfirm}
         onClose={() => setShowDeleteConfirm(false)}
-        title="Xác nhận xóa"
+        title="Confirm Delete"
         size="sm"
       >
         <div className="space-y-4">
-          <p className="text-gray-600">
-            Bạn có chắc chắn muốn xóa phần thưởng "{initialData?.name}" không?
+          <p className="text-gray-900 font-medium text-base">
+            Are you sure you want to delete the reward "{initialData?.name}"?
           </p>
           <div className="flex gap-3 justify-end">
             <Button
               variant="secondary"
               onClick={() => setShowDeleteConfirm(false)}
             >
-              Hủy
+              Cancel
             </Button>
             <Button variant="danger" onClick={handleDelete}>
-              Xóa
+              Delete
             </Button>
           </div>
         </div>

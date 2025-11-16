@@ -18,6 +18,7 @@ export interface LibraryTask {
   category: TaskCategory;
   description: string;
   suggestedReward?: number;
+  suggestedChild?: string;
 }
 
 export interface CreateTaskFormData {
