@@ -1,7 +1,10 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import ParentLayout from '../components/layout/ParentLayout';
 import { parentRoutes } from './parentRoutes';
-// import LoginPage from '../pages/public/LoginPage';
+import LandingPage from '../pages/public/LandingPage';
+import LoginPage from '../pages/public/LoginPage';
+import RegisterPage from '../pages/public/RegisterPage';
+import OnboardingPage from '../pages/public/OnboardingPage';
 
 export const AppRouter = () => {
   // Giả sử có logic check auth ở đây
@@ -10,20 +13,26 @@ export const AppRouter = () => {
 
   return (
     <Routes>
-      <Route path="/login" element={<div>Login Page</div>} />
-      <Route path="/register" element={<div>Register Page</div>} />
+      {/* Public Routes */}
+      <Route path="/" element={<LandingPage />} />
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/register" element={<RegisterPage />} />
+      <Route path="/onboarding" element={<OnboardingPage />} />
 
+      {/* Parent Routes */}
       <Route 
         path="/parent/*" 
         element={isParentAuthenticated ? <ParentRoutes /> : <Navigate to="/login" />}
       />
 
+      {/* Child Routes */}
       <Route 
         path="/child/*" 
         element={isChildAuthenticated ? <div>Child App</div> : <Navigate to="/login" />}
       />
 
-      <Route path="*" element={<Navigate to="/login" />} />
+      {/* Fallback */}
+      <Route path="*" element={<Navigate to="/" />} />
     </Routes>
   );
 };
