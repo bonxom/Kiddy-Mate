@@ -57,17 +57,24 @@ const ChildInfoStep = ({ childNumber, totalChildren, initialData, onComplete, on
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 py-12">
-      <div className="w-full max-w-2xl">
+    <div className="min-h-screen flex items-center justify-center p-4 py-12 bg-linear-to-br from-blue-100 via-purple-100 to-pink-200 relative overflow-hidden">
+      {/* Animated Background Decorations */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-10 left-10 w-80 h-80 bg-green-400 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-pulse-soft" />
+        <div className="absolute bottom-10 right-10 w-72 h-72 bg-blue-400 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-pulse-soft" style={{ animationDelay: '1s' }} />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-pink-400 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse-soft" style={{ animationDelay: '2s' }} />
+      </div>
+
+      <div className="w-full max-w-2xl relative z-10 animate-fade-in">
         {/* Header */}
         <div className="text-center mb-8">
-          <Badge variant="primary" className="mb-4">
+          <Badge variant="primary" className="mb-4 text-base px-6 py-2 bg-linear-to-r from-green-600 to-emerald-600 shadow-medium">
             Child {childNumber} of {totalChildren}
           </Badge>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+          <h1 className="text-4xl font-bold bg-linear-to-r from-green-700 via-blue-700 to-purple-700 bg-clip-text text-transparent mb-3">
             Tell us about your child 👶
           </h1>
-          <p className="text-gray-600">
+          <p className="text-lg text-gray-700 font-medium">
             This helps us create a personalized experience
           </p>
         </div>
@@ -76,21 +83,21 @@ const ChildInfoStep = ({ childNumber, totalChildren, initialData, onComplete, on
         <div className="mb-8">
           <div className="flex items-center justify-center gap-2">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-full bg-green-500 text-white flex items-center justify-center text-sm font-bold">
+              <div className="w-10 h-10 rounded-full bg-linear-to-br from-green-500 to-emerald-600 text-white flex items-center justify-center text-sm font-bold shadow-medium">
                 ✓
               </div>
-              <span className="text-sm font-medium text-gray-400">Parent Info</span>
+              <span className="text-sm font-medium text-gray-500">Parent Info</span>
             </div>
-            <div className="w-12 h-1 bg-gradient-primary rounded-full" />
+            <div className="w-16 h-1.5 bg-linear-to-r from-green-400 to-blue-400 rounded-full shadow-soft" />
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-full bg-gradient-primary text-white flex items-center justify-center text-sm font-bold">
+              <div className="w-10 h-10 rounded-full bg-linear-to-br from-blue-600 to-purple-600 text-white flex items-center justify-center text-sm font-bold shadow-medium">
                 2
               </div>
-              <span className="text-sm font-medium text-gray-900">Child Info</span>
+              <span className="text-sm font-bold text-gray-900">Child Info</span>
             </div>
-            <div className="w-12 h-1 bg-gray-200 rounded-full" />
+            <div className="w-16 h-1.5 bg-linear-to-r from-gray-200 to-gray-300 rounded-full" />
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-full bg-gray-200 text-gray-400 flex items-center justify-center text-sm font-bold">
+              <div className="w-10 h-10 rounded-full bg-gray-200 text-gray-400 flex items-center justify-center text-sm font-bold">
                 3
               </div>
               <span className="text-sm font-medium text-gray-400">Assessment</span>
@@ -99,7 +106,7 @@ const ChildInfoStep = ({ childNumber, totalChildren, initialData, onComplete, on
         </div>
 
         {/* Form Card */}
-        <Card padding="lg">
+        <Card padding="lg" className="bg-white/95 backdrop-blur-sm shadow-strong border border-white/50">
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Full Name */}
             <Input
@@ -153,10 +160,10 @@ const ChildInfoStep = ({ childNumber, totalChildren, initialData, onComplete, on
                     key={gender}
                     type="button"
                     onClick={() => setFormData({ ...formData, gender })}
-                    className={`py-3 px-4 rounded-lg border-2 font-medium transition-all ${
+                    className={`py-4 px-4 rounded-xl border-2 font-bold text-base transition-all duration-300 ${
                       formData.gender === gender
-                        ? 'border-primary-500 bg-primary-50 text-primary-700 shadow-medium'
-                        : 'border-gray-200 hover:border-gray-300 text-gray-600'
+                        ? 'border-blue-500 bg-linear-to-br from-blue-50 via-purple-50 to-pink-50 text-blue-700 shadow-glow-accent scale-105'
+                        : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50 text-gray-600 hover:scale-102'
                     }`}
                   >
                     {gender === 'male' ? '👦 Boy' : gender === 'female' ? '👧 Girl' : '🌟 Other'}
@@ -176,18 +183,18 @@ const ChildInfoStep = ({ childNumber, totalChildren, initialData, onComplete, on
                     key={topic.id}
                     type="button"
                     onClick={() => toggleTopic(topic.id)}
-                    className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                    className={`px-5 py-2.5 rounded-full text-sm font-bold transition-all duration-300 ${
                       formData.favoriteTopics?.includes(topic.id)
-                        ? `${topic.color} ring-2 ring-offset-2 ring-current shadow-medium`
-                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        ? `${topic.color} ring-2 ring-offset-2 ring-current shadow-medium scale-110`
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200 hover:scale-105'
                     }`}
                   >
                     {topic.label}
                   </button>
                 ))}
               </div>
-              <p className="mt-2 text-sm text-gray-500">
-                This helps us suggest relevant tasks and rewards
+              <p className="mt-3 text-sm text-gray-600 bg-blue-50 p-3 rounded-lg border border-blue-100">
+                💡 This helps us suggest relevant tasks and rewards
               </p>
             </div>
 
@@ -198,6 +205,7 @@ const ChildInfoStep = ({ childNumber, totalChildren, initialData, onComplete, on
                 variant="secondary"
                 onClick={onBack}
                 icon={<ArrowLeft className="w-5 h-5" />}
+                className="hover:scale-105 transition-transform"
               >
                 Back
               </Button>
@@ -205,6 +213,7 @@ const ChildInfoStep = ({ childNumber, totalChildren, initialData, onComplete, on
                 type="submit"
                 size="lg"
                 icon={<ArrowRight className="w-5 h-5" />}
+                className="bg-linear-to-r from-green-600 via-blue-600 to-purple-600 hover:from-green-700 hover:via-blue-700 hover:to-purple-700 shadow-glow-accent hover:scale-105 transition-all duration-300"
               >
                 Continue to Assessment
               </Button>

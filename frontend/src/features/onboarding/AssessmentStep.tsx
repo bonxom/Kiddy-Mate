@@ -76,17 +76,24 @@ const AssessmentStep = ({ childNumber, totalChildren, childName, initialData, on
   );
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 py-12">
-      <div className="w-full max-w-4xl">
+    <div className="min-h-screen flex items-center justify-center p-4 py-12 bg-linear-to-br from-blue-100 via-purple-100 to-pink-200 relative overflow-hidden">
+      {/* Animated Background Decorations */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-20 right-20 w-80 h-80 bg-blue-400 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-pulse-soft" />
+        <div className="absolute bottom-20 left-20 w-72 h-72 bg-purple-400 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-pulse-soft" style={{ animationDelay: '1s' }} />
+        <div className="absolute top-1/3 left-1/2 w-64 h-64 bg-pink-400 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse-soft" style={{ animationDelay: '2s' }} />
+      </div>
+
+      <div className="w-full max-w-4xl relative z-10 animate-fade-in">
         {/* Header */}
         <div className="text-center mb-8">
-          <Badge variant="primary" className="mb-4">
+          <Badge variant="primary" className="mb-4 text-base px-6 py-2 bg-linear-to-r from-orange-600 to-pink-600 shadow-medium">
             Child {childNumber} of {totalChildren} - {childName}
           </Badge>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+          <h1 className="text-4xl font-bold bg-linear-to-r from-blue-700 via-purple-700 to-pink-700 bg-clip-text text-transparent mb-3">
             Assessment Questionnaire 📋
           </h1>
-          <p className="text-gray-600">
+          <p className="text-lg text-gray-700 font-medium">
             Help us understand {childName}'s current abilities
           </p>
         </div>
@@ -95,31 +102,31 @@ const AssessmentStep = ({ childNumber, totalChildren, childName, initialData, on
         <div className="mb-8">
           <div className="flex items-center justify-center gap-2">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-full bg-green-500 text-white flex items-center justify-center text-sm font-bold">
+              <div className="w-10 h-10 rounded-full bg-linear-to-br from-green-500 to-emerald-600 text-white flex items-center justify-center text-sm font-bold shadow-medium">
                 ✓
               </div>
-              <span className="text-sm font-medium text-gray-400">Parent Info</span>
+              <span className="text-sm font-medium text-gray-500">Parent Info</span>
             </div>
-            <div className="w-12 h-1 bg-green-500 rounded-full" />
+            <div className="w-16 h-1.5 bg-linear-to-r from-green-400 to-green-500 rounded-full shadow-soft" />
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-full bg-green-500 text-white flex items-center justify-center text-sm font-bold">
+              <div className="w-10 h-10 rounded-full bg-linear-to-br from-green-500 to-emerald-600 text-white flex items-center justify-center text-sm font-bold shadow-medium">
                 ✓
               </div>
-              <span className="text-sm font-medium text-gray-400">Child Info</span>
+              <span className="text-sm font-medium text-gray-500">Child Info</span>
             </div>
-            <div className="w-12 h-1 bg-gradient-primary rounded-full" />
+            <div className="w-16 h-1.5 bg-linear-to-r from-green-400 to-purple-400 rounded-full shadow-soft" />
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-full bg-gradient-primary text-white flex items-center justify-center text-sm font-bold">
+              <div className="w-10 h-10 rounded-full bg-linear-to-br from-purple-600 to-pink-600 text-white flex items-center justify-center text-sm font-bold shadow-medium">
                 3
               </div>
-              <span className="text-sm font-medium text-gray-900">Assessment</span>
+              <span className="text-sm font-bold text-gray-900">Assessment</span>
             </div>
           </div>
         </div>
 
         {/* Category Tabs */}
         <div className="mb-6">
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-3 gap-4">
             {categories.map((category) => {
               const Icon = category.icon;
               const progress = getCategoryProgress(category.id);
@@ -129,29 +136,29 @@ const AssessmentStep = ({ childNumber, totalChildren, childName, initialData, on
                 <button
                   key={category.id}
                   onClick={() => setActiveCategory(category.id)}
-                  className={`relative p-4 rounded-xl border-2 transition-all ${
+                  className={`relative p-5 rounded-2xl border-2 transition-all duration-300 ${
                     isActive
-                      ? 'border-primary-500 bg-primary-50 shadow-medium'
-                      : 'border-gray-200 hover:border-gray-300 bg-white'
+                      ? 'border-purple-500 bg-linear-to-br from-blue-50 via-purple-50 to-pink-50 shadow-glow-accent scale-105'
+                      : 'border-gray-200 hover:border-purple-300 bg-white/90 backdrop-blur-sm hover:scale-102'
                   }`}
                 >
-                  <div className="flex items-center gap-3 mb-2">
-                    <div className={`w-10 h-10 rounded-lg bg-linear-to-br ${category.color} flex items-center justify-center shadow-medium`}>
-                      <Icon className="w-5 h-5 text-white" />
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className={`w-12 h-12 rounded-xl bg-linear-to-br ${category.color} flex items-center justify-center shadow-medium`}>
+                      <Icon className="w-6 h-6 text-white" />
                     </div>
-                    <span className={`text-sm font-semibold ${isActive ? 'text-gray-900' : 'text-gray-600'}`}>
+                    <span className={`text-base font-bold ${isActive ? 'text-gray-900' : 'text-gray-600'}`}>
                       {category.label}
                     </span>
                   </div>
                   
                   {/* Progress Bar */}
-                  <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
+                  <div className="w-full h-2.5 bg-gray-200 rounded-full overflow-hidden">
                     <div 
-                      className={`h-full bg-linear-to-r ${category.color} transition-all duration-300`}
+                      className={`h-full bg-linear-to-r ${category.color} transition-all duration-500 shadow-soft`}
                       style={{ width: `${progress}%` }}
                     />
                   </div>
-                  <p className="text-xs text-gray-500 mt-1">
+                  <p className="text-xs font-semibold text-gray-600 mt-2">
                     {Math.round(progress)}% complete
                   </p>
                 </button>
@@ -161,7 +168,7 @@ const AssessmentStep = ({ childNumber, totalChildren, childName, initialData, on
         </div>
 
         {/* Questions Card */}
-        <Card padding="lg">
+        <Card padding="lg" className="bg-white/95 backdrop-blur-sm shadow-strong border border-white/50">
           <div className="space-y-8">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-bold text-gray-900">
@@ -196,7 +203,7 @@ const AssessmentStep = ({ childNumber, totalChildren, childName, initialData, on
                   </div>
 
                   {/* Rating Buttons */}
-                  <div className="grid grid-cols-5 gap-2">
+                  <div className="grid grid-cols-5 gap-3">
                     {ratingLabels.map((rating) => {
                       const isSelected = currentAnswer === rating.value;
                       
@@ -205,17 +212,17 @@ const AssessmentStep = ({ childNumber, totalChildren, childName, initialData, on
                           key={rating.value}
                           type="button"
                           onClick={() => setAnswerForQuestion(question.id, rating.value as 1 | 2 | 3 | 4 | 5)}
-                          className={`flex flex-col items-center gap-2 p-3 rounded-lg border-2 transition-all ${
+                          className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all duration-300 ${
                             isSelected
-                              ? 'border-primary-500 bg-primary-50 shadow-medium scale-105'
-                              : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                              ? 'border-purple-500 bg-linear-to-br from-blue-50 to-purple-50 shadow-glow-accent scale-110'
+                              : 'border-gray-200 hover:border-purple-300 hover:bg-purple-50 hover:scale-105'
                           }`}
                         >
-                          <span className="text-2xl">{rating.emoji}</span>
-                          <span className={`text-xs font-medium text-center ${isSelected ? 'text-primary-700' : 'text-gray-600'}`}>
+                          <span className={`text-3xl transition-transform ${isSelected ? 'scale-125' : ''}`}>{rating.emoji}</span>
+                          <span className={`text-xs font-bold text-center ${isSelected ? 'text-purple-700' : 'text-gray-600'}`}>
                             {rating.label}
                           </span>
-                          <span className={`text-xs font-bold ${isSelected ? rating.color : 'text-gray-400'}`}>
+                          <span className={`text-sm font-bold ${isSelected ? rating.color : 'text-gray-400'}`}>
                             {rating.value}
                           </span>
                         </button>
@@ -228,12 +235,13 @@ const AssessmentStep = ({ childNumber, totalChildren, childName, initialData, on
           </div>
 
           {/* Action Buttons */}
-          <div className="flex justify-between pt-6 mt-6 border-t border-gray-200">
+          <div className="flex justify-between pt-6 mt-6 border-t-2 border-gray-200">
             <Button
               type="button"
               variant="secondary"
               onClick={onBack}
               icon={<ArrowLeft className="w-5 h-5" />}
+              className="hover:scale-105 transition-transform"
             >
               Back
             </Button>
@@ -245,6 +253,7 @@ const AssessmentStep = ({ childNumber, totalChildren, childName, initialData, on
                   variant="outline"
                   onClick={handleNext}
                   disabled={!canProceedToNext}
+                  className="hover:scale-105 transition-transform disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Next Category →
                 </Button>
@@ -256,18 +265,21 @@ const AssessmentStep = ({ childNumber, totalChildren, childName, initialData, on
                 disabled={!allQuestionsAnswered}
                 size="lg"
                 icon={<CheckCircle2 className="w-5 h-5" />}
+                className="bg-linear-to-r from-purple-600 via-pink-600 to-orange-600 hover:from-purple-700 hover:via-pink-700 hover:to-orange-700 shadow-glow-accent hover:scale-105 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {childNumber < totalChildren ? 'Next Child' : 'Complete Onboarding'}
+                {childNumber < totalChildren ? 'Next Child 🎉' : 'Complete Onboarding 🚀'}
               </Button>
             </div>
           </div>
         </Card>
 
         {/* Progress Summary */}
-        <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-100">
-          <p className="text-sm text-gray-700">
-            <span className="font-semibold">Overall Progress:</span> {answers.length} / {assessmentQuestions.length} questions answered 
-            ({Math.round((answers.length / assessmentQuestions.length) * 100)}%)
+        <div className="mt-6 p-5 bg-linear-to-r from-blue-100 via-purple-100 to-pink-100 rounded-2xl border-2 border-purple-200 shadow-soft">
+          <p className="text-sm text-gray-800 leading-relaxed">
+            <span className="font-bold text-purple-700">📊 Overall Progress:</span> {answers.length} / {assessmentQuestions.length} questions answered 
+            <span className="ml-2 inline-flex items-center gap-1 bg-white/80 px-3 py-1 rounded-full font-bold text-purple-700">
+              {Math.round((answers.length / assessmentQuestions.length) * 100)}%
+            </span>
           </p>
         </div>
       </div>

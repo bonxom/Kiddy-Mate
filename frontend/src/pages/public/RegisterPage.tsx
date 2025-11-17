@@ -73,23 +73,30 @@ const RegisterPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-linear-to-br from-blue-50 via-purple-50 to-pink-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
+    <div className="min-h-screen bg-linear-to-br from-blue-100 via-purple-100 to-pink-200 flex items-center justify-center p-4 py-12 relative overflow-hidden">
+      {/* Animated Background Decorations */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-10 right-10 w-80 h-80 bg-blue-400 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-pulse-soft" />
+        <div className="absolute bottom-10 left-10 w-96 h-96 bg-purple-400 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-pulse-soft" style={{ animationDelay: '1s' }} />
+        <div className="absolute top-1/3 left-1/3 w-72 h-72 bg-pink-400 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse-soft" style={{ animationDelay: '2s' }} />
+      </div>
+
+      <div className="w-full max-w-md relative z-10 animate-fade-in">
         {/* Logo & Brand */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-primary shadow-glow-accent mb-4">
-            <Sparkles className="w-8 h-8 text-white" />
+          <div className="inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-linear-to-br from-blue-600 via-purple-600 to-pink-600 shadow-glow-accent mb-4 animate-bounce-soft">
+            <Sparkles className="w-10 h-10 text-white" />
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Join Kiddy-Mate
+          <h1 className="text-4xl font-bold bg-linear-to-r from-blue-700 via-purple-700 to-pink-700 bg-clip-text text-transparent mb-3">
+            Join Kiddy-Mate! 🚀
           </h1>
-          <p className="text-gray-600">
+          <p className="text-lg text-gray-700 font-medium">
             Start your journey to better parenting
           </p>
         </div>
 
         {/* Registration Form */}
-        <div className="bg-white rounded-2xl shadow-strong p-8">
+        <div className="bg-white/95 backdrop-blur-sm rounded-3xl shadow-strong p-8 border border-white/50">
           <form onSubmit={handleSubmit} className="space-y-5">
             {/* Display Name */}
             <Input
@@ -153,13 +160,13 @@ const RegisterPage = () => {
             />
 
             {/* Terms & Conditions */}
-            <p className="text-xs text-gray-600">
+            <p className="text-xs text-gray-600 bg-gray-50 p-3 rounded-lg border border-gray-200">
               By creating an account, you agree to our{' '}
-              <Link to="/terms" className="text-primary-600 hover:underline">
+              <Link to="/terms" className="text-blue-600 hover:text-blue-700 font-semibold underline">
                 Terms of Service
               </Link>{' '}
               and{' '}
-              <Link to="/privacy" className="text-primary-600 hover:underline">
+              <Link to="/privacy" className="text-blue-600 hover:text-blue-700 font-semibold underline">
                 Privacy Policy
               </Link>
             </p>
@@ -171,31 +178,32 @@ const RegisterPage = () => {
               size="lg"
               disabled={isLoading}
               icon={<UserPlus className="w-5 h-5" />}
+              className="bg-linear-to-r from-blue-600 via-purple-600 to-pink-600 hover:from-blue-700 hover:via-purple-700 hover:to-pink-700 shadow-glow-accent hover:shadow-glow-accent hover:scale-105 transition-all duration-300"
             >
               {isLoading ? 'Creating Account...' : 'Create Account'}
             </Button>
           </form>
 
           {/* Sign In Link */}
-          <div className="mt-6 text-center">
-            <span className="text-gray-600">
+          <div className="mt-6 text-center p-4 bg-linear-to-r from-blue-50 via-purple-50 to-pink-50 rounded-2xl border border-blue-100">
+            <span className="text-gray-700 font-medium">
               Already have an account?{' '}
               <button
                 type="button"
                 onClick={() => navigate('/login')}
-                className="text-primary-600 hover:text-primary-700 font-semibold underline underline-offset-2 decoration-2 hover:decoration-primary-700 transition-all"
+                className="text-transparent bg-linear-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text font-bold underline underline-offset-2 decoration-2 hover:from-blue-700 hover:via-purple-700 hover:to-pink-700 transition-all"
               >
-                Sign In
+                Sign In →
               </button>
             </span>
           </div>
         </div>
 
         {/* Back to Home */}
-        <div className="text-center mt-6">
+        <div className="text-center mt-8">
           <Link
             to="/"
-            className="text-sm text-gray-600 hover:text-gray-900 font-medium"
+            className="inline-flex items-center gap-2 text-gray-700 hover:text-gray-900 font-semibold bg-white/60 backdrop-blur-sm px-6 py-3 rounded-full shadow-soft hover:shadow-medium transition-all"
           >
             ← Back to Home
           </Link>

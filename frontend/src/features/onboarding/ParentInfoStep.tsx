@@ -37,17 +37,24 @@ const ParentInfoStep = ({ initialData, onComplete }: ParentInfoStepProps) => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4">
-      <div className="w-full max-w-2xl">
+    <div className="min-h-screen flex items-center justify-center p-4 bg-linear-to-br from-blue-100 via-purple-100 to-pink-200 relative overflow-hidden">
+      {/* Animated Background Decorations */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-20 left-20 w-72 h-72 bg-blue-400 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-pulse-soft" />
+        <div className="absolute bottom-20 right-20 w-80 h-80 bg-purple-400 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-pulse-soft" style={{ animationDelay: '1s' }} />
+        <div className="absolute top-1/2 right-1/3 w-64 h-64 bg-pink-400 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse-soft" style={{ animationDelay: '2s' }} />
+      </div>
+
+      <div className="w-full max-w-2xl relative z-10 animate-fade-in">
         {/* Header */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-primary shadow-glow-accent mb-4">
-            <Sparkles className="w-8 h-8 text-white" />
+          <div className="inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-linear-to-br from-blue-600 via-purple-600 to-pink-600 shadow-glow-accent mb-4 animate-bounce-soft">
+            <Sparkles className="w-10 h-10 text-white" />
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+          <h1 className="text-4xl font-bold bg-linear-to-r from-blue-700 via-purple-700 to-pink-700 bg-clip-text text-transparent mb-3">
             Welcome to Kiddy-Mate! 🎉
           </h1>
-          <p className="text-gray-600 text-lg">
+          <p className="text-xl text-gray-700 font-medium">
             Let's get to know you better
           </p>
         </div>
@@ -56,21 +63,21 @@ const ParentInfoStep = ({ initialData, onComplete }: ParentInfoStepProps) => {
         <div className="mb-8">
           <div className="flex items-center justify-center gap-2">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-full bg-gradient-primary text-white flex items-center justify-center text-sm font-bold">
+              <div className="w-10 h-10 rounded-full bg-linear-to-br from-blue-600 to-purple-600 text-white flex items-center justify-center text-sm font-bold shadow-medium">
                 1
               </div>
-              <span className="text-sm font-medium text-gray-900">Parent Info</span>
+              <span className="text-sm font-bold text-gray-900">Parent Info</span>
             </div>
-            <div className="w-12 h-1 bg-gray-200 rounded-full" />
+            <div className="w-16 h-1.5 bg-linear-to-r from-gray-200 to-gray-300 rounded-full" />
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-full bg-gray-200 text-gray-400 flex items-center justify-center text-sm font-bold">
+              <div className="w-10 h-10 rounded-full bg-gray-200 text-gray-400 flex items-center justify-center text-sm font-bold">
                 2
               </div>
               <span className="text-sm font-medium text-gray-400">Child Info</span>
             </div>
-            <div className="w-12 h-1 bg-gray-200 rounded-full" />
+            <div className="w-16 h-1.5 bg-linear-to-r from-gray-200 to-gray-300 rounded-full" />
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-full bg-gray-200 text-gray-400 flex items-center justify-center text-sm font-bold">
+              <div className="w-10 h-10 rounded-full bg-gray-200 text-gray-400 flex items-center justify-center text-sm font-bold">
                 3
               </div>
               <span className="text-sm font-medium text-gray-400">Assessment</span>
@@ -79,7 +86,7 @@ const ParentInfoStep = ({ initialData, onComplete }: ParentInfoStepProps) => {
         </div>
 
         {/* Form Card */}
-        <Card padding="lg">
+        <Card padding="lg" className="bg-white/95 backdrop-blur-sm shadow-strong border border-white/50">
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
               <h2 className="text-xl font-bold text-gray-900 mb-6">
@@ -130,10 +137,10 @@ const ParentInfoStep = ({ initialData, onComplete }: ParentInfoStepProps) => {
                           setFormData({ ...formData, numberOfChildren: num });
                           setErrors({ ...errors, numberOfChildren: '' });
                         }}
-                        className={`h-12 rounded-lg border-2 font-semibold transition-all ${
+                        className={`h-14 rounded-xl border-2 font-bold text-lg transition-all duration-300 ${
                           formData.numberOfChildren === num
-                            ? 'border-primary-500 bg-primary-50 text-primary-700 shadow-medium'
-                            : 'border-gray-200 hover:border-gray-300 text-gray-600'
+                            ? 'border-purple-500 bg-linear-to-br from-blue-50 via-purple-50 to-pink-50 text-purple-700 shadow-glow-accent scale-110'
+                            : 'border-gray-200 hover:border-purple-300 hover:bg-purple-50 text-gray-600 hover:scale-105'
                         }`}
                       >
                         {num}
@@ -151,9 +158,9 @@ const ParentInfoStep = ({ initialData, onComplete }: ParentInfoStepProps) => {
             </div>
 
             {/* Info Box */}
-            <div className="p-4 bg-blue-50 rounded-lg border border-blue-100">
-              <p className="text-sm text-gray-700">
-                <span className="font-semibold">What's next?</span> After this, we'll collect basic information 
+            <div className="p-5 bg-linear-to-r from-blue-100 via-purple-100 to-pink-100 rounded-2xl border-2 border-blue-200 shadow-soft">
+              <p className="text-sm text-gray-800 leading-relaxed">
+                <span className="font-bold text-purple-700">✨ What's next?</span> After this, we'll collect basic information 
                 about each of your {formData.numberOfChildren > 1 ? 'children' : 'child'}, followed by a quick 
                 assessment to help us personalize their experience.
               </p>
@@ -165,6 +172,7 @@ const ParentInfoStep = ({ initialData, onComplete }: ParentInfoStepProps) => {
                 type="submit"
                 size="lg"
                 icon={<ArrowRight className="w-5 h-5" />}
+                className="bg-linear-to-r from-blue-600 via-purple-600 to-pink-600 hover:from-blue-700 hover:via-purple-700 hover:to-pink-700 shadow-glow-accent hover:scale-105 transition-all duration-300"
               >
                 Continue to Child Info
               </Button>
