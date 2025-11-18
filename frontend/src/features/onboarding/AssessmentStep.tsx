@@ -1,31 +1,56 @@
-import { useState } from 'react';
-import { ArrowLeft, CheckCircle2, Brain, Heart, Users } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { ArrowLeft, CheckCircle2, Heart, Users, Sparkles } from 'lucide-react';
 import Button from '../../components/ui/Button';
 import Card from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
-import { assessmentQuestions, ratingLabels } from '../../data/assessmentQuestions';
+import { 
+  assessmentQuestionsPrimary, 
+  assessmentQuestionsSecondary, 
+  ratingLabels 
+} from '../../data/assessmentQuestions';
 import type { ChildAssessment, AssessmentAnswer, AssessmentCategory } from '../../types/auth.types';
 
 interface AssessmentStepProps {
   childNumber: number;
   totalChildren: number;
   childName: string;
+  dateOfBirth: string; // THÊM: Cần ngày sinh để xác định bộ câu hỏi
   initialData: ChildAssessment;
   onComplete: (data: ChildAssessment) => void;
   onBack: () => void;
 }
 
-const AssessmentStep = ({ childNumber, totalChildren, childName, initialData, onComplete, onBack }: AssessmentStepProps) => {
+const AssessmentStep = ({ 
+  childNumber, 
+  totalChildren, 
+  childName, 
+  dateOfBirth,
+  initialData, 
+  onComplete, 
+  onBack 
+}: AssessmentStepProps) => {
   const [answers, setAnswers] = useState<AssessmentAnswer[]>(initialData.answers || []);
   const [activeCategory, setActiveCategory] = useState<AssessmentCategory>('discipline');
 
-  const categories: Array<{ id: AssessmentCategory; label: string; icon: typeof Brain; color: string }> = [
+  // --- LOGIC XÁC ĐỊNH ĐỘ TUỔI & CÂU HỎI ---
+  const relevantQuestions = useMemo(() => {
+    if (!dateOfBirth) return assessmentQuestionsPrimary;
+    
+    const birthYear = new Date(dateOfBirth).getFullYear();
+    const currentYear = new Date().getFullYear();
+    const age = currentYear - birthYear;
+
+    // Nếu > 10 tuổi dùng bộ Secondary, ngược lại dùng Primary
+    return age > 10 ? assessmentQuestionsSecondary : assessmentQuestionsPrimary;
+  }, [dateOfBirth]);
+
+  const categories: Array<{ id: AssessmentCategory; label: string; icon: any; color: string }> = [
     { id: 'discipline', label: 'Kỷ luật & Tự lập', icon: CheckCircle2, color: 'from-blue-500 to-cyan-500' },
     { id: 'emotional', label: 'Trí tuệ Cảm xúc', icon: Heart, color: 'from-pink-500 to-rose-500' },
     { id: 'social', label: 'Kỹ năng Xã hội', icon: Users, color: 'from-purple-500 to-indigo-500' },
   ];
 
-  const questionsForCategory = assessmentQuestions.filter(q => q.category === activeCategory);
+  const questionsForCategory = relevantQuestions.filter(q => q.category === activeCategory);
   
   const getAnswerForQuestion = (questionId: string): number | undefined => {
     return answers.find(a => a.questionId === questionId)?.rating;
@@ -45,14 +70,14 @@ const AssessmentStep = ({ childNumber, totalChildren, childName, initialData, on
   };
 
   const getCategoryProgress = (category: AssessmentCategory): number => {
-    const categoryQuestions = assessmentQuestions.filter(q => q.category === category);
+    const categoryQuestions = relevantQuestions.filter(q => q.category === category);
     const answeredCount = categoryQuestions.filter(q => 
       answers.some(a => a.questionId === q.id)
     ).length;
-    return (answeredCount / categoryQuestions.length) * 100;
+    return categoryQuestions.length > 0 ? (answeredCount / categoryQuestions.length) * 100 : 0;
   };
 
-  const allQuestionsAnswered = assessmentQuestions.every(q => 
+  const allQuestionsAnswered = relevantQuestions.every(q => 
     answers.some(a => a.questionId === q.id)
   );
 
@@ -66,6 +91,7 @@ const AssessmentStep = ({ childNumber, totalChildren, childName, initialData, on
     const currentIndex = categories.findIndex(c => c.id === activeCategory);
     if (currentIndex < categories.length - 1) {
       setActiveCategory(categories[currentIndex + 1].id);
+      window.scrollTo({ top: 0, behavior: 'smooth' }); // Scroll lên đầu khi chuyển tab
     } else if (allQuestionsAnswered) {
       handleSubmit();
     }
@@ -94,31 +120,29 @@ const AssessmentStep = ({ childNumber, totalChildren, childName, initialData, on
             Assessment Questionnaire 📋
           </h1>
           <p className="text-lg text-gray-700 font-medium">
-            Help us understand {childName}'s current abilities
+             Help us understand {childName}'s current abilities 
+             {/* Hiển thị nhóm tuổi đang đánh giá */}
+             <span className="block text-sm text-purple-600 mt-1 font-bold">
+               (Applying {relevantQuestions === assessmentQuestionsSecondary ? 'Secondary' : 'Primary'} Framework)
+             </span>
           </p>
         </div>
 
-        {/* Progress Indicator */}
+        {/* Progress Indicator (Giữ nguyên như cũ) */}
         <div className="mb-8">
           <div className="flex items-center justify-center gap-2">
             <div className="flex items-center gap-2">
-              <div className="w-10 h-10 rounded-full bg-linear-to-br from-green-500 to-emerald-600 text-white flex items-center justify-center text-sm font-bold shadow-medium">
-                ✓
-              </div>
+              <div className="w-10 h-10 rounded-full bg-linear-to-br from-green-500 to-emerald-600 text-white flex items-center justify-center text-sm font-bold shadow-medium">✓</div>
               <span className="text-sm font-medium text-gray-500">Parent Info</span>
             </div>
             <div className="w-16 h-1.5 bg-linear-to-r from-green-400 to-green-500 rounded-full shadow-soft" />
             <div className="flex items-center gap-2">
-              <div className="w-10 h-10 rounded-full bg-linear-to-br from-green-500 to-emerald-600 text-white flex items-center justify-center text-sm font-bold shadow-medium">
-                ✓
-              </div>
+              <div className="w-10 h-10 rounded-full bg-linear-to-br from-green-500 to-emerald-600 text-white flex items-center justify-center text-sm font-bold shadow-medium">✓</div>
               <span className="text-sm font-medium text-gray-500">Child Info</span>
             </div>
             <div className="w-16 h-1.5 bg-linear-to-r from-green-400 to-purple-400 rounded-full shadow-soft" />
             <div className="flex items-center gap-2">
-              <div className="w-10 h-10 rounded-full bg-linear-to-br from-purple-600 to-pink-600 text-white flex items-center justify-center text-sm font-bold shadow-medium">
-                3
-              </div>
+              <div className="w-10 h-10 rounded-full bg-linear-to-br from-purple-600 to-pink-600 text-white flex items-center justify-center text-sm font-bold shadow-medium">3</div>
               <span className="text-sm font-bold text-gray-900">Assessment</span>
             </div>
           </div>
@@ -151,7 +175,6 @@ const AssessmentStep = ({ childNumber, totalChildren, childName, initialData, on
                     </span>
                   </div>
                   
-                  {/* Progress Bar */}
                   <div className="w-full h-2.5 bg-gray-200 rounded-full overflow-hidden">
                     <div 
                       className={`h-full bg-linear-to-r ${category.color} transition-all duration-500 shadow-soft`}
@@ -171,7 +194,8 @@ const AssessmentStep = ({ childNumber, totalChildren, childName, initialData, on
         <Card padding="lg" className="bg-white/95 backdrop-blur-sm shadow-strong border border-white/50">
           <div className="space-y-8">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-bold text-gray-900">
+              <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                <Sparkles className="w-5 h-5 text-yellow-500" />
                 {categories.find(c => c.id === activeCategory)?.label}
               </h2>
               <Badge variant="info">
@@ -186,7 +210,7 @@ const AssessmentStep = ({ childNumber, totalChildren, childName, initialData, on
                 <div key={question.id} className="pb-6 border-b border-gray-100 last:border-0">
                   <div className="mb-4">
                     <div className="flex items-start gap-3 mb-2">
-                      <Badge variant="default" className="shrink-0">
+                      <Badge variant="default" className="shrink-0 bg-gray-100 text-gray-600">
                         {index + 1}
                       </Badge>
                       <div className="flex-1">
@@ -194,7 +218,7 @@ const AssessmentStep = ({ childNumber, totalChildren, childName, initialData, on
                           {question.question}
                         </h3>
                         {question.description && (
-                          <p className="text-sm text-gray-600">
+                          <p className="text-sm text-gray-600 italic">
                             {question.description}
                           </p>
                         )}
@@ -214,16 +238,15 @@ const AssessmentStep = ({ childNumber, totalChildren, childName, initialData, on
                           onClick={() => setAnswerForQuestion(question.id, rating.value as 1 | 2 | 3 | 4 | 5)}
                           className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all duration-300 ${
                             isSelected
-                              ? 'border-purple-500 bg-linear-to-br from-blue-50 to-purple-50 shadow-glow-accent scale-110'
-                              : 'border-gray-200 hover:border-purple-300 hover:bg-purple-50 hover:scale-105'
+                              ? 'border-purple-500 bg-linear-to-br from-blue-50 to-purple-50 shadow-glow-accent scale-105'
+                              : 'border-gray-200 hover:border-purple-300 hover:bg-purple-50 hover:scale-102'
                           }`}
                         >
-                          <span className={`text-3xl transition-transform ${isSelected ? 'scale-125' : ''}`}>{rating.emoji}</span>
-                          <span className={`text-xs font-bold text-center ${isSelected ? 'text-purple-700' : 'text-gray-600'}`}>
-                            {rating.label}
+                          <span className={`text-2xl sm:text-3xl transition-transform ${isSelected ? 'scale-125' : ''}`}>
+                            {rating.emoji}
                           </span>
-                          <span className={`text-sm font-bold ${isSelected ? rating.color : 'text-gray-400'}`}>
-                            {rating.value}
+                          <span className={`text-[10px] sm:text-xs font-bold text-center ${isSelected ? 'text-purple-700' : 'text-gray-600'}`}>
+                            {rating.label}
                           </span>
                         </button>
                       );
@@ -275,10 +298,10 @@ const AssessmentStep = ({ childNumber, totalChildren, childName, initialData, on
 
         {/* Progress Summary */}
         <div className="mt-6 p-5 bg-linear-to-r from-blue-100 via-purple-100 to-pink-100 rounded-2xl border-2 border-purple-200 shadow-soft">
-          <p className="text-sm text-gray-800 leading-relaxed">
-            <span className="font-bold text-purple-700">📊 Overall Progress:</span> {answers.length} / {assessmentQuestions.length} questions answered 
-            <span className="ml-2 inline-flex items-center gap-1 bg-white/80 px-3 py-1 rounded-full font-bold text-purple-700">
-              {Math.round((answers.length / assessmentQuestions.length) * 100)}%
+          <p className="text-sm text-gray-800 leading-relaxed text-center sm:text-left">
+            <span className="font-bold text-purple-700">📊 Overall Progress:</span> {answers.length} / {relevantQuestions.length} questions answered 
+            <span className="ml-2 inline-flex items-center gap-1 bg-white/80 px-3 py-1 rounded-full font-bold text-purple-700 shadow-sm">
+              {relevantQuestions.length > 0 ? Math.round((answers.length / relevantQuestions.length) * 100) : 0}%
             </span>
           </p>
         </div>

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ArrowLeft, ArrowRight, Baby, Calendar, Heart } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Baby, Calendar, Heart, AlertCircle } from 'lucide-react';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
 import Card from '../../components/ui/Card';
@@ -18,9 +18,11 @@ interface ChildInfoStepProps {
 const ChildInfoStep = ({ childNumber, totalChildren, initialData, onComplete, onBack }: ChildInfoStepProps) => {
   const [formData, setFormData] = useState<ChildBasicInfo>(initialData);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [ageWarning, setAgeWarning] = useState<string | null>(null);
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
+    setAgeWarning(null);
 
     if (!formData.fullName || formData.fullName.trim().length < 2) {
       newErrors.fullName = 'Please enter child\'s full name (at least 2 characters)';
@@ -32,12 +34,17 @@ const ChildInfoStep = ({ childNumber, totalChildren, initialData, onComplete, on
       const birthDate = new Date(formData.dateOfBirth);
       const today = new Date();
       const age = today.getFullYear() - birthDate.getFullYear();
+      
       if (age < 3 || age > 18) {
-        newErrors.dateOfBirth = 'Child must be between 3 and 18 years old';
+        newErrors.dateOfBirth = 'This app works best for children between 3 and 18 years old';
+      } else if (age < 6 || age > 14) {
+        // Soft warning: App vẫn hoạt động nhưng tối ưu nhất cho 6-14
+        setAgeWarning(`KiddyMate is optimized for ages 6-14. We will adapt the content for a ${age}-year-old, but some features might be limited.`);
       }
     }
 
     setErrors(newErrors);
+    // Cho phép tiếp tục nếu chỉ có warning (không có error)
     return Object.keys(newErrors).length === 0;
   };
 
@@ -79,27 +86,21 @@ const ChildInfoStep = ({ childNumber, totalChildren, initialData, onComplete, on
           </p>
         </div>
 
-        {/* Progress Indicator */}
+        {/* Progress Indicator (Giữ nguyên) */}
         <div className="mb-8">
           <div className="flex items-center justify-center gap-2">
             <div className="flex items-center gap-2">
-              <div className="w-10 h-10 rounded-full bg-linear-to-br from-green-500 to-emerald-600 text-white flex items-center justify-center text-sm font-bold shadow-medium">
-                ✓
-              </div>
+              <div className="w-10 h-10 rounded-full bg-linear-to-br from-green-500 to-emerald-600 text-white flex items-center justify-center text-sm font-bold shadow-medium">✓</div>
               <span className="text-sm font-medium text-gray-500">Parent Info</span>
             </div>
             <div className="w-16 h-1.5 bg-linear-to-r from-green-400 to-blue-400 rounded-full shadow-soft" />
             <div className="flex items-center gap-2">
-              <div className="w-10 h-10 rounded-full bg-linear-to-br from-blue-600 to-purple-600 text-white flex items-center justify-center text-sm font-bold shadow-medium">
-                2
-              </div>
+              <div className="w-10 h-10 rounded-full bg-linear-to-br from-blue-600 to-purple-600 text-white flex items-center justify-center text-sm font-bold shadow-medium">2</div>
               <span className="text-sm font-bold text-gray-900">Child Info</span>
             </div>
             <div className="w-16 h-1.5 bg-linear-to-r from-gray-200 to-gray-300 rounded-full" />
             <div className="flex items-center gap-2">
-              <div className="w-10 h-10 rounded-full bg-gray-200 text-gray-400 flex items-center justify-center text-sm font-bold">
-                3
-              </div>
+              <div className="w-10 h-10 rounded-full bg-gray-200 text-gray-400 flex items-center justify-center text-sm font-bold">3</div>
               <span className="text-sm font-medium text-gray-400">Assessment</span>
             </div>
           </div>
@@ -123,7 +124,7 @@ const ChildInfoStep = ({ childNumber, totalChildren, initialData, onComplete, on
               fullWidth
             />
 
-            {/* Nickname (Optional) */}
+            {/* Nickname */}
             <Input
               label="Nickname (Optional)"
               type="text"
@@ -135,19 +136,29 @@ const ChildInfoStep = ({ childNumber, totalChildren, initialData, onComplete, on
               helperText="What do you call them at home?"
             />
 
-            {/* Date of Birth */}
-            <Input
-              label="Date of Birth *"
-              type="date"
-              value={formData.dateOfBirth}
-              onChange={(e) => {
-                setFormData({ ...formData, dateOfBirth: e.target.value });
-                setErrors({ ...errors, dateOfBirth: '' });
-              }}
-              error={errors.dateOfBirth}
-              icon={<Calendar className="w-5 h-5 text-gray-400" />}
-              fullWidth
-            />
+            {/* Date of Birth & Warnings */}
+            <div>
+                <Input
+                label="Date of Birth *"
+                type="date"
+                value={formData.dateOfBirth}
+                onChange={(e) => {
+                    setFormData({ ...formData, dateOfBirth: e.target.value });
+                    setErrors({ ...errors, dateOfBirth: '' });
+                    setAgeWarning(null);
+                }}
+                error={errors.dateOfBirth}
+                icon={<Calendar className="w-5 h-5 text-gray-400" />}
+                fullWidth
+                />
+                {/* Hiển thị cảnh báo tuổi (nếu có) nhưng không chặn */}
+                {ageWarning && !errors.dateOfBirth && (
+                    <div className="mt-2 p-3 bg-yellow-50 border border-yellow-200 rounded-lg flex items-start gap-2">
+                        <AlertCircle className="w-5 h-5 text-yellow-600 shrink-0 mt-0.5" />
+                        <p className="text-sm text-yellow-700">{ageWarning}</p>
+                    </div>
+                )}
+            </div>
 
             {/* Gender */}
             <div>

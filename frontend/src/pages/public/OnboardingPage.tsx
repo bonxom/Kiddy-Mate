@@ -117,6 +117,7 @@ const OnboardingPage = () => {
           childNumber={currentChildIndex + 1}
           totalChildren={onboardingData.parentInfo.numberOfChildren}
           childName={onboardingData.children[currentChildIndex]?.basicInfo.nickname || onboardingData.children[currentChildIndex]?.basicInfo.fullName}
+          dateOfBirth={onboardingData.children[currentChildIndex]?.basicInfo.dateOfBirth}
           initialData={onboardingData.children[currentChildIndex]?.assessment}
           onComplete={handleAssessmentComplete}
           onBack={handleBack}
