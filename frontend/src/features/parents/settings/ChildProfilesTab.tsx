@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { Plus, Edit2, Trash2, User } from 'lucide-react';
+import { Plus, Edit2, Trash2, User, Sparkles } from 'lucide-react'; // Thêm icon Sparkles cho sinh động
 import Button from '../../../components/ui/Button';
 import Modal from '../../../components/ui/Modal';
+import ChildFormModal from '../../parents/settings/ChildFormModal'; // Import Modal Form đã gộp
 import type { ChildProfile } from '../../../types/user.types';
 
-// Mock data
+// Mock data (Giữ nguyên)
 const mockChildren: ChildProfile[] = [
   {
     id: '1',
@@ -34,24 +35,48 @@ const mockChildren: ChildProfile[] = [
 
 const ChildProfilesTab = () => {
   const [children, setChildren] = useState<ChildProfile[]>(mockChildren);
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  
+  // State quản lý Form Modal (Add/Edit dùng chung)
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  
+  // State quản lý Delete Modal
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedChild, setSelectedChild] = useState<ChildProfile | null>(null);
 
-  const handleEditClick = (child: ChildProfile) => {
-    setSelectedChild(child);
-    setIsEditModalOpen(true);
+  // Mở form để THÊM MỚI
+  const handleAddClick = () => {
+    setSelectedChild(null); // null = chế độ Add
+    setIsFormOpen(true);
   };
 
+  // Mở form để CHỈNH SỬA
+  const handleEditClick = (child: ChildProfile) => {
+    setSelectedChild(child); // có data = chế độ Edit
+    setIsFormOpen(true);
+  };
+
+  // Xử lý LƯU (được gọi từ ChildFormModal khi ấn Save)
+  const handleSaveChild = (childData: ChildProfile) => {
+    if (selectedChild) {
+      // Logic Cập nhật: Tìm child có id trùng và thay thế
+      setChildren(prev => prev.map(c => c.id === childData.id ? childData : c));
+    } else {
+      // Logic Thêm mới: Thêm vào đầu danh sách
+      setChildren(prev => [childData, ...prev]);
+    }
+    setIsFormOpen(false); // Đóng form
+  };
+
+  // Mở modal XÓA
   const handleDeleteClick = (child: ChildProfile) => {
     setSelectedChild(child);
     setIsDeleteModalOpen(true);
   };
 
+  // Xử lý XÁC NHẬN XÓA
   const handleConfirmDelete = () => {
     if (selectedChild) {
-      setChildren(children.filter((c) => c.id !== selectedChild.id));
+      setChildren(prev => prev.filter((c) => c.id !== selectedChild.id));
       setIsDeleteModalOpen(false);
       setSelectedChild(null);
     }
@@ -59,6 +84,9 @@ const ChildProfilesTab = () => {
 
   const formatDate = (dateString: string, age: number) => {
     const date = new Date(dateString);
+    // Fallback nếu ngày sai định dạng
+    if (isNaN(date.getTime())) return `Unknown (${age} tuổi)`; 
+    
     const day = date.getDate().toString().padStart(2, '0');
     const month = (date.getMonth() + 1).toString().padStart(2, '0');
     const year = date.getFullYear();
@@ -73,10 +101,13 @@ const ChildProfilesTab = () => {
           <h2 className="text-xl font-semibold text-gray-900">
             Manage and Update Children's Profiles
           </h2>
+          <p className="text-sm text-gray-500 mt-1">
+            Update personality & interests as they grow
+          </p>
         </div>
         <Button
-          onClick={() => setIsAddModalOpen(true)}
-          className="flex items-center gap-2"
+          onClick={handleAddClick}
+          className="flex items-center gap-2 bg-linear-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-md hover:shadow-lg transition-all"
         >
           <Plus className="w-5 h-5" />
           Add Child Profile
@@ -90,24 +121,29 @@ const ChildProfilesTab = () => {
           to { opacity: 1; transform: translateY(0); }
         }
       `}</style>
+      
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {children.map((child, index) => (
           <div
             key={child.id}
-            className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 border border-gray-100"
+            className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 border border-gray-100 group"
             style={{ animation: `fadeIn 0.3s ease-in-out ${index * 0.1}s both` }}
           >
-            {/* Avatar */}
-            <div className="p-8 flex items-center justify-center relative" style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>
+            {/* Avatar Section with Gradient */}
+            <div className="p-8 flex items-center justify-center relative overflow-hidden" style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>
+               {/* Decorative circles */}
+               <div className="absolute top-2 right-2 w-16 h-16 bg-white opacity-10 rounded-full blur-xl"></div>
+               <div className="absolute bottom-2 left-2 w-10 h-10 bg-pink-400 opacity-20 rounded-full blur-lg"></div>
+
               {child.avatar ? (
                 <img
                   src={child.avatar}
                   alt={child.nickname}
-                  className="w-24 h-24 rounded-full border-4 border-white object-cover"
+                  className="w-24 h-24 rounded-full border-4 border-white/30 shadow-xl object-cover relative z-10"
                 />
               ) : (
-                <div className="w-24 h-24 rounded-full border-4 border-white bg-white flex items-center justify-center">
-                  <User className="w-12 h-12 text-gray-400" />
+                <div className="w-24 h-24 rounded-full border-4 border-white/30 bg-white/20 backdrop-blur-sm flex items-center justify-center shadow-xl relative z-10">
+                  <User className="w-12 h-12 text-white" />
                 </div>
               )}
             </div>
@@ -115,39 +151,58 @@ const ChildProfilesTab = () => {
             {/* Content */}
             <div className="p-5 space-y-3">
               <div className="flex items-center justify-between">
-                <h3 className="font-bold text-lg text-gray-900">
+                <h3 className="font-bold text-lg text-gray-900 group-hover:text-purple-700 transition-colors">
                   {child.nickname}
                 </h3>
                 <div className="flex items-center gap-1.5">
-                  <span className="text-lg">{child.gender === 'male' ? '👦' : '👧'}</span>
-                  <span className="px-2 py-0.5 bg-primary-100 text-primary-700 text-xs font-semibold rounded-full">
+                  <span className="text-lg" title={child.gender}>
+                    {child.gender === 'male' ? '👦' : child.gender === 'female' ? '👧' : '🌟'}
+                  </span>
+                  <span className="px-2.5 py-0.5 bg-blue-50 text-blue-700 text-xs font-bold rounded-full border border-blue-100">
                     {child.age} yrs
                   </span>
                 </div>
               </div>
-              <p className="text-sm text-gray-500">
-                {child.fullName}
-              </p>
-              <p className="text-xs text-gray-400">
-                Birthday: {formatDate(child.dateOfBirth, child.age).split(' (')[0]}
-              </p>
+              
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-gray-700">
+                  {child.fullName}
+                </p>
+                <p className="text-xs text-gray-500 flex items-center gap-1">
+                  🎂 Birthday: {formatDate(child.dateOfBirth, child.age).split(' (')[0]}
+                </p>
+              </div>
+
+              {/* Interests Tags (Optional display) */}
+              {child.interests && child.interests.length > 0 && (
+                <div className="flex flex-wrap gap-1 pt-1">
+                  {child.interests.slice(0, 2).map((interest, i) => (
+                     <span key={i} className="text-[10px] px-2 py-0.5 bg-purple-50 text-purple-600 rounded-full border border-purple-100">
+                       {interest.replace(/^[^\s]+\s/, '')} {/* Remove emoji if exists for cleaner look */}
+                     </span>
+                  ))}
+                  {child.interests.length > 2 && (
+                    <span className="text-[10px] px-1.5 py-0.5 text-gray-400">+{child.interests.length - 2}</span>
+                  )}
+                </div>
+              )}
 
               {/* Actions */}
-              <div className="flex gap-2">
+              <div className="flex gap-2 pt-2">
                 <Button
                   size="sm"
                   variant="outline"
                   onClick={() => handleEditClick(child)}
-                  className="flex-1 flex items-center justify-center gap-1"
+                  className="flex-1 flex items-center justify-center gap-1 hover:bg-purple-50 hover:border-purple-200 hover:text-purple-700"
                 >
-                  <Edit2 className="w-4 h-4" />
+                  <Edit2 className="w-3.5 h-3.5" />
                   Edit
                 </Button>
                 <Button
                   size="sm"
-                  variant="danger"
+                  variant="ghost"
                   onClick={() => handleDeleteClick(child)}
-                  className="flex items-center justify-center"
+                  className="flex items-center justify-center text-gray-400 hover:text-red-600 hover:bg-red-50"
                 >
                   <Trash2 className="w-4 h-4" />
                 </Button>
@@ -155,101 +210,39 @@ const ChildProfilesTab = () => {
             </div>
           </div>
         ))}
+        
+        {/* Add New Card (Empty State Placeholder Style) */}
+        <button 
+          onClick={handleAddClick}
+          className="min-h-[300px] rounded-2xl border-2 border-dashed border-gray-300 flex flex-col items-center justify-center p-6 hover:border-purple-400 hover:bg-purple-50/30 transition-all group cursor-pointer"
+        >
+          <div className="w-16 h-16 rounded-full bg-gray-100 group-hover:bg-purple-100 flex items-center justify-center mb-4 transition-colors">
+            <Plus className="w-8 h-8 text-gray-400 group-hover:text-purple-600" />
+          </div>
+          <p className="font-semibold text-gray-600 group-hover:text-purple-700">Add Another Child</p>
+          <p className="text-xs text-gray-400 mt-1">Create a new learning path</p>
+        </button>
       </div>
 
       {children.length === 0 && (
         <div className="text-center py-12 text-gray-500">
-          <User className="w-16 h-16 mx-auto mb-4 text-gray-300" />
-          <p className="text-lg">No child profiles yet</p>
+          <Sparkles className="w-16 h-16 mx-auto mb-4 text-gray-300" />
+          <p className="text-lg font-medium">No child profiles yet</p>
           <p className="text-sm mt-2">
-            Click "Add Child Profile" to create a new profile
+            Click "Add Child Profile" to start the journey!
           </p>
         </div>
       )}
 
-      {/* Add Child Modal - Full Screen Questionnaire */}
-      <Modal
-        isOpen={isAddModalOpen}
-        onClose={() => setIsAddModalOpen(false)}
-        title="Add New Child Profile"
-        size="xl"
-      >
-        <div className="space-y-6">
-          <div className="p-6 bg-blue-50 rounded-lg text-center">
-            <p className="text-gray-700">
-              📋 This is where the complete <strong>REGISTRATION QUESTIONNAIRE</strong> (SECTION A, B, C, D) will be displayed
-              <br />
-              for parents to fill in information for a new child.
-            </p>
-            <p className="text-sm text-gray-600 mt-2">
-              (Detailed component will be integrated from registration section)
-            </p>
-          </div>
-          <div className="flex gap-3 justify-end">
-            <Button variant="secondary" onClick={() => setIsAddModalOpen(false)}>
-              Cancel
-            </Button>
-            <Button
-              onClick={() => {
-                // TODO: Implement save logic
-                alert('New child profile added');
-                setIsAddModalOpen(false);
-              }}
-            >
-              Save Profile
-            </Button>
-          </div>
-        </div>
-      </Modal>
+      {/* === UNIFIED ADD/EDIT MODAL === */}
+      <ChildFormModal
+        isOpen={isFormOpen}
+        onClose={() => setIsFormOpen(false)}
+        initialData={selectedChild} // Truyền data nếu là Edit, null nếu là Add
+        onSave={handleSaveChild}
+      />
 
-      {/* Edit Child Modal - Full Screen Questionnaire */}
-      {selectedChild && (
-        <Modal
-          isOpen={isEditModalOpen}
-          onClose={() => {
-            setIsEditModalOpen(false);
-            setSelectedChild(null);
-          }}
-          title={`Edit Profile - ${selectedChild.nickname}`}
-          size="xl"
-        >
-          <div className="space-y-6">
-            <div className="p-6 bg-blue-50 rounded-lg text-center">
-              <p className="text-gray-700">
-                📋 This is where the complete <strong>REGISTRATION QUESTIONNAIRE</strong> (SECTION A, B, C, D) will be displayed
-                <br />
-                with <strong>{selectedChild.nickname}</strong>'s data pre-filled.
-              </p>
-              <p className="text-sm text-gray-600 mt-2">
-                Parents can update information as the child grows or their personality changes.
-              </p>
-            </div>
-            <div className="flex gap-3 justify-end">
-              <Button
-                variant="secondary"
-                onClick={() => {
-                  setIsEditModalOpen(false);
-                  setSelectedChild(null);
-                }}
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={() => {
-                  // TODO: Implement update logic
-                  alert('Profile updated');
-                  setIsEditModalOpen(false);
-                  setSelectedChild(null);
-                }}
-              >
-                Update Profile
-              </Button>
-            </div>
-          </div>
-        </Modal>
-      )}
-
-      {/* Delete Confirmation Modal */}
+      {/* === DELETE CONFIRMATION MODAL === */}
       {selectedChild && (
         <Modal
           isOpen={isDeleteModalOpen}
@@ -261,10 +254,12 @@ const ChildProfilesTab = () => {
           size="sm"
         >
           <div className="space-y-4">
-            <p className="text-gray-600">
-              Are you sure you want to delete <strong>{selectedChild.nickname}</strong>'s profile?
+            <p className="text-gray-600 text-center">
+              Are you sure you want to delete <strong>{selectedChild.nickname}</strong>'s profile? 
+              <br/>
+              <span className="text-xs text-red-500 block mt-2">⚠️ This action cannot be undone and all progress will be lost.</span>
             </p>
-            <div className="flex gap-3 justify-end">
+            <div className="flex gap-3 justify-center mt-4">
               <Button
                 variant="secondary"
                 onClick={() => {
@@ -275,7 +270,7 @@ const ChildProfilesTab = () => {
                 Cancel
               </Button>
               <Button variant="danger" onClick={handleConfirmDelete}>
-                Delete
+                Delete Profile
               </Button>
             </div>
           </div>
