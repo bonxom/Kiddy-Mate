@@ -1,49 +1,54 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import ParentLayout from '../components/layout/ParentLayout';
-import DashboardPage from '../pages/parents/DashboardPage';
-import TaskCenterPage from '../pages/parents/TaskCenterPage';
-import RewardCenterPage from  '../pages/parents/RewardCenterPage';
-import SettingsPage from '../pages/parents/SettingsPage';
-// import LoginPage from '../pages/public/LoginPage';
+import { parentRoutes } from './parentRoutes';
+import LandingPage from '../pages/public/LandingPage';
+import LoginPage from '../pages/public/LoginPage';
+import RegisterPage from '../pages/public/RegisterPage';
+import OnboardingPage from '../pages/public/OnboardingPage';
 
 export const AppRouter = () => {
-  // Giả sử chúng ta có logic check auth ở đây
+  // Giả sử có logic check auth ở đây
   const isParentAuthenticated = true; // Hardcode là đã đăng nhập
   const isChildAuthenticated = false;
 
   return (
     <Routes>
-      {/* Luồng Public */}
-      <Route path="/login" element={<div>Login Page</div>} />
-      <Route path="/register" element={<div>Register Page</div>} />
+      {/* Public Routes */}
+      <Route path="/" element={<LandingPage />} />
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/register" element={<RegisterPage />} />
+      <Route path="/onboarding" element={<OnboardingPage />} />
 
-      {/* Luồng Parent (Phụ huynh) */}
+      {/* Parent Routes */}
       <Route 
         path="/parent/*" 
         element={isParentAuthenticated ? <ParentRoutes /> : <Navigate to="/login" />}
       />
 
-      {/* Luồng Child (Trẻ em) */}
+      {/* Child Routes */}
       <Route 
         path="/child/*" 
         element={isChildAuthenticated ? <div>Child App</div> : <Navigate to="/login" />}
       />
 
-      {/* Route mặc định */}
-      <Route path="*" element={<Navigate to="/login" />} />
+      {/* Fallback */}
+      <Route path="*" element={<Navigate to="/" />} />
     </Routes>
   );
 };
 
-// Một component con để quản lý các route của Parent
+// Component con quản lý route của Parent
 const ParentRoutes = () => {
   return (
     <ParentLayout>
       <Routes>
-        <Route path="dashboard" element={<DashboardPage />} />
-        <Route path="tasks" element={<TaskCenterPage />} />
-        <Route path="rewards" element={<RewardCenterPage />} />
-        <Route path="settings" element={<SettingsPage />} />
+        {parentRoutes.map((route) => (
+          <Route 
+            key={route.path} 
+            path={route.path} 
+            element={<route.Component />}
+          />
+        ))}
         <Route path="*" element={<Navigate to="dashboard" />} />
       </Routes>
     </ParentLayout>
