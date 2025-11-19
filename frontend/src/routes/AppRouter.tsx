@@ -2,7 +2,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import ParentLayout from '../components/layout/ParentLayout';
 import DashboardPage from '../pages/parents/DashboardPage';
 import TaskCenterPage from '../pages/parents/TaskCenterPage';
-import RewardCenterPage from '../pages/parents/RewardCenterPage';
+import RewardCenterPage from  '../pages/parents/RewardCenterPage';
 import SettingsPage from '../pages/parents/SettingsPage';
 // import LoginPage from '../pages/public/LoginPage';
 
