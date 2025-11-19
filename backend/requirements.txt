@@ -1,0 +1,11 @@
+fastapi
+uvicorn[standard]
+beanie
+motor
+pydantic
+pydantic-settings
+python-jose[jwt]
+passlib[bcrypt]
+python-multipart
+apscheduler
+httpx
