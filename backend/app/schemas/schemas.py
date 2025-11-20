@@ -12,10 +12,10 @@ class TaskType(str, enum.Enum):
     EMOTION = "emotion"
 
 class ChildTaskStatus(str, enum.Enum):
-    SUGGESTED = "suggested"
+    UNASSIGNED = "unassigned"
     IN_PROGRESS = "in_progress"
+    NEED_VERIFY = "need_verify"
     COMPLETED = "completed"
-    VERIFIED = "verified"
 
 class RewardType(str, enum.Enum):
     BADGE = "badge"

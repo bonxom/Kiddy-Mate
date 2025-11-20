@@ -236,20 +236,19 @@ async def seed_database():
     # Fetch tasks để dùng
     all_tasks = await Task.find_all().to_list()
     
-    # Child 1 có một số tasks đã hoàn thành và verified
+    # Child 1 có một số tasks ở nhiều trạng thái
     child_task1 = ChildTask(
         child=child1,
         task=all_tasks[0],  # Task đầu tiên
-        status=ChildTaskStatus.VERIFIED,
+        status=ChildTaskStatus.COMPLETED,
         assigned_at=datetime.now() - timedelta(days=5),
         completed_at=datetime.now() - timedelta(days=4)
     )
     child_task2 = ChildTask(
         child=child1,
         task=all_tasks[1],  # Task thứ hai
-        status=ChildTaskStatus.COMPLETED,
-        assigned_at=datetime.now() - timedelta(days=3),
-        completed_at=datetime.now() - timedelta(days=2)
+        status=ChildTaskStatus.NEED_VERIFY,
+        assigned_at=datetime.now() - timedelta(days=3)
     )
     child_task3 = ChildTask(
         child=child1,
@@ -258,11 +257,11 @@ async def seed_database():
         assigned_at=datetime.now() - timedelta(days=1)
     )
     
-    # Child 2 có một task đã verified
+    # Child 2 có một task đã hoàn thành
     child_task4 = ChildTask(
         child=child2,
         task=all_tasks[0],
-        status=ChildTaskStatus.VERIFIED,
+        status=ChildTaskStatus.COMPLETED,
         assigned_at=datetime.now() - timedelta(days=7),
         completed_at=datetime.now() - timedelta(days=6)
     )
@@ -271,7 +270,7 @@ async def seed_database():
     child_task5 = ChildTask(
         child=child3,
         task=all_tasks[3],
-        status=ChildTaskStatus.VERIFIED,
+        status=ChildTaskStatus.COMPLETED,
         assigned_at=datetime.now() - timedelta(days=10),
         completed_at=datetime.now() - timedelta(days=9)
     )
@@ -281,12 +280,22 @@ async def seed_database():
         status=ChildTaskStatus.IN_PROGRESS,
         assigned_at=datetime.now() - timedelta(days=2)
     )
+
+    # Child 2 có thêm một nhiệm vụ chưa bắt đầu
+    unassigned_task_ref = all_tasks[5] if len(all_tasks) > 5 else all_tasks[0]
+    child_task7 = ChildTask(
+        child=child2,
+        task=unassigned_task_ref,
+        status=ChildTaskStatus.UNASSIGNED,
+        assigned_at=datetime.now() - timedelta(days=1)
+    )
     
     await ChildTask.insert_many([
         child_task1, child_task2, child_task3,
-        child_task4, child_task5, child_task6
+        child_task4, child_task5, child_task6,
+        child_task7
     ])
-    print(f">>> Đã tạo {6} child tasks")
+    print(f">>> Đã tạo {7} child tasks")
 
     # Tạo ChildReward mẫu (rewards đã nhận)
     print(">>> Đang tạo child rewards...")
