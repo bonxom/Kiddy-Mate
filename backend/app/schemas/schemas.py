@@ -5,7 +5,7 @@ import enum
 
 # Import enums from models for consistency
 from app.models.task_models import TaskCategory, TaskType
-from app.models.childtask_models import ChildTaskStatus
+from app.models.childtask_models import ChildTaskStatus, ChildTaskPriority
 from app.models.reward_models import RewardType
 
 class UserBase(BaseModel):
@@ -38,7 +38,13 @@ class ChildInDB(ChildBase):
     model_config = ConfigDict(from_attributes=True)
 
 class ChildPublic(ChildInDB):
-    pass
+    nickname: Optional[str] = None
+    gender: Optional[str] = None
+    avatar_url: Optional[str] = None
+    personality: Optional[list[str]] = None
+    interests: Optional[list[str]] = None
+    strengths: Optional[list[str]] = None
+    challenges: Optional[list[str]] = None
 
 ###### Store answers of parents
 class DisciplineAutonomyAnswers(BaseModel):
@@ -127,6 +133,10 @@ class ChildTaskWithDetails(BaseModel):
     status: ChildTaskStatus
     assigned_at: datetime
     completed_at: Optional[datetime]
+    priority: Optional[str] = None
+    due_date: Optional[datetime] = None
+    progress: int = 0
+    notes: Optional[str] = None
     task: TaskPublic  # Full task details
     model_config = ConfigDict(from_attributes=True)
 

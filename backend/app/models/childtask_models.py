@@ -11,12 +11,23 @@ class ChildTaskStatus(str, enum.Enum):
     COMPLETED = "completed"
     VERIFIED = "verified"
 
+class ChildTaskPriority(str, enum.Enum):
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+
 class ChildTask(Document):
     child: Link[Child]
     task: Link[Task]
     status: ChildTaskStatus = ChildTaskStatus.SUGGESTED
     assigned_at: datetime = datetime.utcnow()
     completed_at: Optional[datetime] = None
+    
+    # New fields for enhanced task management
+    priority: Optional[ChildTaskPriority] = None
+    due_date: Optional[datetime] = None
+    progress: int = 0  # 0-100 percentage
+    notes: Optional[str] = None
 
     class Settings:
         name = "child_tasks"

@@ -1,6 +1,6 @@
 from beanie import Document, Link
 from datetime import datetime
-from typing import Optional, Dict
+from typing import Optional, Dict, List
 from pydantic import Field
 from app.models.user_models import User
 
@@ -8,7 +8,19 @@ class Child(Document):
     parent: Link[User]
     name: str
     birth_date: datetime
-    initial_traits: Optional[dict]
+    
+    # Dedicated fields (instead of initial_traits dict)
+    nickname: Optional[str] = None
+    gender: Optional[str] = None
+    avatar_url: Optional[str] = None
+    personality: Optional[List[str]] = None
+    interests: Optional[List[str]] = None
+    strengths: Optional[List[str]] = None
+    challenges: Optional[List[str]] = None
+    
+    # Keep for backward compatibility and other traits
+    initial_traits: Optional[dict] = None
+    
     current_coins: int = 0
     level: int = 1
 

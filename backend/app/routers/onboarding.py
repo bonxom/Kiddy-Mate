@@ -14,6 +14,10 @@ class ChildOnboardingData(BaseModel):
     date_of_birth: str  # ISO format string
     gender: str
     favorite_topics: List[str]
+    personality: Optional[List[str]] = None
+    interests: Optional[List[str]] = None
+    strengths: Optional[List[str]] = None
+    challenges: Optional[List[str]] = None
     discipline_autonomy: Dict[str, Optional[str]]
     emotional_intelligence: Dict[str, Optional[str]]
     social_interaction: Dict[str, Optional[str]]
@@ -57,11 +61,13 @@ async def complete_onboarding(
             parent=current_user,  # type: ignore
             name=child_data.full_name,
             birth_date=birth_date,
-            initial_traits={
-                "nickname": child_data.nickname,
-                "gender": child_data.gender,
-                "favorite_topics": child_data.favorite_topics
-            }
+            nickname=child_data.nickname,
+            gender=child_data.gender,
+            personality=child_data.personality,
+            interests=child_data.interests,
+            strengths=child_data.strengths,
+            challenges=child_data.challenges,
+            initial_traits={"favorite_topics": child_data.favorite_topics}
         )
         await new_child.insert()
         
