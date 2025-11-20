@@ -20,9 +20,7 @@ export interface DashboardResponse {
   };
   tasks_completed: number;
   badges_earned: number;
-  total_stars?: number; // Added in backend enhancement
-  achievements?: number; // Added in backend enhancement
-  completion_rate?: number; // Added in backend enhancement (percentage)
+  completion_rate: number; // Percentage (0-100)
 }
 
 export interface StatsCardsData {
@@ -93,9 +91,9 @@ export const getStatsCards = async (childId: string): Promise<StatsCardsData> =>
 
     return {
       level: dashboard.child.level.toString(),
-      totalStars: (dashboard.total_stars || dashboard.child.coins || 0).toLocaleString(),
-      achievements: (dashboard.achievements || dashboard.badges_earned || 0).toString(),
-      completion: `${dashboard.completion_rate || 0}%`,
+      totalStars: dashboard.child.coins.toLocaleString(),
+      achievements: dashboard.badges_earned.toString(),
+      completion: `${dashboard.completion_rate}%`,
     };
   } catch (error) {
     console.error('Failed to fetch stats cards:', error);
@@ -164,29 +162,28 @@ export const getCategoryProgress = async (
 ): Promise<CategoryProgressData[]> => {
   const tasks = await getChildTasks(childId);
 
-  // Frontend expects: Independence, Logic, Physical, Creativity, Social, Academic
-  const categoryMap: Record<string, CategoryProgressData> = {
-    Independence: { name: 'Independence', completed: 0, total: 0, percentage: 0 },
-    Logic: { name: 'Logic', completed: 0, total: 0, percentage: 0 },
-    Physical: { name: 'Physical', completed: 0, total: 0, percentage: 0 },
-    Creativity: { name: 'Creativity', completed: 0, total: 0, percentage: 0 },
-    Social: { name: 'Social', completed: 0, total: 0, percentage: 0 },
-    Academic: { name: 'Academic', completed: 0, total: 0, percentage: 0 },
-  };
+  // Initialize category map with all standard categories
+  const categories = ['Independence', 'Logic', 'Physical', 'Creativity', 'Social', 'Academic'];
+  const categoryMap: Record<string, CategoryProgressData> = {};
+  
+  categories.forEach(cat => {
+    categoryMap[cat] = { name: cat, completed: 0, total: 0, percentage: 0 };
+  });
 
-  // Backend now returns full task details with category
+  // Process tasks and normalize category names (IQ→Logic, EQ→Social)
   tasks.forEach((ct) => {
-    const category = ct.task?.category;
+    const rawCategory = ct.task?.category;
+    if (!rawCategory) return;
     
-    // Map backend categories to frontend categories
-    let frontendCategory: string = category || '';
-    if (category === 'IQ') frontendCategory = 'Logic';
-    if (category === 'EQ') frontendCategory = 'Social';
+    // Normalize legacy categories (IQ→Logic, EQ→Social)
+    let category = rawCategory;
+    if (category === 'IQ') category = 'Logic';
+    if (category === 'EQ') category = 'Social';
     
-    if (frontendCategory && categoryMap[frontendCategory]) {
-      categoryMap[frontendCategory].total++;
+    if (categoryMap[category]) {
+      categoryMap[category].total++;
       if (ct.status === 'verified') {
-        categoryMap[frontendCategory].completed++;
+        categoryMap[category].completed++;
       }
     }
   });

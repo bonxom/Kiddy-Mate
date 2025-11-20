@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { getDashboardData } from '../../api/services/dashboardService';
-import type { DashboardData } from '../../api/services/dashboardService';
 import { useChild } from '../../providers/ChildProvider';
 import StatsCards from '../../features/parents/dashboard/StatsCards';
 import CompletionLineChart from '../../features/parents/dashboard/CompletionLineChart';
@@ -14,41 +14,30 @@ import { Loading } from '../../components/ui';
 const DashboardPage = () => {
   const navigate = useNavigate();
   const { selectedChildId, children, loading: childLoading } = useChild();
-  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
+  // Redirect to onboarding if no children
   useEffect(() => {
-    // Wait for child context to load
-    if (childLoading) return;
-
-    // No children - redirect to onboarding
-    if (children.length === 0) {
+    if (!childLoading && children.length === 0) {
       navigate('/onboarding');
-      return;
     }
+  }, [childLoading, children.length, navigate]);
 
-    // No selected child yet
-    if (!selectedChildId) return;
+  // Fetch dashboard data with React Query
+  const {
+    data: dashboardData,
+    isLoading,
+    error,
+    refetch,
+  } = useQuery({
+    queryKey: ['dashboard', selectedChildId],
+    queryFn: () => getDashboardData(selectedChildId!),
+    enabled: !!selectedChildId && !childLoading,
+    staleTime: 30000, // Cache for 30 seconds
+    retry: 2,
+  });
 
-    const fetchDashboardData = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        const data = await getDashboardData(selectedChildId);
-        setDashboardData(data);
-      } catch (err) {
-        console.error('Failed to load dashboard:', err);
-        setError('Failed to load dashboard data. Please try again.');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchDashboardData();
-  }, [selectedChildId, childLoading, children.length, navigate]);
-
-  if (childLoading || loading) {
+  // Loading state
+  if (childLoading || (isLoading && !dashboardData)) {
     return (
       <div className="flex items-center justify-center h-screen">
         <Loading text="Loading dashboard..." />
@@ -56,30 +45,19 @@ const DashboardPage = () => {
     );
   }
 
+  // No children state
   if (children.length === 0) {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold mb-4">No Children Found</h2>
-          <p className="text-gray-600 mb-6">Please complete onboarding to add children</p>
-          <button
-            onClick={() => navigate('/onboarding')}
-            className="px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
-          >
-            Complete Onboarding
-          </button>
-        </div>
-      </div>
-    );
+    return null; // Will redirect via useEffect
   }
 
+  // Error state
   if (error) {
     return (
       <div className="flex items-center justify-center h-screen">
         <div className="text-center">
-          <p className="text-red-600 mb-4">{error}</p>
+          <p className="text-red-600 mb-4">Failed to load dashboard data. Please try again.</p>
           <button
-            onClick={() => window.location.reload()}
+            onClick={() => refetch()}
             className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
           >
             Retry
@@ -89,6 +67,7 @@ const DashboardPage = () => {
     );
   }
 
+  // No data yet
   if (!dashboardData) {
     return null;
   }

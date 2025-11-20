@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import Calendar from '../../../components/ui/Calendar';
 import { RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, ResponsiveContainer, Tooltip } from 'recharts';
-import { Target, Heart, Award, Users, Brain, TrendingUp } from 'lucide-react';
-
+import { TrendingUp } from 'lucide-react';
 import type { SkillRadarData } from '../../../api/services/dashboardService';
+import { SKILL_COLORS, SKILL_ICONS } from '../../../constants/categoryConfig';
 
 interface DashboardSidebarProps {
   skillData: SkillRadarData[];
@@ -12,39 +12,14 @@ interface DashboardSidebarProps {
 const DashboardSidebar = ({ skillData }: DashboardSidebarProps) => {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
 
-  const getSkillIcon = (skill: string) => {
-    const iconClass = "w-3.5 h-3.5";
-    switch (skill) {
-      case 'Independence':
-        return <Target className={iconClass} />;
-      case 'Emotional':
-        return <Heart className={iconClass} />;
-      case 'Discipline':
-        return <Award className={iconClass} />;
-      case 'Social':
-        return <Users className={iconClass} />;
-      case 'Logic':
-        return <Brain className={iconClass} />;
-      default:
-        return null;
-    }
+  const renderSkillIcon = (skill: string) => {
+    const Icon = SKILL_ICONS[skill] || SKILL_ICONS.Logic;
+    return <Icon className="w-3.5 h-3.5" />;
   };
 
   const getSkillColor = (skill: string) => {
-    switch (skill) {
-      case 'Independence':
-        return 'text-blue-600 bg-blue-50';
-      case 'Emotional':
-        return 'text-pink-600 bg-pink-50';
-      case 'Discipline':
-        return 'text-purple-600 bg-purple-50';
-      case 'Social':
-        return 'text-orange-600 bg-orange-50';
-      case 'Logic':
-        return 'text-green-600 bg-green-50';
-      default:
-        return 'text-gray-600 bg-gray-50';
-    }
+    const config = SKILL_COLORS[skill] || { text: 'text-gray-600', bg: 'bg-gray-50' };
+    return `${config.text} ${config.bg}`;
   };
 
   // Custom tooltip
@@ -139,7 +114,7 @@ const DashboardSidebar = ({ skillData }: DashboardSidebarProps) => {
           {skillData.map((skill) => (
             <div key={skill.skill} className="flex items-center gap-2">
               <div className={`p-1.5 rounded-md ${getSkillColor(skill.skill)}`}>
-                {getSkillIcon(skill.skill)}
+                {renderSkillIcon(skill.skill)}
               </div>
               <div className="flex-1">
                 <div className="flex items-center justify-between mb-1">

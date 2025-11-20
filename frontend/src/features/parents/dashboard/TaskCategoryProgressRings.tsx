@@ -1,17 +1,11 @@
 import { useState } from 'react';
-import type { ElementType } from 'react'; 
-import { Target, Brain, Dumbbell, Palette, Users, BookOpen, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import type { CategoryProgressData } from '../../../api/services/dashboardService';
-
-interface CategoryConfigItem {
-  color: string;
-  bgColor: string;
-  icon: ElementType; // Dùng ElementType thay vì React.ElementType
-}
+import { getCategoryConfig } from '../../../constants/categoryConfig';
 
 interface TaskCategory {
   name: string;
-  icon: ElementType;
+  icon: React.ElementType;
   completed: number;
   total: number;
   color: string;
@@ -26,25 +20,18 @@ const TaskProgressRings = ({ data }: TaskProgressRingsProps) => {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const [currentPage, setCurrentPage] = useState(0);
 
-  // 3. Khai báo kiểu tường minh: Record<string, CategoryConfigItem>
-  const categoryConfig: Record<string, CategoryConfigItem> = {
-    Focus: { color: '#3b82f6', bgColor: 'bg-blue-50', icon: Target },
-    Logic: { color: '#8b5cf6', bgColor: 'bg-purple-50', icon: Brain },
-    Physical: { color: '#10b981', bgColor: 'bg-green-50', icon: Dumbbell },
-    Creativity: { color: '#ec4899', bgColor: 'bg-pink-50', icon: Palette },
-    Social: { color: '#f59e0b', bgColor: 'bg-amber-50', icon: Users },
-    Academic: { color: '#6366f1', bgColor: 'bg-indigo-50', icon: BookOpen },
-  };
-
-  const allCategories: TaskCategory[] = data.map((cat) => ({
-    name: cat.name,
-    completed: cat.completed,
-    total: cat.total,
-    // Dùng Optional Chaining và Fallback an toàn
-    color: categoryConfig[cat.name]?.color || '#6b7280',
-    bgColor: categoryConfig[cat.name]?.bgColor || 'bg-gray-50',
-    icon: categoryConfig[cat.name]?.icon || Target,
-  }));
+  // Use shared category config
+  const allCategories: TaskCategory[] = data.map((cat) => {
+    const config = getCategoryConfig(cat.name);
+    return {
+      name: cat.name,
+      completed: cat.completed,
+      total: cat.total,
+      color: config.color,
+      bgColor: config.bgColor,
+      icon: config.icon,
+    };
+  });
 
   const ITEMS_PER_PAGE = 3;
   const totalPages = Math.ceil(allCategories.length / ITEMS_PER_PAGE);
