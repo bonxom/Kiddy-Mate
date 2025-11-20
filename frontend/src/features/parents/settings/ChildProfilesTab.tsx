@@ -1,40 +1,26 @@
-import { useState } from 'react';
-import { Plus, Edit2, Trash2, User, Sparkles } from 'lucide-react'; // Thêm icon Sparkles cho sinh động
+import { useState, useEffect } from 'react';
+import { Plus, Edit2, Trash2, User, Sparkles } from 'lucide-react';
 import Button from '../../../components/ui/Button';
 import Modal from '../../../components/ui/Modal';
-import ChildFormModal from '../../parents/settings/ChildFormModal'; // Import Modal Form đã gộp
+import ChildFormModal from '../../parents/settings/ChildFormModal';
 import type { ChildProfile } from '../../../types/user.types';
-
-// Mock data (Giữ nguyên)
-const mockChildren: ChildProfile[] = [
-  {
-    id: '1',
-    nickname: 'Bé Bắp',
-    fullName: 'Nguyễn Minh An',
-    dateOfBirth: '2018-01-01',
-    age: 7,
-    gender: 'male',
-    personality: ['Hoạt bát', 'Tò mò'],
-    interests: ['Vẽ', 'Lego'],
-    strengths: ['Sáng tạo', 'Logic'],
-    challenges: ['Tập trung'],
-  },
-  {
-    id: '2',
-    nickname: 'Bé Hà',
-    fullName: 'Nguyễn Thu Hà',
-    dateOfBirth: '2016-05-15',
-    age: 9,
-    gender: 'female',
-    personality: ['Điềm đạm', 'Chu đáo'],
-    interests: ['Đọc sách', 'Piano'],
-    strengths: ['Học tập', 'Trách nhiệm'],
-    challenges: ['Tự tin'],
-  },
-];
+import {
+  getChildren,
+  createChild,
+  updateChild,
+  deleteChild,
+} from '../../../api/services/childService';
 
 const ChildProfilesTab = () => {
-  const [children, setChildren] = useState<ChildProfile[]>(mockChildren);
+  const [children, setChildren] = useState<ChildProfile[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [toast, setToast] = useState<{
+    show: boolean;
+    message: string;
+    type: 'success' | 'error';
+  }>({ show: false, message: '', type: 'success' });
   
   // State quản lý Form Modal (Add/Edit dùng chung)
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -42,6 +28,62 @@ const ChildProfilesTab = () => {
   // State quản lý Delete Modal
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedChild, setSelectedChild] = useState<ChildProfile | null>(null);
+
+  const showToast = (message: string, type: 'success' | 'error') => {
+    setToast({ show: true, message, type });
+    setTimeout(() => {
+      setToast({ show: false, message: '', type: 'success' });
+    }, 3000);
+  };
+
+  // Fetch children on mount
+  useEffect(() => {
+    fetchChildren();
+  }, []);
+
+  const calculateAge = (birthDate: string): number => {
+    const today = new Date();
+    const birth = new Date(birthDate);
+    let age = today.getFullYear() - birth.getFullYear();
+    const monthDiff = today.getMonth() - birth.getMonth();
+    
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+      age--;
+    }
+    
+    return age;
+  };
+
+  const fetchChildren = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await getChildren();
+      
+      // Map backend response to frontend format
+      const mappedChildren: ChildProfile[] = response.map(child => ({
+        id: child.id,
+        nickname: child.nickname || child.name,
+        fullName: child.name,
+        dateOfBirth: child.birth_date,
+        age: calculateAge(child.birth_date),
+        gender: (child.gender as 'male' | 'female' | 'other') || 'other',
+        avatar: child.avatar_url,
+        personality: child.personality || [],
+        interests: child.interests || [],
+        strengths: child.strengths || [],
+        challenges: child.challenges || [],
+      }));
+      
+      setChildren(mappedChildren);
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : 'Failed to load children';
+      setError(errorMsg);
+      showToast(errorMsg, 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Mở form để THÊM MỚI
   const handleAddClick = () => {
@@ -56,15 +98,45 @@ const ChildProfilesTab = () => {
   };
 
   // Xử lý LƯU (được gọi từ ChildFormModal khi ấn Save)
-  const handleSaveChild = (childData: ChildProfile) => {
-    if (selectedChild) {
-      // Logic Cập nhật: Tìm child có id trùng và thay thế
-      setChildren(prev => prev.map(c => c.id === childData.id ? childData : c));
-    } else {
-      // Logic Thêm mới: Thêm vào đầu danh sách
-      setChildren(prev => [childData, ...prev]);
+  const handleSaveChild = async (childData: ChildProfile) => {
+    try {
+      setSaving(true);
+      setError(null);
+      
+      // Map frontend format to backend format
+      const backendData = {
+        name: childData.fullName,
+        birth_date: childData.dateOfBirth,
+        nickname: childData.nickname,
+        gender: childData.gender,
+        avatar_url: childData.avatar,
+        personality: childData.personality,
+        interests: childData.interests,
+        strengths: childData.strengths,
+        challenges: childData.challenges,
+        initial_traits: {},
+      };
+      
+      if (selectedChild) {
+        // Update existing child
+        await updateChild(selectedChild.id, backendData);
+        showToast(`${childData.nickname} updated successfully!`, 'success');
+      } else {
+        // Create new child
+        await createChild(backendData);
+        showToast(`${childData.nickname} added successfully!`, 'success');
+      }
+      
+      // Refresh list
+      await fetchChildren();
+      setIsFormOpen(false);
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : 'Failed to save child';
+      setError(errorMsg);
+      showToast(errorMsg, 'error');
+    } finally {
+      setSaving(false);
     }
-    setIsFormOpen(false); // Đóng form
   };
 
   // Mở modal XÓA
@@ -74,11 +146,27 @@ const ChildProfilesTab = () => {
   };
 
   // Xử lý XÁC NHẬN XÓA
-  const handleConfirmDelete = () => {
-    if (selectedChild) {
-      setChildren(prev => prev.filter((c) => c.id !== selectedChild.id));
+  const handleConfirmDelete = async () => {
+    if (!selectedChild) return;
+    
+    try {
+      setSaving(true);
+      setError(null);
+      
+      await deleteChild(selectedChild.id);
+      
+      showToast(`${selectedChild.nickname} deleted successfully`, 'success');
+      
+      // Refresh list
+      await fetchChildren();
       setIsDeleteModalOpen(false);
       setSelectedChild(null);
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : 'Failed to delete child';
+      setError(errorMsg);
+      showToast(errorMsg, 'error');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -93,8 +181,24 @@ const ChildProfilesTab = () => {
     return `${day}/${month}/${year} (${age} tuổi)`;
   };
 
+  // Loading state
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
   return (
     <div>
+      {/* Error Alert */}
+      {error && (
+        <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
+          {error}
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
@@ -269,12 +373,27 @@ const ChildProfilesTab = () => {
               >
                 Cancel
               </Button>
-              <Button variant="danger" onClick={handleConfirmDelete}>
-                Delete Profile
+              <Button variant="danger" onClick={handleConfirmDelete} disabled={saving}>
+                {saving ? 'Deleting...' : 'Delete Profile'}
               </Button>
             </div>
           </div>
         </Modal>
+      )}
+
+      {/* Toast Notification */}
+      {toast.show && (
+        <div className="fixed bottom-6 right-6 z-50 animate-slide-up">
+          <div
+            className={`px-6 py-4 rounded-lg shadow-lg flex items-center gap-3 ${
+              toast.type === 'success'
+                ? 'bg-green-500 text-white'
+                : 'bg-red-500 text-white'
+            }`}
+          >
+            <span className="font-medium">{toast.message}</span>
+          </div>
+        </div>
       )}
     </div>
   );

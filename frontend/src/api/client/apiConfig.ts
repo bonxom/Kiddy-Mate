@@ -14,6 +14,10 @@ export const API_ENDPOINTS = {
     LOGIN: '/auth/login',
     TOKEN: '/auth/token',
     ME: '/auth/me',
+    UPDATE_PROFILE: '/auth/me',
+    CHANGE_PASSWORD: '/auth/me/password',
+    DELETE_ACCOUNT: '/auth/me',
+    NOTIFICATION_SETTINGS: '/auth/me/notification-settings',
     LOGOUT: '/auth/logout',
   },
   
