@@ -66,7 +66,7 @@ const RewardCard = ({ reward, onClick, onQuantityChange }: RewardCardProps) => {
           >
             <Star className="w-5 h-5 text-yellow-600 fill-yellow-500" />
             <span className="font-bold text-gray-900 text-lg">{reward.cost}</span>
-            <span className="text-sm text-gray-700">Stars</span>
+            <span className="text-sm text-gray-700">Coins</span>
           </div>
         </div>
 

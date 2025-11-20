@@ -1,59 +1,14 @@
-import { useState } from 'react';
-import type { Reward } from '../../../types/reward.types';
+import { useState, useEffect } from 'react';
+import type { Reward } from '../../../api/services/rewardService';
+import { 
+  getAllRewards, 
+  createReward, 
+  updateReward, 
+  deleteReward, 
+  updateRewardQuantity 
+} from '../../../api/services/rewardService';
 import RewardCard from './RewardCard.tsx';
 import RewardModal from './RewardModal.tsx';
-
-// Mock data
-const mockRewards: Reward[] = [
-  {
-    id: '1',
-    url_thumbnail: 'https://images.unsplash.com/photo-1585435557343-3b092031a831?w=400',
-    name: '30 minutes gaming time',
-    cost: 50,
-    remain: 10,
-    description: 'Play favorite games for 30 minutes',
-  },
-  {
-    id: '2',
-    url_thumbnail: 'https://images.unsplash.com/photo-1481349518771-20055b2a7b24?w=400',
-    name: 'Movie theater trip',
-    cost: 100,
-    remain: 3,
-    description: 'Family movie outing at the cinema',
-  },
-  {
-    id: '3',
-    url_thumbnail: 'https://images.unsplash.com/photo-1560769629-975ec94e6a86?w=400',
-    name: 'New toy',
-    cost: 150,
-    remain: 2,
-    description: 'Purchase one favorite toy',
-  },
-  {
-    id: '4',
-    url_thumbnail: 'https://images.unsplash.com/photo-1551024506-0bccd828d307?w=400',
-    name: 'Custom pizza',
-    cost: 80,
-    remain: 5,
-    description: 'Choose your own pizza toppings',
-  },
-  {
-    id: '5',
-    url_thumbnail: 'https://images.unsplash.com/photo-1512909006721-3d6018887383?w=400',
-    name: 'Park visit',
-    cost: 60,
-    remain: 8,
-    description: 'Weekend park outing',
-  },
-  {
-    id: '6',
-    url_thumbnail: 'https://images.unsplash.com/photo-1532012197267-da84d127e765?w=400',
-    name: 'New storybook',
-    cost: 40,
-    remain: 15,
-    description: 'Purchase one new storybook',
-  },
-];
 
 interface ShopManagementTabProps {
   isCreateModalOpen: boolean;
@@ -61,53 +16,104 @@ interface ShopManagementTabProps {
 }
 
 const ShopManagementTab = ({ isCreateModalOpen, setIsCreateModalOpen }: ShopManagementTabProps) => {
-  const [rewards, setRewards] = useState<Reward[]>(mockRewards);
+  const [rewards, setRewards] = useState<Reward[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [selectedReward, setSelectedReward] = useState<Reward | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<'name' | 'cost' | 'remain'>('name');
   const [filterStock, setFilterStock] = useState<'all' | 'in-stock' | 'low-stock' | 'out-of-stock'>('all');
 
+  // Fetch rewards on mount
+  useEffect(() => {
+    fetchRewards();
+  }, []);
+
+  const fetchRewards = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await getAllRewards();
+      setRewards(data);
+    } catch (err: any) {
+      console.error('Failed to fetch rewards:', err);
+      setError(err.message || 'Failed to load rewards');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleCardClick = (reward: Reward) => {
     setSelectedReward(reward);
     setIsEditModalOpen(true);
   };
 
-  const handleQuantityChange = (rewardId: string, delta: number) => {
-    setRewards(
-      rewards.map((r) =>
-        r.id === rewardId
-          ? { ...r, remain: Math.max(0, r.remain + delta) }
-          : r
-      )
-    );
-  };
-
-  const handleSaveReward = (rewardData: Omit<Reward, 'id'>) => {
-    if (selectedReward) {
-      // Edit existing reward
+  const handleQuantityChange = async (rewardId: string, delta: number) => {
+    try {
+      const result = await updateRewardQuantity(rewardId, delta);
       setRewards(
         rewards.map((r) =>
-          r.id === selectedReward.id ? { ...r, ...rewardData } : r
+          r.id === rewardId
+            ? { ...r, remain: result.remain }
+            : r
         )
       );
-      setIsEditModalOpen(false);
-      setSelectedReward(null);
-    } else {
-      // Create new reward
-      const newReward: Reward = {
-        id: Date.now().toString(),
-        ...rewardData,
-      };
-      setRewards([...rewards, newReward]);
-      setIsCreateModalOpen(false);
+    } catch (err: any) {
+      console.error('Failed to update quantity:', err);
+      alert('Failed to update quantity: ' + (err.message || 'Unknown error'));
     }
   };
 
-  const handleDeleteReward = (rewardId: string) => {
-    setRewards(rewards.filter((r) => r.id !== rewardId));
-    setIsEditModalOpen(false);
-    setSelectedReward(null);
+  const handleSaveReward = async (rewardData: Omit<Reward, 'id'>) => {
+    try {
+      if (selectedReward) {
+        // Edit existing reward
+        const updated = await updateReward(selectedReward.id, {
+          name: rewardData.name,
+          description: rewardData.description,
+          image_url: rewardData.url_thumbnail,
+          cost_coins: rewardData.cost,
+          stock_quantity: rewardData.remain,
+          is_active: rewardData.is_active,
+        });
+        setRewards(
+          rewards.map((r) =>
+            r.id === selectedReward.id ? updated : r
+          )
+        );
+        setIsEditModalOpen(false);
+        setSelectedReward(null);
+      } else {
+        // Create new reward
+        const newReward = await createReward({
+          name: rewardData.name,
+          description: rewardData.description,
+          type: 'item',  // Default type
+          image_url: rewardData.url_thumbnail,
+          cost_coins: rewardData.cost,
+          stock_quantity: rewardData.remain,
+          is_active: true,
+        });
+        setRewards([...rewards, newReward]);
+        setIsCreateModalOpen(false);
+      }
+    } catch (err: any) {
+      console.error('Failed to save reward:', err);
+      alert('Failed to save reward: ' + (err.message || 'Unknown error'));
+    }
+  };
+
+  const handleDeleteReward = async (rewardId: string) => {
+    try {
+      await deleteReward(rewardId);
+      setRewards(rewards.filter((r) => r.id !== rewardId));
+      setIsEditModalOpen(false);
+      setSelectedReward(null);
+    } catch (err: any) {
+      console.error('Failed to delete reward:', err);
+      alert('Failed to delete reward: ' + (err.message || 'Unknown error'));
+    }
   };
 
   // Filter and sort rewards
@@ -137,8 +143,32 @@ const ShopManagementTab = ({ isCreateModalOpen, setIsCreateModalOpen }: ShopMana
       {/* Description */}
       <p className="text-gray-600 mb-6">Manage your reward shop items</p>
 
-      {/* Search and Filters */}
-      <div className="mb-6 space-y-4">
+      {/* Error State */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4">
+          <p className="font-semibold">Error loading rewards</p>
+          <p className="text-sm">{error}</p>
+          <button 
+            onClick={fetchRewards}
+            className="mt-2 text-sm underline hover:no-underline"
+          >
+            Try again
+          </button>
+        </div>
+      )}
+
+      {/* Loading State */}
+      {loading && (
+        <div className="text-center py-12">
+          <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-primary-200 border-t-primary-600"></div>
+          <p className="text-gray-500 mt-2">Loading rewards...</p>
+        </div>
+      )}
+
+      {!loading && !error && (
+        <>
+          {/* Search and Filters */}
+          <div className="mb-6 space-y-4">
         {/* Search Bar */}
         <div className="relative">
           <input
@@ -211,18 +241,22 @@ const ShopManagementTab = ({ isCreateModalOpen, setIsCreateModalOpen }: ShopMana
         ))}
       </div>
 
-      {filteredAndSortedRewards.length === 0 && rewards.length > 0 && (
+      {/* Empty State - No Results */}
+      {!loading && !error && filteredAndSortedRewards.length === 0 && rewards.length > 0 && (
         <div className="text-center py-12 text-gray-500">
           <p className="text-lg">No rewards match your filters</p>
           <p className="text-sm mt-2">Try adjusting your search or filters</p>
         </div>
       )}
 
-      {rewards.length === 0 && (
+      {/* Empty State - No Rewards at All */}
+      {!loading && !error && rewards.length === 0 && (
         <div className="text-center py-12 text-gray-500">
           <p className="text-lg">No rewards yet</p>
           <p className="text-sm mt-2">Click "Add Reward" button to create a new reward</p>
         </div>
+      )}
+      </>
       )}
 
       {/* Create Modal */}

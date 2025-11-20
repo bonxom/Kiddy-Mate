@@ -162,7 +162,7 @@ const AssignTaskModal = ({ isOpen, onClose, task }: AssignTaskModalProps) => {
         {/* Reward */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Reward (Stars) <span className="text-red-500">*</span>
+            Reward (Coins) <span className="text-red-500">*</span>
           </label>
           <div className="flex items-center gap-3">
             <input
@@ -181,7 +181,7 @@ const AssignTaskModal = ({ isOpen, onClose, task }: AssignTaskModalProps) => {
             </div>
           </div>
           <p className="text-xs text-gray-500 mt-1">
-            Suggested: {task.suggestedReward} stars
+            Suggested: {task.suggestedReward} coins
           </p>
         </div>
 

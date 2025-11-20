@@ -19,7 +19,7 @@ const HowItWorksSection = () => {
     {
       step: '3',
       title: 'Reward Success',
-      description: 'Auto-reward with stars and let kids redeem for real prizes',
+      description: 'Auto-reward with coins and let kids redeem for real prizes',
       icon: Trophy,
     },
   ];

@@ -172,7 +172,7 @@ const CreateTaskModal = ({ isOpen, onClose }: CreateTaskModalProps) => {
         {/* Reward */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Reward (Stars) <span className="text-red-500">*</span>
+            Reward (Coins) <span className="text-red-500">*</span>
           </label>
           <div className="flex items-center gap-3">
             <input

@@ -24,8 +24,8 @@ const StatsCards = ({ data }: StatsCardsProps) => {
     },
     {
       icon: Star,
-      title: 'Total Stars',
-      value: data.totalStars,
+      title: 'Total Coins',
+      value: data.totalCoins,
       iconColor: 'text-warning-600',
       bgGradient: 'bg-gradient-to-br from-warning-50 to-warning-100',
     },

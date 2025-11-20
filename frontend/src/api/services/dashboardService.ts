@@ -25,7 +25,7 @@ export interface DashboardResponse {
 
 export interface StatsCardsData {
   level: string;
-  totalStars: string;
+  totalCoins: string;
   achievements: string;
   completion: string;
 }
@@ -92,7 +92,7 @@ export const getStatsCards = async (childId: string): Promise<StatsCardsData> =>
 
     return {
       level: dashboard.child.level.toString(),
-      totalStars: dashboard.child.coins.toLocaleString(),
+      totalCoins: dashboard.child.coins.toLocaleString(),
       achievements: dashboard.badges_earned.toString(),
       completion: `${dashboard.completion_rate}%`,
     };
@@ -101,7 +101,7 @@ export const getStatsCards = async (childId: string): Promise<StatsCardsData> =>
     // Fallback for newly registered children or API errors
     return {
       level: '1',
-      totalStars: '0',
+      totalCoins: '0',
       achievements: '0',
       completion: '0%',
     };
@@ -220,7 +220,7 @@ export const getActivityTimeline = async (
       category: ct.task?.category || 'Other',
       status: ct.status,
       completed: ct.status === 'completed',
-      reward: `+${ct.task?.reward_coins || 0} Stars`,
+      reward: `+${ct.task?.reward_coins || 0} Coins`,
       childName: child.name,
       childAvatar: child.name.charAt(0).toUpperCase(),
     }));

@@ -249,7 +249,7 @@ const TaskDetailModal = ({ isOpen, onClose, task, onSave, onDelete, onUpdate }: 
 
               {/* Reward */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Reward (Stars)</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Reward (Coins)</label>
                 <div className="flex items-center gap-3">
                   <input
                     type="range"

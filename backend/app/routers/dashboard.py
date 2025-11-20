@@ -20,7 +20,7 @@ async def get_dashboard(
         - Badge/reward count
         
     All counts are calculated in real-time from database.
-    Frontend should use child.coins directly (no total_stars duplicate).
+    Frontend should use child.coins directly.
     """
     # Count verified tasks (completed and approved by parent)
     tasks_completed = await ChildTask.find(

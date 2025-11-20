@@ -177,6 +177,7 @@ const TaskLibraryTab = () => {
                     <span className="text-sm font-bold text-yellow-600">
                       {task.suggestedReward}
                     </span>
+                    <span className="text-xs text-yellow-600">Coins</span>
                   </div>
                 </td>
                 <td className="px-4 py-4 text-center">

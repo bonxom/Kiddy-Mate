@@ -109,7 +109,7 @@ const RewardModal = ({
           {/* Cost and Remain - Side by side */}
           <div className="grid grid-cols-2 gap-4">
             <Input
-              label="Cost (Stars)"
+              label="Cost (Coins)"
               type="number"
               min="0"
               placeholder="0"
