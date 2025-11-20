@@ -222,14 +222,14 @@ const AccountSettingsTab = () => {
     <div className="space-y-6 max-w-6xl">
       {/* Error Alert */}
       {error && (
-        <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
+        <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 shadow-soft">
           {error}
         </div>
       )}
 
       {/* Unsaved Changes Warning */}
       {hasUnsavedChanges && (
-        <div className="p-4 rounded-lg border-2 border-yellow-300 flex items-center gap-3 animate-slide-down" style={{ background: 'linear-gradient(to right, rgb(254 252 232), rgb(254 243 199))' }}>
+        <div className="p-4 rounded-xl border-2 border-yellow-300 shadow-soft flex items-center gap-3 animate-slide-down" style={{ background: 'linear-gradient(to right, rgb(254 252 232), rgb(254 243 199))' }}>
           <AlertTriangle className="w-5 h-5 text-yellow-600 shrink-0" />
           <div className="flex-1">
             <p className="font-medium text-yellow-800">You have unsaved changes</p>
@@ -354,10 +354,11 @@ const AccountSettingsTab = () => {
       </div>
 
       {/* Block 3: Danger Zone */}
-      <Card padding="md" className="border-2 border-red-200 bg-red-50/30">
+      <Card padding="md" className="border-2 border-red-200 bg-red-50/30 shadow-soft">
         <div className="space-y-4">
-          <div>
-            <h3 className="text-lg font-semibold text-red-600 mb-2">
+          <div className="p-4 bg-red-50 border border-red-200 rounded-xl">
+            <h3 className="text-lg font-semibold text-red-600 mb-2 flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5" />
               Delete Account
             </h3>
             <p className="text-sm text-gray-600">
@@ -385,7 +386,7 @@ const AccountSettingsTab = () => {
         size="md"
       >
         <div className="space-y-4">
-          <div className="p-4 rounded-lg border-2 border-red-300" style={{ background: 'linear-gradient(to right, rgb(254 242 242), rgb(254 226 226))' }}>
+          <div className="p-4 rounded-xl border-2 border-red-300 shadow-soft\" style={{ background: 'linear-gradient(to right, rgb(254 242 242), rgb(254 226 226))' }}>
             <div className="flex items-start gap-3">
               <AlertTriangle className="w-6 h-6 text-red-600 shrink-0 mt-0.5" />
               <div>

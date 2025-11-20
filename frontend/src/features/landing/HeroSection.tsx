@@ -161,12 +161,6 @@ const HeroSection = () => {
           showScrollIndicator ? 'opacity-100 translate-y-0 animate-bounce' : 'opacity-0 translate-y-4 pointer-events-none'
         }`}
       >
-        {/* <div className="flex flex-col items-center gap-2 text-gray-600">
-          <span className="text-sm font-semibold">Scroll to explore</span>
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
-          </svg>
-        </div> */}
       </div>
     </section>
   );

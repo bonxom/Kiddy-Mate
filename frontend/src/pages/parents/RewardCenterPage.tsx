@@ -57,7 +57,7 @@ const RewardCenterPage = () => {
   ];
 
   return (
-    <div className="min-h-screen overflow-y-auto p-4 md:p-6 lg:p-8 scrollbar-thin">
+    <div className="min-h-screen overflow-y-auto p-4 md:p-6 lg:p-8 scrollbar-thin bg-gray-50">
       <div className="max-w-7xl mx-auto space-y-6 animate-fade-in">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -83,10 +83,10 @@ const RewardCenterPage = () => {
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
                     className={`
-                      flex items-center gap-3 px-6 py-4 text-sm font-semibold transition-all relative whitespace-nowrap
+                      flex items-center gap-3 px-6 py-4 text-sm font-semibold transition-all duration-300 relative whitespace-nowrap
                       ${activeTab === tab.id
                         ? 'text-primary-700 bg-white shadow-sm'
-                        : 'text-gray-600 hover:text-gray-900 hover:bg-white/50'
+                        : 'text-gray-600 hover:text-gray-900 hover:bg-white/70 hover:shadow-soft'
                       }
                     `}
                   >
@@ -127,7 +127,7 @@ const RewardCenterPage = () => {
 
           {/* Tab Content */}
           <div className="p-6">
-            <div className="animate-fade-in">
+            <div className="animate-fade-in" style={{ animationDelay: '0.1s' }}>
               {activeTab === 'shop' ? (
                 <ShopManagementTab 
                   isCreateModalOpen={isCreateModalOpen}

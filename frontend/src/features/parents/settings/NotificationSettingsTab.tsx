@@ -16,12 +16,12 @@ interface ToggleSwitchProps {
 
 const ToggleSwitch = ({ enabled, onChange, label }: ToggleSwitchProps) => {
   return (
-    <div className="flex items-center justify-between py-3 px-4 rounded-lg hover:bg-gray-50 transition-colors">
+    <div className="flex items-center justify-between py-3 px-4 rounded-xl hover:bg-gray-50 transition-all duration-200">
       <span className="text-sm font-medium text-gray-700">{label}</span>
       <button
         type="button"
         onClick={() => onChange(!enabled)}
-        className="relative inline-flex h-6 w-11 items-center rounded-full transition-all duration-300"
+        className="relative inline-flex h-6 w-11 items-center rounded-full transition-all duration-300 shadow-soft active:scale-95"
         style={{
           background: enabled
             ? 'linear-gradient(to right, #3b82f6, #8b5cf6)'
@@ -51,13 +51,13 @@ interface CheckboxPropsWithIcon extends CheckboxProps {
 
 const Checkbox = ({ checked, onChange, label, disabled, icon }: CheckboxPropsWithIcon) => {
   return (
-    <label className={`flex items-start gap-3 py-2.5 px-3 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors ${disabled ? 'opacity-50' : ''}`}>
+    <label className={`flex items-start gap-3 py-2.5 px-3 rounded-xl hover:bg-gray-50 cursor-pointer transition-all duration-200 ${disabled ? 'opacity-50' : ''}`}>
       <input
         type="checkbox"
         checked={checked}
         onChange={(e) => onChange(e.target.checked)}
         disabled={disabled}
-        className="mt-1 w-4 h-4 border-gray-300 rounded focus:ring-2 focus:ring-primary-500 cursor-pointer disabled:cursor-not-allowed"
+        className="mt-1 w-4 h-4 border-gray-300 rounded focus:ring-2 focus:ring-primary-500 cursor-pointer disabled:cursor-not-allowed transition-all"
         style={{
           accentColor: checked ? '#3b82f6' : undefined
         }}
@@ -226,7 +226,7 @@ const NotificationSettingsTab = () => {
     <div className="space-y-6 max-w-3xl">
       {/* Error Alert */}
       {error && (
-        <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
+        <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 shadow-soft">
           {error}
         </div>
       )}
@@ -247,7 +247,7 @@ const NotificationSettingsTab = () => {
 
           <div className={`space-y-1 ${
             !settings.emailNotifications.enabled ? 'opacity-50' : ''
-          }`} style={{ background: 'linear-gradient(to right, rgb(249 250 251), transparent)', borderRadius: '0.5rem', padding: '0.5rem' }}>
+          }`} style={{ background: 'linear-gradient(to right, rgb(249 250 251), transparent)', borderRadius: '0.75rem', padding: '0.75rem' }}>
             <Checkbox
               checked={settings.emailNotifications.redemptionRequests}
               onChange={(checked) => handleEmailCheckbox('redemptionRequests', checked)}
@@ -291,7 +291,7 @@ const NotificationSettingsTab = () => {
 
           <div className={`space-y-1 ${
             !settings.pushNotifications.enabled ? 'opacity-50' : ''
-          }`} style={{ background: 'linear-gradient(to right, rgb(250 245 255), transparent)', borderRadius: '0.5rem', padding: '0.5rem' }}>
+          }`} style={{ background: 'linear-gradient(to right, rgb(250 245 255), transparent)', borderRadius: '0.75rem', padding: '0.75rem' }}>
             <Checkbox
               checked={settings.pushNotifications.redemptionRequests}
               onChange={(checked) => handlePushCheckbox('redemptionRequests', checked)}

@@ -166,7 +166,7 @@ const RegisterPage = () => {
             />
 
             {/* Terms & Conditions */}
-            <p className="text-xs text-gray-600 bg-gray-50 p-3 rounded-lg border border-gray-200">
+            <p className="text-xs text-gray-600 bg-gray-50 p-3 rounded-xl border border-gray-200 shadow-soft">
               By creating an account, you agree to our{' '}
               <Link to="/terms" className="text-blue-600 hover:text-blue-700 font-semibold underline">
                 Terms of Service
@@ -184,20 +184,20 @@ const RegisterPage = () => {
               size="lg"
               disabled={isLoading}
               icon={<UserPlus className="w-5 h-5" />}
-              className="bg-linear-to-r from-blue-600 via-purple-600 to-pink-600 hover:from-blue-700 hover:via-purple-700 hover:to-pink-700 shadow-glow-accent hover:shadow-glow-accent hover:scale-105 transition-all duration-300"
+              className="bg-linear-to-r from-blue-600 via-purple-600 to-pink-600 hover:from-blue-700 hover:via-purple-700 hover:to-pink-700 shadow-soft hover:shadow-strong active:scale-95 transition-all duration-300"
             >
               {isLoading ? 'Creating Account...' : 'Create Account'}
             </Button>
           </form>
 
           {/* Sign In Link */}
-          <div className="mt-6 text-center p-4 bg-linear-to-r from-blue-50 via-purple-50 to-pink-50 rounded-2xl border border-blue-100">
+          <div className="mt-6 text-center p-4 bg-linear-to-r from-blue-50 via-purple-50 to-pink-50 rounded-2xl border border-blue-100 shadow-soft">
             <span className="text-gray-700 font-medium">
               Already have an account?{' '}
               <button
                 type="button"
                 onClick={() => navigate('/login')}
-                className="text-transparent bg-linear-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text font-bold underline underline-offset-2 decoration-2 hover:from-blue-700 hover:via-purple-700 hover:to-pink-700 transition-all"
+                className="text-transparent bg-linear-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text font-bold underline underline-offset-2 decoration-2 hover:from-blue-700 hover:via-purple-700 hover:to-pink-700 transition-all duration-300"
               >
                 Sign In →
               </button>
@@ -209,7 +209,7 @@ const RegisterPage = () => {
         <div className="text-center mt-8">
           <Link
             to="/"
-            className="inline-flex items-center gap-2 text-gray-700 hover:text-gray-900 font-semibold bg-white/60 backdrop-blur-sm px-6 py-3 rounded-full shadow-soft hover:shadow-medium transition-all"
+            className="inline-flex items-center gap-2 text-gray-700 hover:text-gray-900 font-semibold bg-white/60 backdrop-blur-sm px-6 py-3 rounded-full shadow-soft hover:shadow-medium active:scale-95 transition-all duration-300"
           >
             ← Back to Home
           </Link>

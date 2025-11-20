@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { Search, Trash2, ArrowUpDown, CheckCircle } from 'lucide-react';
+import { Search, Trash2, ArrowUpDown, CheckCircle, ListTodo } from 'lucide-react';
 import Input from '../../../components/ui/Input';
 import Badge from '../../../components/ui/Badge';
 import Modal from '../../../components/ui/Modal';
@@ -205,9 +205,9 @@ const AssignedTasksTab = ({ onCountChange }: AssignedTasksTabProps) => {
           </div>
 
       {/* Table */}
-      <div className="overflow-x-auto border border-gray-200 rounded-xl shadow-md">
+      <div className="overflow-x-auto border border-gray-200 rounded-2xl shadow-soft">
         <table className="w-full">
-          <thead style={{ background: 'linear-gradient(to right, rgb(249 250 251), rgb(243 244 246))' }}>
+          <thead className="bg-linear-to-r from-gray-50 to-gray-100 border-b border-gray-200">
             <tr>
               <th
                 className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-200 transition-colors"
@@ -405,8 +405,12 @@ const AssignedTasksTab = ({ onCountChange }: AssignedTasksTabProps) => {
         </table>
 
         {filteredTasks.length === 0 && (
-          <div className="text-center py-8 text-gray-500">
-            No tasks found
+          <div className="text-center py-12 bg-gray-50">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 mb-4">
+              <ListTodo className="w-8 h-8 text-gray-400" />
+            </div>
+            <p className="text-gray-500 font-medium">No tasks found</p>
+            <p className="text-sm text-gray-400 mt-1">Try adjusting your search or assign new tasks</p>
           </div>
         )}
       </div>
@@ -421,9 +425,14 @@ const AssignedTasksTab = ({ onCountChange }: AssignedTasksTabProps) => {
         size="sm"
       >
         <div className="space-y-4">
-          <p className="text-gray-900 font-medium text-base">
-            Are you sure you want to delete this task?
-          </p>
+          <div className="p-4 bg-red-50 border border-red-200 rounded-xl">
+            <p className="text-gray-900 font-semibold text-base">
+              Are you sure you want to delete this task?
+            </p>
+            <p className="text-sm text-gray-600 mt-2">
+              This action cannot be undone.
+            </p>
+          </div>
           <div className="flex gap-3 justify-end">
             <Button variant="secondary" onClick={() => setDeleteModalOpen(false)}>
               Cancel

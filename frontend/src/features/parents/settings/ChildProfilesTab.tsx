@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Edit2, Trash2, User, Sparkles } from 'lucide-react';
+import { Plus, Edit2, Trash2, User, Sparkles, AlertTriangle } from 'lucide-react';
 import Button from '../../../components/ui/Button';
 import Modal from '../../../components/ui/Modal';
 import ChildFormModal from '../../parents/settings/ChildFormModal';
@@ -230,7 +230,7 @@ const ChildProfilesTab = () => {
         {children.map((child, index) => (
           <div
             key={child.id}
-            className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 border border-gray-100 group"
+            className="bg-white rounded-2xl shadow-soft overflow-hidden hover:shadow-strong hover:-translate-y-1 transition-all duration-300 border border-gray-100 group"
             style={{ animation: `fadeIn 0.3s ease-in-out ${index * 0.1}s both` }}
           >
             {/* Avatar Section with Gradient */}
@@ -318,7 +318,7 @@ const ChildProfilesTab = () => {
         {/* Add New Card (Empty State Placeholder Style) */}
         <button 
           onClick={handleAddClick}
-          className="min-h-[300px] rounded-2xl border-2 border-dashed border-gray-300 flex flex-col items-center justify-center p-6 hover:border-purple-400 hover:bg-purple-50/30 transition-all group cursor-pointer"
+          className="min-h-[300px] rounded-2xl border-2 border-dashed border-gray-300 shadow-soft flex flex-col items-center justify-center p-6 hover:border-purple-400 hover:bg-purple-50/30 hover:shadow-medium transition-all duration-300 group cursor-pointer active:scale-95"
         >
           <div className="w-16 h-16 rounded-full bg-gray-100 group-hover:bg-purple-100 flex items-center justify-center mb-4 transition-colors">
             <Plus className="w-8 h-8 text-gray-400 group-hover:text-purple-600" />
@@ -358,11 +358,15 @@ const ChildProfilesTab = () => {
           size="sm"
         >
           <div className="space-y-4">
-            <p className="text-gray-600 text-center">
-              Are you sure you want to delete <strong>{selectedChild.nickname}</strong>'s profile? 
-              <br/>
-              <span className="text-xs text-red-500 block mt-2">⚠️ This action cannot be undone and all progress will be lost.</span>
-            </p>
+            <div className="p-4 bg-red-50 border border-red-200 rounded-xl shadow-soft">
+              <p className="text-gray-900 font-semibold text-center">
+                Are you sure you want to delete <strong className="text-red-600">{selectedChild.nickname}</strong>'s profile?
+              </p>
+              <p className="text-sm text-red-600 text-center mt-2 flex items-center justify-center gap-2">
+                <AlertTriangle className="w-4 h-4" />
+                This action cannot be undone and all progress will be lost.
+              </p>
+            </div>
             <div className="flex gap-3 justify-center mt-4">
               <Button
                 variant="secondary"

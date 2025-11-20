@@ -89,6 +89,18 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
     )
     return {"access_token": access_token, "token_type": "bearer"}
 
+@router.post("/logout", response_model=dict)
+async def logout_user(current_user: User = Depends(get_current_user)):
+    """
+    Logout endpoint - invalidates the current session.
+    Client should clear token from localStorage.
+    """
+    # Update last activity timestamp
+    current_user.updated_at = datetime.utcnow()
+    await current_user.save()
+    
+    return {"message": "Logout successful"}
+
 @router.get("/me", response_model=dict)
 async def get_me(current_user: User = Depends(get_current_user)):
     from app.models.child_models import Child

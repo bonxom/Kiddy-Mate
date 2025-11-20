@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { Search, Filter, Star } from 'lucide-react';
+import { Search, Filter, Star, Library } from 'lucide-react';
 import Input from '../../../components/ui/Input';
 import Button from '../../../components/ui/Button';
 import Loading from '../../../components/ui/Loading';
@@ -110,9 +110,9 @@ const TaskLibraryTab = ({ onCountChange }: TaskLibraryTabProps) => {
       </div>
 
       {/* Table */}
-      <div className="overflow-x-auto border border-gray-200 rounded-xl shadow-md">
+      <div className="overflow-x-auto border border-gray-200 rounded-2xl shadow-soft">
         <table className="w-full">
-          <thead style={{ background: 'linear-gradient(to right, rgb(249 250 251), rgb(243 244 246))' }}>
+          <thead className="bg-linear-to-r from-gray-50 to-gray-100 border-b border-gray-200">
             <tr>
               <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                 Suggested Child
@@ -207,8 +207,12 @@ const TaskLibraryTab = ({ onCountChange }: TaskLibraryTabProps) => {
         </table>
 
         {filteredTasks.length === 0 && (
-          <div className="text-center py-8 text-gray-500">
-            No tasks found
+          <div className="text-center py-12 bg-gray-50">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 mb-4">
+              <Library className="w-8 h-8 text-gray-400" />
+            </div>
+            <p className="text-gray-500 font-medium">No tasks found</p>
+            <p className="text-sm text-gray-400 mt-1">Try adjusting your filters or create new tasks</p>
           </div>
         )}
       </div>

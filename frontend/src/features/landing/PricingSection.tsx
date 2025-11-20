@@ -79,8 +79,10 @@ const PricingSection = () => {
               padding="lg"
               hover
               variant={plan.popular ? 'gradient' : 'default'}
-              className={`relative animate-fade-in ${
-                plan.popular ? 'ring-2 ring-primary-500 shadow-glow-accent' : ''
+              className={`relative animate-fade-in transition-all duration-300 ${
+                plan.popular 
+                  ? 'ring-2 ring-primary-500 shadow-strong hover:shadow-glow-accent' 
+                  : 'shadow-soft hover:shadow-strong'
               }`}
             >
               <div className="text-center mb-6">
@@ -110,6 +112,7 @@ const PricingSection = () => {
                 variant={plan.popular ? 'primary' : 'outline'}
                 size="lg"
                 onClick={() => navigate('/register')}
+                className="shadow-soft hover:shadow-medium active:scale-95 transition-all duration-300"
               >
                 {plan.cta}
               </Button>

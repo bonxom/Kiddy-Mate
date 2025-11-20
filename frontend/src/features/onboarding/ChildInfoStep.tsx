@@ -171,10 +171,10 @@ const ChildInfoStep = ({ childNumber, totalChildren, initialData, onComplete, on
                     key={gender}
                     type="button"
                     onClick={() => setFormData({ ...formData, gender })}
-                    className={`py-4 px-4 rounded-xl border-2 font-bold text-base transition-all duration-300 ${
+                    className={`py-4 px-4 rounded-xl border-2 font-bold text-base transition-all duration-300 shadow-soft hover:shadow-medium active:scale-95 ${
                       formData.gender === gender
-                        ? 'border-blue-500 bg-linear-to-br from-blue-50 via-purple-50 to-pink-50 text-blue-700 shadow-glow-accent scale-105'
-                        : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50 text-gray-600 hover:scale-102'
+                        ? 'border-blue-500 bg-linear-to-br from-blue-50 via-purple-50 to-pink-50 text-blue-700 shadow-strong scale-105'
+                        : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50 text-gray-600'
                     }`}
                   >
                     {gender === 'male' ? '👦 Boy' : gender === 'female' ? '👧 Girl' : '🌟 Other'}
@@ -194,10 +194,10 @@ const ChildInfoStep = ({ childNumber, totalChildren, initialData, onComplete, on
                     key={topic.id}
                     type="button"
                     onClick={() => toggleTopic(topic.id)}
-                    className={`px-5 py-2.5 rounded-full text-sm font-bold transition-all duration-300 ${
+                    className={`px-5 py-2.5 rounded-full text-sm font-bold transition-all duration-300 shadow-soft hover:shadow-medium active:scale-95 ${
                       formData.favoriteTopics?.includes(topic.id)
-                        ? `${topic.color} ring-2 ring-offset-2 ring-current shadow-medium scale-110`
-                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200 hover:scale-105'
+                        ? `${topic.color} ring-2 ring-offset-2 ring-current shadow-strong scale-105`
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                     }`}
                   >
                     {topic.label}
@@ -216,7 +216,7 @@ const ChildInfoStep = ({ childNumber, totalChildren, initialData, onComplete, on
                 variant="secondary"
                 onClick={onBack}
                 icon={<ArrowLeft className="w-5 h-5" />}
-                className="hover:scale-105 transition-transform"
+                className="shadow-soft hover:shadow-medium active:scale-95 transition-all duration-300"
               >
                 Back
               </Button>
@@ -224,7 +224,7 @@ const ChildInfoStep = ({ childNumber, totalChildren, initialData, onComplete, on
                 type="submit"
                 size="lg"
                 icon={<ArrowRight className="w-5 h-5" />}
-                className="bg-linear-to-r from-green-600 via-blue-600 to-purple-600 hover:from-green-700 hover:via-blue-700 hover:to-purple-700 shadow-glow-accent hover:scale-105 transition-all duration-300"
+                className="bg-linear-to-r from-green-600 via-blue-600 to-purple-600 hover:from-green-700 hover:via-blue-700 hover:to-purple-700 shadow-soft hover:shadow-strong active:scale-95 transition-all duration-300"
               >
                 Continue to Assessment
               </Button>

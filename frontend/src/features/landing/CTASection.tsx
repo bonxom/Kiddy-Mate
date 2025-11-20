@@ -33,14 +33,14 @@ const CTASection = () => {
             variant="secondary"
             onClick={() => navigate('/register')}
             icon={<Sparkles className="w-5 h-5" />}
-            className="text-lg shadow-strong hover:shadow-glow"
+            className="text-lg shadow-soft hover:shadow-strong active:scale-95 transition-all duration-300"
           >
             Start Your Free Trial
           </Button>
           <Button
             size="lg"
             variant="outline"
-            className="text-lg bg-white/10 backdrop-blur-sm border-white/30 text-white hover:bg-white/20"
+            className="text-lg bg-white/10 backdrop-blur-sm border-white/30 text-white hover:bg-white/20 shadow-soft hover:shadow-medium active:scale-95 transition-all duration-300"
             icon={<Heart className="w-5 h-5" />}
           >
             Schedule a Demo

@@ -4,11 +4,13 @@ import Badge from '../../components/ui/Badge';
 import AccountSettingsTab from '../../features/parents/settings/AccountSettingsTab.tsx';
 import ChildProfilesTab from '../../features/parents/settings/ChildProfilesTab.tsx';
 import NotificationSettingsTab from '../../features/parents/settings/NotificationSettingsTab.tsx';
+import { useChild } from '../../providers/ChildProvider';
 
 type TabType = 'account' | 'children' | 'notifications';
 
 const SettingsPage = () => {
   const [activeTab, setActiveTab] = useState<TabType>('account');
+  const { children } = useChild();
 
   const tabs = [
     {
@@ -20,7 +22,7 @@ const SettingsPage = () => {
       id: 'children' as TabType,
       label: 'Children Profiles',
       icon: Users,
-      count: 2,
+      count: children.length,
     },
     {
       id: 'notifications' as TabType,
@@ -30,7 +32,7 @@ const SettingsPage = () => {
   ];
 
   return (
-    <div className="min-h-screen overflow-y-auto p-4 md:p-6 lg:p-8 scrollbar-thin">
+    <div className="min-h-screen overflow-y-auto p-4 md:p-6 lg:p-8 scrollbar-thin bg-gray-50">
       <div className="max-w-7xl mx-auto space-y-6 animate-fade-in">
         {/* Header */}
         <div>
@@ -53,10 +55,10 @@ const SettingsPage = () => {
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
                   className={`
-                    flex items-center gap-3 px-6 py-4 text-sm font-semibold transition-all duration-200 relative whitespace-nowrap
+                    flex items-center gap-3 px-6 py-4 text-sm font-semibold transition-all duration-300 relative whitespace-nowrap
                     ${activeTab === tab.id
                       ? 'text-primary-700 bg-white shadow-sm'
-                      : 'text-gray-600 hover:text-gray-900 hover:bg-white/50'
+                      : 'text-gray-600 hover:text-gray-900 hover:bg-white/70 hover:shadow-soft'
                     }
                   `}
                 >
@@ -85,7 +87,7 @@ const SettingsPage = () => {
 
           {/* Tab Content */}
           <div className="p-6">
-            <div className="animate-fade-in">
+            <div className="animate-fade-in" style={{ animationDelay: '0.1s' }}>
               {activeTab === 'account' && <AccountSettingsTab />}
               {activeTab === 'children' && <ChildProfilesTab />}
               {activeTab === 'notifications' && <NotificationSettingsTab />}

@@ -137,9 +137,9 @@ const ParentInfoStep = ({ initialData, onComplete }: ParentInfoStepProps) => {
                           setFormData({ ...formData, numberOfChildren: num });
                           setErrors({ ...errors, numberOfChildren: '' });
                         }}
-                        className={`h-14 rounded-xl border-2 font-bold text-lg transition-all duration-300 ${
+                        className={`h-14 rounded-xl border-2 font-bold text-lg transition-all duration-300 shadow-soft hover:shadow-medium active:scale-95 ${
                           formData.numberOfChildren === num
-                            ? 'border-purple-500 bg-linear-to-br from-blue-50 via-purple-50 to-pink-50 text-purple-700 shadow-glow-accent scale-110'
+                            ? 'border-purple-500 bg-linear-to-br from-blue-50 via-purple-50 to-pink-50 text-purple-700 shadow-strong scale-105'
                             : 'border-gray-200 hover:border-purple-300 hover:bg-purple-50 text-gray-600 hover:scale-105'
                         }`}
                       >
@@ -172,7 +172,7 @@ const ParentInfoStep = ({ initialData, onComplete }: ParentInfoStepProps) => {
                 type="submit"
                 size="lg"
                 icon={<ArrowRight className="w-5 h-5" />}
-                className="bg-linear-to-r from-blue-600 via-purple-600 to-pink-600 hover:from-blue-700 hover:via-purple-700 hover:to-pink-700 shadow-glow-accent hover:scale-105 transition-all duration-300"
+                className="bg-linear-to-r from-blue-600 via-purple-600 to-pink-600 hover:from-blue-700 hover:via-purple-700 hover:to-pink-700 shadow-soft hover:shadow-strong active:scale-95 transition-all duration-300"
               >
                 Continue to Child Info
               </Button>

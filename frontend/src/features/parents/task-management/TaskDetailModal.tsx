@@ -407,9 +407,14 @@ const TaskDetailModal = ({ isOpen, onClose, task, onSave, onDelete, onUpdate }: 
         size="sm"
       >
         <div className="space-y-4">
-          <p className="text-gray-900 font-medium text-base">
-            Are you sure you want to delete the task "{task.task}"?
-          </p>
+          <div className="p-4 bg-red-50 border border-red-200 rounded-xl">
+            <p className="text-gray-900 font-semibold text-base">
+              Are you sure you want to delete the task "{task.task}"?
+            </p>
+            <p className="text-sm text-gray-600 mt-2">
+              This action cannot be undone.
+            </p>
+          </div>
           <div className="flex gap-3 justify-end">
             <Button variant="secondary" onClick={() => setShowDeleteConfirm(false)}>
               Cancel
