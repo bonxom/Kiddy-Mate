@@ -3,24 +3,10 @@ from typing import Optional
 from datetime import datetime
 import enum
 
-class TaskCategory(str, enum.Enum):
-    IQ = "IQ"
-    EQ = "EQ"
-
-class TaskType(str, enum.Enum):
-    LOGIC = "logic"
-    EMOTION = "emotion"
-
-class ChildTaskStatus(str, enum.Enum):
-    SUGGESTED = "suggested"
-    IN_PROGRESS = "in_progress"
-    COMPLETED = "completed"
-    VERIFIED = "verified"
-
-class RewardType(str, enum.Enum):
-    BADGE = "badge"
-    SKIN = "skin"
-    COIN = "coin"
+# Import enums from models for consistency
+from app.models.task_models import TaskCategory, TaskType
+from app.models.childtask_models import ChildTaskStatus
+from app.models.reward_models import RewardType
 
 class UserBase(BaseModel):
     email: EmailStr
@@ -134,6 +120,15 @@ class ChildTaskInDB(ChildTaskBase):
 
 class ChildTaskPublic(ChildTaskInDB):
     pass
+
+class ChildTaskWithDetails(BaseModel):
+    """Child task with populated task details for dashboard"""
+    id: str
+    status: ChildTaskStatus
+    assigned_at: datetime
+    completed_at: Optional[datetime]
+    task: TaskPublic  # Full task details
+    model_config = ConfigDict(from_attributes=True)
 
 class RewardBase(BaseModel):
     name: str

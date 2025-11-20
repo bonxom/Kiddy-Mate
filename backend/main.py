@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routers import auth, children, tasks, rewards, games, interact, reports, dashboard, assessments
+from app.routers import auth, children, tasks, rewards, games, interact, reports, dashboard, assessments, onboarding
 from app.db.database import init_database
 from app.scheduler import scheduler
 
@@ -8,13 +8,19 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "https://kiddymate.com"],
+    allow_origins=[
+        "http://localhost:3000",
+        "http://localhost:5173",
+        "http://localhost:5174",
+        "https://kiddymate.com"
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 app.include_router(auth.router, prefix="/auth", tags=["Auth"])
+app.include_router(onboarding.router, tags=["Onboarding"])
 app.include_router(children.router, prefix="/children", tags=["Children"])
 app.include_router(tasks.router, prefix="/children", tags=["Tasks"])
 app.include_router(rewards.router, prefix="/children", tags=["Rewards"])

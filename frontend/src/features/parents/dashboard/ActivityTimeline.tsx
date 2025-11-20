@@ -1,11 +1,13 @@
 import { CheckCircle2, Circle, Target, Brain, Dumbbell, Palette, Users } from 'lucide-react';
 import { Badge } from '../../../components/ui';
 
+import type { ActivityTimelineItem } from '../../../api/services/dashboardService';
+
 interface Activity {
-  id: number;
+  id: string;
   time: string;
   task: string;
-  category: 'Independence' | 'Logic' | 'Physical' | 'Creative' | 'Social';
+  category: string;
   completed: boolean;
   reward: string;
   childName: string;
@@ -16,69 +18,39 @@ interface GroupedActivities {
   [childName: string]: Activity[];
 }
 
-const ActivityTimeline = () => {
-  const activities: Activity[] = [
-    {
-      id: 1,
-      time: '10:15 AM',
-      task: 'Brush Teeth',
-      category: 'Independence',
-      completed: true,
-      reward: '+20 Stars',
-      childName: 'Emma',
-      childAvatar: 'E',
-    },
-    {
-      id: 2,
-      time: '11:30 AM',
-      task: 'Clean Room',
-      category: 'Independence',
-      completed: true,
-      reward: '+30 Stars',
-      childName: 'Emma',
-      childAvatar: 'E',
-    },
-    {
-      id: 3,
-      time: '02:45 PM',
-      task: 'Math Homework',
-      category: 'Logic',
-      completed: false,
-      reward: '+50 Stars',
-      childName: 'Emma',
-      childAvatar: 'E',
-    },
-    {
-      id: 4,
-      time: '09:30 AM',
-      task: 'Morning Exercise',
-      category: 'Physical',
-      completed: true,
-      reward: '+25 Stars',
-      childName: 'Liam',
-      childAvatar: 'L',
-    },
-    {
-      id: 5,
-      time: '01:00 PM',
-      task: 'Drawing Class',
-      category: 'Creative',
-      completed: true,
-      reward: '+35 Stars',
-      childName: 'Liam',
-      childAvatar: 'L',
-    },
-    {
-      id: 6,
-      time: '03:30 PM',
-      task: 'Play with Friends',
-      category: 'Social',
-      completed: false,
-      reward: '+20 Stars',
-      childName: 'Liam',
-      childAvatar: 'L',
-    },
-  ];
+interface ActivityTimelineProps {
+  data: ActivityTimelineItem[];
+}
+
+const ActivityTimeline = ({ data }: ActivityTimelineProps) => {
+  // Use data from API instead of mock
+  const activities: Activity[] = data.map((item) => ({
+    id: item.id,
+    time: item.time,
+    task: item.task,
+    category: item.category,
+    completed: item.completed,
+    reward: item.reward,
+    childName: item.childName,
+    childAvatar: item.childAvatar,
+  }));
+
+  // Show empty state if no activities yet
+  if (activities.length === 0) {
+    return (
+      <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
+        <h3 className="text-lg font-bold text-gray-900 mb-4">Recent Activity</h3>
+        
+        <div className="flex flex-col items-center justify-center py-12 text-gray-400">
+          <svg className="w-16 h-16 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+          </svg>
+          <p className="text-sm font-medium text-gray-500">No activities yet</p>
+          <p className="text-xs text-gray-400 mt-1">Assign tasks to your child to see activity here</p>
+        </div>
+      </div>
+    );
+  }
 
   // Group activities by child
   const groupedActivities: GroupedActivities = activities.reduce((acc, activity) => {
@@ -89,34 +61,46 @@ const ActivityTimeline = () => {
     return acc;
   }, {} as GroupedActivities);
 
-  const getCategoryIcon = (category: Activity['category']) => {
+  const getCategoryIcon = (category: string) => {
     const iconClass = "w-4 h-4";
     switch (category) {
       case 'Independence':
         return <Target className={iconClass} />;
       case 'Logic':
+      case 'IQ':
         return <Brain className={iconClass} />;
       case 'Physical':
         return <Dumbbell className={iconClass} />;
-      case 'Creative':
+      case 'Creativity':
         return <Palette className={iconClass} />;
       case 'Social':
+      case 'EQ':
         return <Users className={iconClass} />;
+      case 'Academic':
+        return <Brain className={iconClass} />;
+      default:
+        return <Target className={iconClass} />;
     }
   };
 
-  const getCategoryColor = (category: Activity['category']) => {
+  const getCategoryColor = (category: string) => {
     switch (category) {
       case 'Independence':
         return 'text-blue-600 bg-blue-50';
       case 'Logic':
+      case 'IQ':
         return 'text-purple-600 bg-purple-50';
       case 'Physical':
         return 'text-green-600 bg-green-50';
-      case 'Creative':
+      case 'Creativity':
         return 'text-pink-600 bg-pink-50';
       case 'Social':
+      case 'EQ':
         return 'text-orange-600 bg-orange-50';
+      case 'Academic':
+        return 'text-indigo-600 bg-indigo-50';
+      default:
+        return 'text-gray-600 bg-gray-50';
     }
   };
 

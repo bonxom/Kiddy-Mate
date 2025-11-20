@@ -1,9 +1,9 @@
-from fastapi import APIRouter, HTTPException, status, Depends
+from fastapi import APIRouter, HTTPException, status, Depends, Query
 from app.models.task_models import Task
 from app.models.child_models import Child
 from app.models.childtask_models import ChildTask, ChildTaskStatus
-from app.schemas.schemas import TaskPublic, ChildTaskPublic
-from typing import List
+from app.schemas.schemas import TaskPublic, ChildTaskPublic, ChildTaskWithDetails
+from typing import List, Optional
 from datetime import datetime
 from app.dependencies import verify_child_ownership
 from app.models.reward_models import ChildReward, Reward
@@ -29,7 +29,7 @@ async def list_all_tasks() -> List[TaskPublic]:
         for t in tasks
     ]
 
-@router.get("/children/{child_id}/tasks/suggested", response_model=List[TaskPublic])
+@router.get("/{child_id}/tasks/suggested", response_model=List[TaskPublic])
 async def get_suggested_tasks(
     child_id: str,
     child: Child = Depends(verify_child_ownership)
@@ -58,23 +58,70 @@ async def get_suggested_tasks(
         for t in suggested_tasks[:5]
     ]
 
-@router.get("/children/{child_id}/tasks", response_model=List[ChildTaskPublic])
+@router.get("/{child_id}/tasks", response_model=List[ChildTaskWithDetails])
 async def get_child_tasks(
     child_id: str,
-    child: Child = Depends(verify_child_ownership)
+    child: Child = Depends(verify_child_ownership),
+    limit: Optional[int] = Query(None, description="Limit number of results"),
+    category: Optional[str] = Query(None, description="Filter by task category"),
+    status_filter: Optional[ChildTaskStatus] = Query(None, alias="status", description="Filter by task status")
 ):
-    child_tasks = await ChildTask.find(ChildTask.child.id == child.id).to_list()
-    return [
-        ChildTaskPublic(
-            id=str(ct.id),
-            status=ct.status,
-            assigned_at=ct.assigned_at,
-            completed_at=ct.completed_at,
+    """
+    Get child's assigned tasks with full task details populated.
+    Supports filtering by category and status, and limiting results.
+    """
+    query = ChildTask.find(ChildTask.child.id == child.id)
+    
+    # Apply status filter if provided
+    if status_filter:
+        query = query.find(ChildTask.status == status_filter)
+    
+    # Sort by assigned_at descending (most recent first)
+    query = query.sort("-assigned_at")
+    
+    # Get child tasks
+    child_tasks = await query.to_list()
+    
+    # Populate task details and apply category filter
+    results = []
+    for ct in child_tasks:
+        # Fetch task details
+        task = await ct.task.fetch() if ct.task else None
+        if not task:
+            continue
+        
+        # Apply category filter if specified
+        if category and task.category != category:
+            continue
+        
+        # Build response with full task details
+        results.append(
+            ChildTaskWithDetails(
+                id=str(ct.id),
+                status=ct.status,
+                assigned_at=ct.assigned_at,
+                completed_at=ct.completed_at,
+                task=TaskPublic(
+                    id=str(task.id),
+                    title=task.title,
+                    description=task.description,
+                    category=task.category,
+                    type=task.type,
+                    difficulty=task.difficulty,
+                    suggested_age_range=task.suggested_age_range,
+                    reward_coins=task.reward_coins,
+                    reward_badge_name=task.reward_badge_name,
+                )
+            )
         )
-        for ct in child_tasks
-    ]
+    
+    # Apply limit if specified
+    if limit:
+        results = results[:limit]
+    
+    return results
 
-@router.post("/children/{child_id}/tasks/{task_id}/start", response_model=ChildTaskPublic)
+@router.post("/{child_id}/tasks/{task_id}/start", response_model=ChildTaskPublic)
 async def start_task(
     child_id: str,
     task_id: str,
@@ -117,7 +164,7 @@ async def start_task(
         completed_at=new_child_task.completed_at,
     )
 
-@router.post("/children/{child_id}/tasks/{child_task_id}/complete", response_model=dict)
+@router.post("/{child_id}/tasks/{child_task_id}/complete", response_model=dict)
 async def complete_task(
     child_id: str,
     child_task_id: str,
@@ -147,7 +194,7 @@ async def complete_task(
     await child_task.save()
     return {"message": "Đánh dấu hoàn thành thành công."}
 
-@router.post("/children/{child_id}/tasks/{child_task_id}/verify", response_model=dict)
+@router.post("/{child_id}/tasks/{child_task_id}/verify", response_model=dict)
 async def verify_task(
     child_id: str,
     child_task_id: str,

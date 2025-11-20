@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import type { ReactNode } from 'react';
 import type { AuthResponse } from '../types/auth.types';
+import * as authService from '../api/services/authService';
 
 interface AuthContextType {
   user: AuthResponse['user'] | null;
@@ -33,12 +34,12 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   // Initialize auth state from localStorage
   useEffect(() => {
-    const storedToken = localStorage.getItem('auth_token');
-    const storedUser = localStorage.getItem('auth_user');
+    const storedToken = authService.getToken();
+    const storedUser = authService.getStoredUser();
 
     if (storedToken && storedUser) {
       setToken(storedToken);
-      setUser(JSON.parse(storedUser));
+      setUser(storedUser);
     }
     
     setIsLoading(false);
@@ -46,59 +47,46 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   const login = async (credentials: { email: string; password: string }) => {
     try {
-      // TODO: Replace with actual API call
-      const response: AuthResponse = {
-        token: 'mock_jwt_token_' + Date.now(),
-        user: {
-          id: 'user_' + Date.now(),
-          email: credentials.email,
-          displayName: credentials.email.split('@')[0],
-          role: 'parent',
-          hasCompletedOnboarding: false,
-        },
-      };
+      setIsLoading(true);
+      
+      // Call actual API
+      const response = await authService.login(credentials);
 
       setToken(response.token);
       setUser(response.user);
-      
-      localStorage.setItem('auth_token', response.token);
-      localStorage.setItem('auth_user', JSON.stringify(response.user));
     } catch (error) {
       console.error('Login error:', error);
       throw error;
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const register = async (credentials: { email: string; password: string; displayName: string }) => {
     try {
-      // TODO: Replace with actual API call
-      const response: AuthResponse = {
-        token: 'mock_jwt_token_' + Date.now(),
-        user: {
-          id: 'user_' + Date.now(),
-          email: credentials.email,
-          displayName: credentials.displayName,
-          role: 'parent',
-          hasCompletedOnboarding: false,
-        },
-      };
+      setIsLoading(true);
+      
+      // Call actual API
+      const response = await authService.register({
+        email: credentials.email,
+        password: credentials.password,
+        full_name: credentials.displayName,
+      });
 
       setToken(response.token);
       setUser(response.user);
-      
-      localStorage.setItem('auth_token', response.token);
-      localStorage.setItem('auth_user', JSON.stringify(response.user));
     } catch (error) {
       console.error('Registration error:', error);
       throw error;
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const logout = () => {
+    authService.logout();
     setToken(null);
     setUser(null);
-    localStorage.removeItem('auth_token');
-    localStorage.removeItem('auth_user');
   };
 
   const value: AuthContextType = {

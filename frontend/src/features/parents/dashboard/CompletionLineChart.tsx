@@ -1,16 +1,12 @@
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
 import { TrendingUp, /*Trophy, Target*/ } from 'lucide-react';
+import type { CompletionTrendDataPoint } from '../../../api/services/dashboardService';
 
-const CompletionLineChart = () => {
-  const data = [
-    { name: 'Mon', completed: 5, total: 8, rate: 62.5 },
-    { name: 'Tue', completed: 8, total: 10, rate: 80 },
-    { name: 'Wed', completed: 6, total: 9, rate: 66.7 },
-    { name: 'Thu', completed: 10, total: 12, rate: 83.3 },
-    { name: 'Fri', completed: 7, total: 8, rate: 87.5 },
-    { name: 'Sat', completed: 9, total: 11, rate: 81.8 },
-    { name: 'Sun', completed: 11, total: 13, rate: 84.6 },
-  ];
+interface CompletionLineChartProps {
+  data: CompletionTrendDataPoint[];
+}
+
+const CompletionLineChart = ({ data }: CompletionLineChartProps) => {
 
   // Calculate stats
   const totalCompleted = data.reduce((sum, d) => sum + d.completed, 0);

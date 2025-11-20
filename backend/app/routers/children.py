@@ -21,7 +21,7 @@ def _to_child_public(child: Child) -> ChildPublic:
     )
 
 
-@router.post("/children", response_model=ChildPublic)
+@router.post("/", response_model=ChildPublic)
 async def create_child(
     child: ChildCreate,
     current_user: User = Depends(get_current_user)
@@ -35,19 +35,19 @@ async def create_child(
     await new_child.insert()
     return _to_child_public(new_child)
 
-@router.get("/children", response_model=List[ChildPublic])
+@router.get("/", response_model=List[ChildPublic])
 async def get_children(current_user: User = Depends(get_current_user)):
     children = await Child.find(Child.parent.id == current_user.id).to_list()
     return [_to_child_public(c) for c in children]
 
-@router.get("/children/{child_id}", response_model=ChildPublic)
+@router.get("/{child_id}", response_model=ChildPublic)
 async def get_child(
     child_id: str,
     child: Child = Depends(verify_child_ownership)
 ):
     return _to_child_public(child)
 
-@router.put("/children/{child_id}", response_model=ChildPublic)
+@router.put("/{child_id}", response_model=ChildPublic)
 async def update_child(
     child_id: str,
     updated_child: ChildCreate,
@@ -59,7 +59,7 @@ async def update_child(
     await child.save()
     return _to_child_public(child)
 
-@router.post("/children/{child_id}/select", response_model=dict)
+@router.post("/{child_id}/select", response_model=dict)
 async def select_child(
     child_id: str,
     child: Child = Depends(verify_child_ownership)

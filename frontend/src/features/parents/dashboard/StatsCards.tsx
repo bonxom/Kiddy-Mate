@@ -1,4 +1,5 @@
 import { TrendingUp, Star, Trophy, CheckCircle } from 'lucide-react';
+import type { StatsCardsData } from '../../../api/services/dashboardService';
 
 interface StatCard {
   icon: React.ElementType;
@@ -8,33 +9,37 @@ interface StatCard {
   bgGradient: string;
 }
 
-const StatsCards = () => {
+interface StatsCardsProps {
+  data: StatsCardsData;
+}
+
+const StatsCards = ({ data }: StatsCardsProps) => {
   const stats: StatCard[] = [
     {
       icon: TrendingUp,
       title: 'Level',
-      value: '12',
+      value: data.level,
       iconColor: 'text-info-600',
       bgGradient: 'bg-gradient-to-br from-info-50 to-info-100',
     },
     {
       icon: Star,
       title: 'Total Stars',
-      value: '1,450',
+      value: data.totalStars,
       iconColor: 'text-warning-600',
       bgGradient: 'bg-gradient-to-br from-warning-50 to-warning-100',
     },
     {
       icon: Trophy,
       title: 'Achievements',
-      value: '5',
+      value: data.achievements,
       iconColor: 'text-purple-600',
       bgGradient: 'bg-gradient-to-br from-purple-50 to-purple-100',
     },
     {
       icon: CheckCircle,
       title: 'Completion',
-      value: '85%',
+      value: data.completion,
       iconColor: 'text-success-600',
       bgGradient: 'bg-gradient-to-br from-success-50 to-success-100',
     },

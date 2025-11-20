@@ -3,17 +3,14 @@ import Calendar from '../../../components/ui/Calendar';
 import { RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, ResponsiveContainer, Tooltip } from 'recharts';
 import { Target, Heart, Award, Users, Brain, TrendingUp } from 'lucide-react';
 
-const DashboardSidebar = () => {
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
+import type { SkillRadarData } from '../../../api/services/dashboardService';
 
-  // Dữ liệu cho Radar Chart
-  const skillData = [
-    { skill: 'Independence', value: 85, fullMark: 100 },
-    { skill: 'Emotional', value: 70, fullMark: 100 },
-    { skill: 'Discipline', value: 90, fullMark: 100 },
-    { skill: 'Social', value: 65, fullMark: 100 },
-    { skill: 'Logic', value: 75, fullMark: 100 },
-  ];
+interface DashboardSidebarProps {
+  skillData: SkillRadarData[];
+}
+
+const DashboardSidebar = ({ skillData }: DashboardSidebarProps) => {
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
 
   const getSkillIcon = (skill: string) => {
     const iconClass = "w-3.5 h-3.5";

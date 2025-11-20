@@ -1,69 +1,50 @@
 import { useState } from 'react';
+import type { ElementType } from 'react'; 
 import { Target, Brain, Dumbbell, Palette, Users, BookOpen, ChevronLeft, ChevronRight } from 'lucide-react';
+import type { CategoryProgressData } from '../../../api/services/dashboardService';
+
+interface CategoryConfigItem {
+  color: string;
+  bgColor: string;
+  icon: ElementType; // Dùng ElementType thay vì React.ElementType
+}
 
 interface TaskCategory {
   name: string;
-  icon: React.ElementType;
+  icon: ElementType;
   completed: number;
   total: number;
   color: string;
   bgColor: string;
 }
 
-const TaskProgressRings = () => {
+interface TaskProgressRingsProps {
+  data: CategoryProgressData[];
+}
+
+const TaskProgressRings = ({ data }: TaskProgressRingsProps) => {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const [currentPage, setCurrentPage] = useState(0);
 
-  const allCategories: TaskCategory[] = [
-    {
-      name: 'Independence',
-      icon: Target,
-      completed: 8,
-      total: 10,
-      color: '#3b82f6',
-      bgColor: 'bg-blue-50',
-    },
-    {
-      name: 'Logic',
-      icon: Brain,
-      completed: 6,
-      total: 10,
-      color: '#8b5cf6',
-      bgColor: 'bg-purple-50',
-    },
-    {
-      name: 'Physical',
-      icon: Dumbbell,
-      completed: 9,
-      total: 10,
-      color: '#10b981',
-      bgColor: 'bg-green-50',
-    },
-    {
-      name: 'Creativity',
-      icon: Palette,
-      completed: 7,
-      total: 10,
-      color: '#ec4899',
-      bgColor: 'bg-pink-50',
-    },
-    {
-      name: 'Social',
-      icon: Users,
-      completed: 5,
-      total: 10,
-      color: '#f59e0b',
-      bgColor: 'bg-amber-50',
-    },
-    {
-      name: 'Academic',
-      icon: BookOpen,
-      completed: 8,
-      total: 10,
-      color: '#6366f1',
-      bgColor: 'bg-indigo-50',
-    },
-  ];
+  // 3. Khai báo kiểu tường minh: Record<string, CategoryConfigItem>
+  const categoryConfig: Record<string, CategoryConfigItem> = {
+    Focus: { color: '#3b82f6', bgColor: 'bg-blue-50', icon: Target },
+    Logic: { color: '#8b5cf6', bgColor: 'bg-purple-50', icon: Brain },
+    Physical: { color: '#10b981', bgColor: 'bg-green-50', icon: Dumbbell },
+    Creativity: { color: '#ec4899', bgColor: 'bg-pink-50', icon: Palette },
+    Social: { color: '#f59e0b', bgColor: 'bg-amber-50', icon: Users },
+    Academic: { color: '#6366f1', bgColor: 'bg-indigo-50', icon: BookOpen },
+  };
+
+  const allCategories: TaskCategory[] = data.map((cat) => ({
+    name: cat.name,
+    completed: cat.completed,
+    total: cat.total,
+    // Dùng Optional Chaining và Fallback an toàn
+    color: categoryConfig[cat.name]?.color || '#6b7280',
+    bgColor: categoryConfig[cat.name]?.bgColor || 'bg-gray-50',
+    icon: categoryConfig[cat.name]?.icon || Target,
+  }));
 
   const ITEMS_PER_PAGE = 3;
   const totalPages = Math.ceil(allCategories.length / ITEMS_PER_PAGE);
@@ -80,6 +61,7 @@ const TaskProgressRings = () => {
   };
 
   const calculatePercentage = (completed: number, total: number) => {
+    if (total === 0) return 0;
     return Math.round((completed / total) * 100);
   };
 
@@ -101,26 +83,27 @@ const TaskProgressRings = () => {
           <p className="text-sm text-gray-600">Completion rates across skill areas</p>
         </div>
         
-        <div className="flex items-center gap-1">
-          {/* Navigation buttons */}
-          <button
-            onClick={goToPreviousPage}
-            className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors duration-200 group"
-            aria-label="Previous page"
-          >
-            <ChevronLeft className="w-4 h-4 text-gray-600 group-hover:text-gray-900" />
-          </button>
-          <button
-            onClick={goToNextPage}
-            className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors duration-200 group"
-            aria-label="Next page"
-          >
-            <ChevronRight className="w-4 h-4 text-gray-600 group-hover:text-gray-900" />
-          </button>
-        </div>
+        {totalPages > 1 && (
+          <div className="flex items-center gap-1">
+            <button
+              onClick={(e) => { e.stopPropagation(); goToPreviousPage(); }}
+              className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors duration-200 group"
+              aria-label="Previous page"
+            >
+              <ChevronLeft className="w-4 h-4 text-gray-600 group-hover:text-gray-900" />
+            </button>
+            <button
+              onClick={(e) => { e.stopPropagation(); goToNextPage(); }}
+              className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors duration-200 group"
+              aria-label="Next page"
+            >
+              <ChevronRight className="w-4 h-4 text-gray-600 group-hover:text-gray-900" />
+            </button>
+          </div>
+        )}
       </div>
       
-      <div className="space-y-4" style={{ height: '276px' }}>
+      <div className="space-y-4" style={{ minHeight: '276px' }}>
         {categories.map((category, index) => {
           const percentage = calculatePercentage(category.completed, category.total);
           const { circumference, offset } = getCircleProgress(percentage);
@@ -129,7 +112,7 @@ const TaskProgressRings = () => {
 
           return (
             <div
-              key={category.name}
+              key={`${category.name}-${index}`}
               className="flex items-center gap-4 p-3 rounded-xl hover:bg-gray-50 transition-all duration-200 cursor-pointer group"
               onMouseEnter={() => setHoveredIndex(index)}
               onMouseLeave={() => setHoveredIndex(null)}
@@ -137,7 +120,6 @@ const TaskProgressRings = () => {
               {/* Progress Ring */}
               <div className="relative shrink-0">
                 <svg className="w-16 h-16 transform -rotate-90" viewBox="0 0 64 64">
-                  {/* Background circle */}
                   <circle
                     cx="32"
                     cy="32"
@@ -146,7 +128,6 @@ const TaskProgressRings = () => {
                     stroke="#e5e7eb"
                     strokeWidth="6"
                   />
-                  {/* Progress circle */}
                   <circle
                     cx="32"
                     cy="32"
@@ -164,7 +145,6 @@ const TaskProgressRings = () => {
                   />
                 </svg>
                 
-                {/* Icon in center */}
                 <div className={`absolute inset-0 flex items-center justify-center ${category.bgColor} rounded-full m-2 group-hover:scale-110 transition-transform duration-200`}>
                   <Icon 
                     className="w-5 h-5" 
@@ -188,7 +168,6 @@ const TaskProgressRings = () => {
                   </span>
                 </div>
                 
-                {/* Progress bar */}
                 <div className="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
                   <div
                     className="h-full rounded-full transition-all duration-500 ease-out"
@@ -199,7 +178,6 @@ const TaskProgressRings = () => {
                   />
                 </div>
                 
-                {/* Stats */}
                 <p className="text-xs text-gray-500 mt-1.5">
                   {category.completed} of {category.total} tasks completed
                 </p>
