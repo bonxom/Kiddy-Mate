@@ -49,6 +49,7 @@ export interface ActivityTimelineItem {
   time: string;
   task: string;
   category: string;
+  status: string;
   completed: boolean;
   reward: string;
   childName: string;
@@ -134,7 +135,7 @@ export const getCompletionTrend = async (
       return taskDate === dateStr;
     });
 
-    const completed = dayTasks.filter((t) => t.status === 'verified').length;
+    const completed = dayTasks.filter((t) => t.status === 'completed').length;
     const total = dayTasks.length;
     const rate = total > 0 ? Math.round((completed / total) * 100) : 0;
 
@@ -182,7 +183,7 @@ export const getCategoryProgress = async (
     
     if (categoryMap[category]) {
       categoryMap[category].total++;
-      if (ct.status === 'verified') {
+      if (ct.status === 'completed') {
         categoryMap[category].completed++;
       }
     }
@@ -217,7 +218,8 @@ export const getActivityTimeline = async (
       time: formatTime(ct.assigned_at),
       task: ct.task?.title || 'Unknown Task',
       category: ct.task?.category || 'Other',
-      completed: ct.status === 'verified',
+      status: ct.status,
+      completed: ct.status === 'completed',
       reward: `+${ct.task?.reward_coins || 0} Stars`,
       childName: child.name,
       childAvatar: child.name.charAt(0).toUpperCase(),

@@ -109,7 +109,7 @@ const DashboardPage = () => {
 
           {/* Activity Timeline */}
           <div className="animate-slide-up" style={{ animationDelay: '0.2s' }}>
-            <ActivityTimeline data={dashboardData.activityTimeline} />
+            <ActivityTimeline data={dashboardData.activityTimeline} onRefresh={refetch} />
           </div>
         </div>
       </div>

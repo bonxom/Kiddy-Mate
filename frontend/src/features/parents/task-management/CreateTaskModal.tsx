@@ -2,11 +2,12 @@ import { useState } from 'react';
 import Modal from '../../../components/ui/Modal';
 import Input from '../../../components/ui/Input';
 import Button from '../../../components/ui/Button';
-import { Star, Target, Brain, Dumbbell, Palette, Users, BookOpen } from 'lucide-react';
+import { Star } from 'lucide-react';
 import { useTaskLibrary } from '../../../hooks/useTasks';
 import { mapToBackendCategory } from '../../../utils/taskMappers';
 import type { TaskCreate } from '../../../api/services/taskService';
 import { useChildContext } from '../../../contexts/ChildContext';
+import { getCategoryConfig, TASK_CATEGORY_LABELS, ICON_SIZES } from '../../../constants/taskConfig';
 
 interface CreateTaskModalProps {
   isOpen: boolean;
@@ -26,35 +27,6 @@ const CreateTaskModal = ({ isOpen, onClose }: CreateTaskModalProps) => {
     reward: 10,
     dueDate: '',
   });
-
-  const getCategoryIcon = (category: string) => {
-    const iconClass = "w-4 h-4";
-    switch (category) {
-      case 'self-discipline':
-        return <Target className={iconClass} />;
-      case 'logic':
-        return <Brain className={iconClass} />;
-      case 'physical':
-        return <Dumbbell className={iconClass} />;
-      case 'creativity':
-        return <Palette className={iconClass} />;
-      case 'social':
-        return <Users className={iconClass} />;
-      case 'academic':
-        return <BookOpen className={iconClass} />;
-      default:
-        return <Target className={iconClass} />;
-    }
-  };
-
-  const categoryLabels: Record<string, string> = {
-    'self-discipline': 'Independence',
-    'logic': 'Logic',
-    'physical': 'Physical',
-    'creativity': 'Creativity',
-    'social': 'Social',
-    'academic': 'Academic',
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -133,21 +105,25 @@ const CreateTaskModal = ({ isOpen, onClose }: CreateTaskModalProps) => {
             Category <span className="text-red-500">*</span>
           </label>
           <div className="grid grid-cols-2 gap-2">
-            {Object.entries(categoryLabels).map(([value, label]) => (
-              <button
-                key={value}
-                type="button"
-                onClick={() => setFormData({ ...formData, category: value as any })}
-                className={`flex items-center gap-2 px-3 py-2 rounded-lg border-2 transition-all duration-200 ${
-                  formData.category === value
-                    ? 'border-primary-500 bg-primary-50 text-primary-700'
-                    : 'border-gray-200 bg-white text-gray-700 hover:border-primary-300'
-                }`}
-              >
-                {getCategoryIcon(value)}
-                <span className="text-sm font-semibold">{label}</span>
-              </button>
-            ))}
+            {Object.entries(TASK_CATEGORY_LABELS).map(([value, label]) => {
+              const config = getCategoryConfig(value as any);
+              const Icon = config.icon;
+              return (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => setFormData({ ...formData, category: value as any })}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-lg border-2 transition-all duration-200 ${
+                    formData.category === value
+                      ? 'border-primary-500 bg-primary-50 text-primary-700'
+                      : 'border-gray-200 bg-white text-gray-700 hover:border-primary-300'
+                  }`}
+                >
+                  <Icon className={ICON_SIZES.sm} />
+                  <span className="text-sm font-semibold">{label}</span>
+                </button>
+              );
+            })}
           </div>
         </div>
 
