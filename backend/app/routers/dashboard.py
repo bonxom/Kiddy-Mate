@@ -18,7 +18,7 @@ async def get_dashboard(
     # Count verified tasks (completed and approved by parent)
     tasks_completed = await ChildTask.find(
         ChildTask.child.id == child.id,
-        ChildTask.status == ChildTaskStatus.VERIFIED
+        ChildTask.status == ChildTaskStatus.COMPLETED
     ).count()
 
     # Count all badges/rewards earned

@@ -141,11 +141,22 @@ async def start_task(
         ChildTask.task.id == task_id
     )
     if existing:
+        if existing.status == ChildTaskStatus.UNASSIGNED:
+            existing.status = ChildTaskStatus.IN_PROGRESS
+            existing.assigned_at = datetime.utcnow()
+            existing.completed_at = None
+            await existing.save()
+            return ChildTaskPublic(
+                id=str(existing.id),
+                status=existing.status,
+                assigned_at=existing.assigned_at,
+                completed_at=existing.completed_at,
+            )
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Task already assigned to this child."
         )
-    
+
     new_child_task = ChildTask(
         child=child,
         task=task,
@@ -184,11 +195,16 @@ async def complete_task(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You do not own this task."
         )
-    
-    child_task.status = ChildTaskStatus.COMPLETED
-    child_task.completed_at = datetime.utcnow()
+
+    if child_task.status != ChildTaskStatus.IN_PROGRESS:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Task must be in progress to request verification."
+        )
+
+    child_task.status = ChildTaskStatus.NEED_VERIFY
     await child_task.save()
-    return {"message": "Đánh dấu hoàn thành thành công."}
+    return {"message": "Đã gửi nhiệm vụ để chờ phụ huynh xác nhận."}
 
 @router.post("/{child_id}/tasks/{child_task_id}/verify", response_model=dict)
 async def verify_task(
@@ -215,7 +231,14 @@ async def verify_task(
             detail="You do not own this task."
         )
 
-    child_task.status = ChildTaskStatus.VERIFIED
+    if child_task.status != ChildTaskStatus.NEED_VERIFY:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Task must be waiting for verification."
+        )
+
+    child_task.status = ChildTaskStatus.COMPLETED
+    child_task.completed_at = datetime.utcnow()
 
     task_link = child_task.task
     task_id_or_ref = getattr(task_link, "id", None) or getattr(task_link, "ref", None)
@@ -225,8 +248,6 @@ async def verify_task(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Task not found."
         )
-    task_goc = await Task.get(task_id_str)
-    task_goc = await Task.get(task_id_str)
     task_goc = await Task.get(task_id_str)
     if not task_goc:
         raise HTTPException(

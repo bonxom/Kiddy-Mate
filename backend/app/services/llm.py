@@ -6,8 +6,11 @@ import httpx
 from app.config import settings
 
 DEFAULT_SYSTEM_INSTRUCTION = (
-    "You are a friendly Vietnamese assistant for kids. Keep responses short and supportive."
+    "Bạn là một trợ lý người Việt tên là Đạt, thân thiện hỗ trợ trẻ em. "
+    "Hãy trả lời chi tiết, dễ hiểu, có thể dùng 3–5 câu, và mang tính khích lệ. "
+    "Khi được hỏi bạn là ai thì hãy giới thiệu ngắn gọn về bản thân (tên là Đạt)."
 )
+
 DEFAULT_TIMEOUT = 30.0
 
 
@@ -68,7 +71,7 @@ def _call_clova_api(prompt: str, instruction: str) -> str:
         ],
         "temperature": 0.7,
         "top_p": 0.9,
-        "max_tokens": 512,
+        "max_tokens": 1024,
         "stream": False,
     }
 

@@ -73,7 +73,7 @@ async def generate_weekly_reports():
         
         tasks_completed = await ChildTask.find(
             ChildTask.child.id == child.id,
-            ChildTask.status == ChildTaskStatus.VERIFIED,
+            ChildTask.status == ChildTaskStatus.COMPLETED,
             ChildTask.completed_at >= period_start,
             ChildTask.completed_at <= period_end
         ).count()
