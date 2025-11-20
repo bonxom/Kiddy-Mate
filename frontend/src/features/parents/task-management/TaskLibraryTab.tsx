@@ -1,61 +1,12 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Search, Filter, Target, Brain, Dumbbell, Palette, Users, BookOpen, Star } from 'lucide-react';
 import Input from '../../../components/ui/Input';
 import Button from '../../../components/ui/Button';
+import Loading from '../../../components/ui/Loading';
 import type { LibraryTask, TaskCategory } from '../../../types/task.types';
 import AssignTaskModal from './AssignTaskModal';
-
-// Mock data
-const mockLibraryTasks: LibraryTask[] = [
-  {
-    id: 'lib1',
-    task: 'Đọc sách 15 phút',
-    category: 'academic',
-    description: 'Khuyến khích thói quen đọc sách mỗi ngày',
-    suggestedReward: 8,
-    suggestedChild: 'Minh An',
-  },
-  {
-    id: 'lib2',
-    task: 'Dọn dẹp phòng ngủ',
-    category: 'self-discipline',
-    description: 'Rèn luyện kỹ năng tự lập và giữ gìn không gian sống',
-    suggestedReward: 10,
-    suggestedChild: 'Thu Hà',
-  },
-  {
-    id: 'lib3',
-    task: 'Giải bài toán logic',
-    category: 'logic',
-    description: 'Phát triển tư duy logic và giải quyết vấn đề',
-    suggestedReward: 12,
-    suggestedChild: 'Minh An',
-  },
-  {
-    id: 'lib4',
-    task: 'Vẽ tranh tự do',
-    category: 'creativity',
-    description: 'Khuyến khích sự sáng tạo và thể hiện cảm xúc',
-    suggestedReward: 10,
-    suggestedChild: 'Thu Hà',
-  },
-  {
-    id: 'lib5',
-    task: 'Chơi game nhóm',
-    category: 'social',
-    description: 'Phát triển kỹ năng làm việc nhóm và giao tiếp',
-    suggestedReward: 15,
-    suggestedChild: 'Minh An',
-  },
-  {
-    id: 'lib6',
-    task: 'Tập thể dục 20 phút',
-    category: 'physical',
-    description: 'Rèn luyện sức khỏe thể chất',
-    suggestedReward: 10,
-    suggestedChild: 'Thu Hà',
-  },
-];
+import { useTaskLibrary } from '../../../hooks/useTasks';
+import { mapToLibraryTask } from '../../../utils/taskMappers';
 
 const categoryLabels: Record<TaskCategory, string> = {
   'self-discipline': 'Independence',
@@ -67,7 +18,18 @@ const categoryLabels: Record<TaskCategory, string> = {
 };
 
 const TaskLibraryTab = () => {
-  const [tasks] = useState<LibraryTask[]>(mockLibraryTasks);
+  // Use real API
+  const { tasks: backendTasks, loading, error, fetchTasks } = useTaskLibrary();
+
+  // Fetch tasks on mount
+  useEffect(() => {
+    fetchTasks();
+  }, [fetchTasks]);
+
+  // Map backend tasks to frontend format
+  const tasks = useMemo(() => {
+    return backendTasks.map(mapToLibraryTask);
+  }, [backendTasks]);
 
   const getCategoryIcon = (category: TaskCategory) => {
     const iconClass = "w-4 h-4";
@@ -138,6 +100,24 @@ const TaskLibraryTab = () => {
 
   return (
     <div>
+      {/* Loading State */}
+      {loading && (
+        <div className="flex items-center justify-center py-12">
+          <Loading />
+        </div>
+      )}
+
+      {/* Error State */}
+      {error && !loading && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4">
+          <p className="font-semibold">Error loading tasks</p>
+          <p className="text-sm">{error}</p>
+        </div>
+      )}
+
+      {/* Content */}
+      {!loading && (
+        <>
       {/* Search and Filter */}
       <div className="flex gap-4 mb-4">
         {/* Search */}
@@ -262,6 +242,8 @@ const TaskLibraryTab = () => {
           </div>
         )}
       </div>
+        </>
+      )}
 
       {/* Assign Task Modal */}
       {selectedTask && (

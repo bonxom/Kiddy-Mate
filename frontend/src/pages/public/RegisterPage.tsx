@@ -4,10 +4,12 @@ import { Sparkles, Mail, User, UserPlus } from 'lucide-react';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
 import PasswordInput from '../../components/ui/PasswordInput';
+import { useAuth } from '../../providers/AuthProvider';
 import type { RegisterCredentials } from '../../types/auth.types';
 
 const RegisterPage = () => {
   const navigate = useNavigate();
+  const { register } = useAuth();
   const [credentials, setCredentials] = useState<RegisterCredentials>({
     email: '',
     password: '',
@@ -56,17 +58,21 @@ const RegisterPage = () => {
     setIsLoading(true);
 
     try {
-      // TODO: Implement API call
-      console.log('Register:', credentials);
-      
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Call API through AuthProvider
+      await register({
+        email: credentials.email,
+        password: credentials.password,
+        displayName: credentials.displayName,
+      });
       
       // Navigate to onboarding flow
       navigate('/onboarding');
     } catch (error) {
       console.error('Registration error:', error);
-      setErrors({ email: 'Email already exists' });
+      
+      // Show error message
+      const errorMessage = error instanceof Error ? error.message : 'Email already exists';
+      setErrors({ email: errorMessage });
     } finally {
       setIsLoading(false);
     }

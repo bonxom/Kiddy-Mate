@@ -64,25 +64,46 @@ async def seed_database():
     # Tạo trẻ em mẫu
     print(">>> Đang tạo children...")
     child1 = Child(
-        name="Bé An",
-        parent=user1,
+        name="Nguyễn Minh An",
+        parent=user1,  # type: ignore
         birth_date=datetime(2015, 5, 15),
+        nickname="An",
+        gender="female",
+        avatar_url="https://api.dicebear.com/7.x/avataaars/svg?seed=An",
+        personality=["outgoing", "creative", "empathetic"],
+        interests=["drawing", "music", "storytelling"],
+        strengths=["creativity", "communication", "emotional awareness"],
+        challenges=["math", "staying focused", "following routines"],
         initial_traits={"intelligence": 5, "creativity": 7, "social": 6},
         current_coins=50,
         level=2
     )
     child2 = Child(
-        name="Bé Bình",
-        parent=user1,
+        name="Trần Đức Bình",
+        parent=user1,  # type: ignore
         birth_date=datetime(2017, 8, 20),
+        nickname="Bình",
+        gender="male",
+        avatar_url="https://api.dicebear.com/7.x/avataaars/svg?seed=Binh",
+        personality=["analytical", "curious", "introverted"],
+        interests=["robots", "puzzles", "science experiments"],
+        strengths=["logic", "problem-solving", "attention to detail"],
+        challenges=["social interaction", "expressing emotions", "physical activities"],
         initial_traits={"intelligence": 6, "creativity": 8, "social": 7},
         current_coins=30,
         level=1
     )
     child3 = Child(
-        name="Bé Chi",
-        parent=user1,
+        name="Lê Phương Chi",
+        parent=user1,  # type: ignore
         birth_date=datetime(2016, 3, 10),
+        nickname="Chi",
+        gender="female",
+        avatar_url="https://api.dicebear.com/7.x/avataaars/svg?seed=Chi",
+        personality=["energetic", "confident", "leader"],
+        interests=["sports", "dance", "team games"],
+        strengths=["physical coordination", "social skills", "confidence"],
+        challenges=["patience", "quiet activities", "detailed work"],
         initial_traits={"intelligence": 7, "creativity": 6, "social": 8},
         current_coins=100,
         level=3
@@ -251,8 +272,8 @@ async def seed_database():
         assigned_at=datetime.now() - timedelta(days=3)
     )
     child_task3 = ChildTask(
-        child=child1,
-        task=all_tasks[2],  # Task thứ ba
+        child=child1,  # type: ignore
+        task=all_tasks[2],  # type: ignore
         status=ChildTaskStatus.IN_PROGRESS,
         assigned_at=datetime.now() - timedelta(days=1)
     )
@@ -275,8 +296,8 @@ async def seed_database():
         completed_at=datetime.now() - timedelta(days=9)
     )
     child_task6 = ChildTask(
-        child=child3,
-        task=all_tasks[4],
+        child=child3,  # type: ignore
+        task=all_tasks[4],  # type: ignore
         status=ChildTaskStatus.IN_PROGRESS,
         assigned_at=datetime.now() - timedelta(days=2)
     )
@@ -304,37 +325,37 @@ async def seed_database():
     
     # Child 1 đã nhận một số badges
     child_reward1 = ChildReward(
-        child=child1,
-        reward=all_rewards[0],  # Badge Toán Học Cơ Bản
+        child=child1,  # type: ignore
+        reward=all_rewards[0],  # type: ignore
         earned_at=datetime.now() - timedelta(days=4)
     )
     child_reward2 = ChildReward(
-        child=child1,
-        reward=all_rewards[5],  # Skin Siêu Anh Hùng
+        child=child1,  # type: ignore
+        reward=all_rewards[5],  # type: ignore
         earned_at=datetime.now() - timedelta(days=3)
     )
     
     # Child 2 đã nhận một badge
     child_reward3 = ChildReward(
-        child=child2,
-        reward=all_rewards[0],  # Badge Toán Học Cơ Bản
+        child=child2,  # type: ignore
+        reward=all_rewards[0],  # type: ignore
         earned_at=datetime.now() - timedelta(days=6)
     )
     
     # Child 3 đã nhận nhiều rewards
     child_reward4 = ChildReward(
-        child=child3,
-        reward=all_rewards[3],  # Badge Đồng Cảm
+        child=child3,  # type: ignore
+        reward=all_rewards[3],  # type: ignore
         earned_at=datetime.now() - timedelta(days=9)
     )
     child_reward5 = ChildReward(
-        child=child3,
-        reward=all_rewards[6],  # Skin Công Chúa
+        child=child3,  # type: ignore
+        reward=all_rewards[6],  # type: ignore
         earned_at=datetime.now() - timedelta(days=8)
     )
     child_reward6 = ChildReward(
-        child=child3,
-        reward=all_rewards[7],  # Skin Khủng Long
+        child=child3,  # type: ignore
+        reward=all_rewards[7],  # type: ignore
         earned_at=datetime.now() - timedelta(days=7)
     )
     
@@ -351,8 +372,8 @@ async def seed_database():
     
     # Child 1 đã chơi một số games
     game_session1 = GameSession(
-        child=child1,
-        game=all_games[0],  # Trò chơi Logic
+        child=child1,  # type: ignore
+        game=all_games[0],  # type: ignore
         start_time=datetime.now() - timedelta(days=2, hours=3),
         end_time=datetime.now() - timedelta(days=2, hours=2, minutes=45),
         score=85,
@@ -364,8 +385,8 @@ async def seed_database():
         }
     )
     game_session2 = GameSession(
-        child=child1,
-        game=all_games[1],  # Trò chơi Sáng Tạo
+        child=child1,  # type: ignore
+        game=all_games[1],  # type: ignore
         start_time=datetime.now() - timedelta(days=1, hours=2),
         end_time=datetime.now() - timedelta(days=1, hours=1, minutes=30),
         score=92,
@@ -379,8 +400,8 @@ async def seed_database():
     
     # Child 2 đã chơi một game
     game_session3 = GameSession(
-        child=child2,
-        game=all_games[0],  # Trò chơi Logic
+        child=child2,  # type: ignore
+        game=all_games[0],  # type: ignore
         start_time=datetime.now() - timedelta(days=5),
         end_time=datetime.now() - timedelta(days=5, minutes=-20),
         score=78,
@@ -394,8 +415,8 @@ async def seed_database():
     
     # Child 3 đã chơi nhiều games
     game_session4 = GameSession(
-        child=child3,
-        game=all_games[2],  # Trò chơi Giao Tiếp
+        child=child3,  # type: ignore
+        game=all_games[2],  # type: ignore
         start_time=datetime.now() - timedelta(days=8),
         end_time=datetime.now() - timedelta(days=8, minutes=-15),
         score=95,
@@ -407,8 +428,8 @@ async def seed_database():
         }
     )
     game_session5 = GameSession(
-        child=child3,
-        game=all_games[3],  # Trò chơi Toán Học
+        child=child3,  # type: ignore
+        game=all_games[3],  # type: ignore
         start_time=datetime.now() - timedelta(hours=5),
         end_time=None,  # Đang chơi
         score=None,
@@ -425,35 +446,35 @@ async def seed_database():
     print(">>> Đang tạo interaction logs...")
     interaction_logs = [
         InteractionLog(
-            child=child1,
+            child=child1,  # type: ignore
             user_input="Xin chào, bạn tên gì?",
             avatar_response="Xin chào! Mình là KiddyMate, bạn đồng hành của bạn!",
             detected_emotion="happy",
             timestamp=datetime.now() - timedelta(days=1, hours=5)
         ),
         InteractionLog(
-            child=child1,
+            child=child1,  # type: ignore
             user_input="2 + 2 bằng mấy?",
             avatar_response="2 + 2 = 4! Bạn giỏi quá!",
             detected_emotion="curious",
             timestamp=datetime.now() - timedelta(days=1, hours=4)
         ),
         InteractionLog(
-            child=child2,
+            child=child2,  # type: ignore
             user_input="Hôm nay mình buồn",
             avatar_response="Mình hiểu cảm giác của bạn. Hãy kể cho mình nghe chuyện gì đã xảy ra nhé!",
             detected_emotion="sad",
             timestamp=datetime.now() - timedelta(days=3)
         ),
         InteractionLog(
-            child=child3,
+            child=child3,  # type: ignore
             user_input="Mình muốn chơi game",
             avatar_response="Tuyệt vời! Bạn muốn chơi game nào? Mình có nhiều game thú vị lắm!",
             detected_emotion="excited",
             timestamp=datetime.now() - timedelta(hours=2)
         ),
         InteractionLog(
-            child=child3,
+            child=child3,  # type: ignore
             user_input="Cảm ơn bạn",
             avatar_response="Không có gì! Mình luôn sẵn sàng giúp đỡ bạn!",
             detected_emotion="happy",
@@ -467,7 +488,7 @@ async def seed_database():
     print(">>> Đang tạo reports...")
     reports = [
         Report(
-            child=child1,
+            child=child1,  # type: ignore
             period_start=datetime(2025, 1, 1),
             period_end=datetime(2025, 1, 31),
             generated_at=datetime(2025, 2, 1),
@@ -486,7 +507,7 @@ async def seed_database():
             }
         ),
         Report(
-            child=child2,
+            child=child2,  # type: ignore
             period_start=datetime(2025, 1, 1),
             period_end=datetime(2025, 1, 31),
             generated_at=datetime(2025, 2, 1),
@@ -505,7 +526,7 @@ async def seed_database():
             }
         ),
         Report(
-            child=child3,
+            child=child3,  # type: ignore
             period_start=datetime(2025, 1, 1),
             period_end=datetime(2025, 1, 31),
             generated_at=datetime(2025, 2, 1),

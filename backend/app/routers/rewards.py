@@ -7,7 +7,7 @@ from typing import List
 
 router = APIRouter()
 
-@router.get("/children/{child_id}/inventory", response_model=List[dict])
+@router.get("/{child_id}/inventory", response_model=List[dict])
 async def get_inventory(
     child_id: str,
     child: Child = Depends(verify_child_ownership)
@@ -32,7 +32,7 @@ async def get_inventory(
         })
     return results
 
-@router.post("/children/{child_id}/avatar/equip", response_model=dict)
+@router.post("/{child_id}/avatar/equip", response_model=dict)
 async def equip_avatar_skin(
     child_id: str,
     reward_id: str,

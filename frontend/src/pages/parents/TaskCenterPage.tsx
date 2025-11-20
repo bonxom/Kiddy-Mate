@@ -5,6 +5,7 @@ import Badge from '../../components/ui/Badge';
 import AssignedTasksTab from '../../features/parents/task-management/AssignedTasksTab';
 import TaskLibraryTab from '../../features/parents/task-management/TaskLibraryTab';
 import CreateTaskModal from '../../features/parents/task-management/CreateTaskModal';
+import { ChildProvider } from '../../contexts/ChildContext';
 
 type TabType = 'assigned' | 'library';
 
@@ -28,6 +29,7 @@ const TaskCenterPage = () => {
   ];
 
   return (
+    <ChildProvider>
     <div className="min-h-screen overflow-y-auto p-4 md:p-6 lg:p-8 scrollbar-thin">
       <div className="max-w-7xl mx-auto space-y-6 animate-fade-in">
         {/* Header */}
@@ -114,6 +116,7 @@ const TaskCenterPage = () => {
         onClose={() => setIsCreateModalOpen(false)}
       />
     </div>
+    </ChildProvider>
   );
 };
 

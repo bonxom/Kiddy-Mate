@@ -4,10 +4,12 @@ import { Sparkles, Mail, LogIn } from 'lucide-react';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
 import PasswordInput from '../../components/ui/PasswordInput';
+import { useAuth } from '../../providers/AuthProvider';
 import type { LoginCredentials } from '../../types/auth.types';
 
 const LoginPage = () => {
   const navigate = useNavigate();
+  const { login } = useAuth();
   const [credentials, setCredentials] = useState<LoginCredentials>({
     email: '',
     password: '',
@@ -40,17 +42,17 @@ const LoginPage = () => {
     setIsLoading(true);
 
     try {
-      // TODO: Implement API call
-      console.log('Login:', credentials);
+      // Call API through AuthProvider
+      await login(credentials);
       
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Mock successful login
+      // Navigate to parent dashboard on success
       navigate('/parent/dashboard');
     } catch (error) {
       console.error('Login error:', error);
-      setErrors({ email: 'Invalid email or password' });
+      
+      // Show error message
+      const errorMessage = error instanceof Error ? error.message : 'Invalid email or password';
+      setErrors({ email: errorMessage });
     } finally {
       setIsLoading(false);
     }

@@ -12,6 +12,7 @@ class RegisterRequest(BaseModel):
     email: EmailStr
     password: str
     full_name: str
+    phone_number: str | None = None
 
 class LoginRequest(BaseModel):
     email: EmailStr
@@ -74,9 +75,16 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
 
 @router.get("/me", response_model=dict)
 async def get_me(current_user: User = Depends(get_current_user)):
+    from app.models.child_models import Child
+    
+    # Get children count
+    children = await Child.find(Child.parent.id == current_user.id).to_list()
+    
     return {
         "id": str(current_user.id),
         "email": current_user.email,
         "full_name": current_user.full_name,
+        "onboarding_completed": current_user.onboarding_completed,
+        "children_count": len(children),
         "created_at": current_user.created_at.isoformat()
     }

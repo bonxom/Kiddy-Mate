@@ -36,7 +36,7 @@ def _serialize_assessment(doc: ChildDevelopmentAssessment) -> ChildAssessmentPub
         social_interaction=SocialInteractionAnswers(**(doc.social_interaction or {})),
     )
 
-@router.post("/children/{child_id}/assessments", response_model=ChildAssessmentPublic)
+@router.post("/{child_id}/assessments", response_model=ChildAssessmentPublic)
 async def create_child_assessment(
     child_id: str,
     assessment: ChildAssessmentCreate,
@@ -52,7 +52,7 @@ async def create_child_assessment(
     await new_assessment.insert()
     return _serialize_assessment(new_assessment)
 
-@router.get("/children/{child_id}/assessments", response_model=List[ChildAssessmentPublic])
+@router.get("/{child_id}/assessments", response_model=List[ChildAssessmentPublic])
 async def list_child_assessments(
     child_id: str,
     child: Child = Depends(verify_child_ownership),
@@ -63,7 +63,7 @@ async def list_child_assessments(
     assessments = await query.to_list()
     return [_serialize_assessment(a) for a in assessments]
 
-@router.get("/children/{child_id}/assessments/{assessment_id}", response_model=ChildAssessmentPublic)
+@router.get("/{child_id}/assessments/{assessment_id}", response_model=ChildAssessmentPublic)
 async def get_child_assessment(
     child_id: str,
     assessment_id: str,
@@ -83,7 +83,7 @@ async def get_child_assessment(
         )
     return _serialize_assessment(assessment)
 
-@router.put("/children/{child_id}/assessments/{assessment_id}", response_model=ChildAssessmentPublic)
+@router.put("/{child_id}/assessments/{assessment_id}", response_model=ChildAssessmentPublic)
 async def update_child_assessment(
     child_id: str,
     assessment_id: str,

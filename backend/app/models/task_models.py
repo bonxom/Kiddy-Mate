@@ -3,6 +3,13 @@ from typing import Optional
 import enum
 
 class TaskCategory(str, enum.Enum):
+    INDEPENDENCE = "Independence"
+    LOGIC = "Logic"
+    PHYSICAL = "Physical"
+    CREATIVITY = "Creativity"
+    SOCIAL = "Social"
+    ACADEMIC = "Academic"
+    # Backward compatibility
     IQ = "IQ"
     EQ = "EQ"
 

@@ -3,24 +3,10 @@ from typing import Optional
 from datetime import datetime
 import enum
 
-class TaskCategory(str, enum.Enum):
-    IQ = "IQ"
-    EQ = "EQ"
-
-class TaskType(str, enum.Enum):
-    LOGIC = "logic"
-    EMOTION = "emotion"
-
-class ChildTaskStatus(str, enum.Enum):
-    UNASSIGNED = "unassigned"
-    IN_PROGRESS = "in_progress"
-    NEED_VERIFY = "need_verify"
-    COMPLETED = "completed"
-
-class RewardType(str, enum.Enum):
-    BADGE = "badge"
-    SKIN = "skin"
-    COIN = "coin"
+# Import enums from models for consistency
+from app.models.task_models import TaskCategory, TaskType
+from app.models.childtask_models import ChildTaskStatus, ChildTaskPriority
+from app.models.reward_models import RewardType
 
 class UserBase(BaseModel):
     email: EmailStr
@@ -40,7 +26,14 @@ class UserPublic(UserInDB):
 class ChildBase(BaseModel):
     name: str
     birth_date: datetime
-    initial_traits: Optional[dict]
+    initial_traits: Optional[dict] = None
+    nickname: Optional[str] = None
+    gender: Optional[str] = None
+    avatar_url: Optional[str] = None
+    personality: Optional[list[str]] = None
+    interests: Optional[list[str]] = None
+    strengths: Optional[list[str]] = None
+    challenges: Optional[list[str]] = None
 
 class ChildCreate(ChildBase):
     pass
@@ -52,7 +45,13 @@ class ChildInDB(ChildBase):
     model_config = ConfigDict(from_attributes=True)
 
 class ChildPublic(ChildInDB):
-    pass
+    nickname: Optional[str] = None
+    gender: Optional[str] = None
+    avatar_url: Optional[str] = None
+    personality: Optional[list[str]] = None
+    interests: Optional[list[str]] = None
+    strengths: Optional[list[str]] = None
+    challenges: Optional[list[str]] = None
 
 ###### Store answers of parents
 class DisciplineAutonomyAnswers(BaseModel):
@@ -106,14 +105,14 @@ class TaskBase(BaseModel):
     type: TaskType
     difficulty: int
     suggested_age_range: str
+    reward_coins: Optional[int] = 50
+    reward_badge_name: Optional[str] = None
 
 class TaskCreate(TaskBase):
     pass
 
 class TaskInDB(TaskBase):
     id: str
-    reward_coins: int = 50
-    reward_badge_name: Optional[str] = None
     model_config = ConfigDict(from_attributes=True)
 
 class TaskPublic(TaskInDB):
@@ -134,6 +133,19 @@ class ChildTaskInDB(ChildTaskBase):
 
 class ChildTaskPublic(ChildTaskInDB):
     pass
+
+class ChildTaskWithDetails(BaseModel):
+    """Child task with populated task details for dashboard"""
+    id: str
+    status: ChildTaskStatus
+    assigned_at: datetime
+    completed_at: Optional[datetime]
+    priority: Optional[str] = None
+    due_date: Optional[datetime] = None
+    progress: int = 0
+    notes: Optional[str] = None
+    task: TaskPublic  # Full task details
+    model_config = ConfigDict(from_attributes=True)
 
 class RewardBase(BaseModel):
     name: str

@@ -5,11 +5,13 @@ import LandingPage from '../pages/public/LandingPage';
 import LoginPage from '../pages/public/LoginPage';
 import RegisterPage from '../pages/public/RegisterPage';
 import OnboardingPage from '../pages/public/OnboardingPage';
+import { useAuth } from '../providers/AuthProvider';
 
 export const AppRouter = () => {
-  // Giả sử có logic check auth ở đây
-  const isParentAuthenticated = true; // Hardcode là đã đăng nhập
-  const isChildAuthenticated = false;
+  // Get real authentication state from AuthProvider
+  const { isAuthenticated, user } = useAuth();
+  const isParentAuthenticated = isAuthenticated && user?.role === 'parent';
+  const isChildAuthenticated = isAuthenticated && user?.role === 'child';
 
   return (
     <Routes>

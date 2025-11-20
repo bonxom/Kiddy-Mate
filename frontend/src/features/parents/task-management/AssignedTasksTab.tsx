@@ -1,90 +1,57 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Search, Trash2, ArrowUpDown, Target, Brain, Dumbbell, Palette, Users, BookOpen, Star, AlertCircle, TrendingUp, Minus } from 'lucide-react';
 import Input from '../../../components/ui/Input';
 import Badge from '../../../components/ui/Badge';
 import Modal from '../../../components/ui/Modal';
 import Button from '../../../components/ui/Button';
+import Loading from '../../../components/ui/Loading';
 import TaskDetailModal from './TaskDetailModal';
 import type { AssignedTask, TaskStatus } from '../../../types/task.types';
+import { useAssignedTasks } from '../../../hooks/useTasks';
+import { mapToUIAssignedTask } from '../../../utils/taskMappers';
+import { useChildContext } from '../../../contexts/ChildContext';
 
-// Mock data
+// Extended interface for UI
 interface ExtendedAssignedTask extends AssignedTask {
   category: 'self-discipline' | 'logic' | 'creativity' | 'social' | 'physical' | 'academic';
   priority: 'high' | 'medium' | 'low';
   progress?: number;
 }
 
-const mockAssignedTasks: ExtendedAssignedTask[] = [
-  {
-    id: '1',
-    child: 'Minh An',
-    task: 'Dọn phòng ngủ',
-    date: '2025-11-10',
-    status: 'completed',
-    reward: 10,
-    category: 'self-discipline',
-    priority: 'medium',
-    progress: 100,
-  },
-  {
-    id: '2',
-    child: 'Minh An',
-    task: 'Làm bài tập toán',
-    date: '2025-11-12',
-    status: 'in-progress',
-    reward: 15,
-    category: 'logic',
-    priority: 'high',
-    progress: 65,
-  },
-  {
-    id: '3',
-    child: 'Thu Hà',
-    task: 'Đọc sách 15 phút',
-    date: '2025-11-13',
-    status: 'assigned',
-    reward: 8,
-    category: 'academic',
-    priority: 'low',
-    progress: 0,
-  },
-  {
-    id: '4',
-    child: 'Minh An',
-    task: 'Tưới cây',
-    date: '2025-11-09',
-    status: 'missed',
-    reward: 5,
-    category: 'self-discipline',
-    priority: 'low',
-    progress: 0,
-  },
-  {
-    id: '5',
-    child: 'Thu Hà',
-    task: 'Vẽ tranh tự do',
-    date: '2025-11-13',
-    status: 'in-progress',
-    reward: 12,
-    category: 'creativity',
-    priority: 'medium',
-    progress: 40,
-  },
-  {
-    id: '6',
-    child: 'Minh An',
-    task: 'Chơi game nhóm',
-    date: '2025-11-13',
-    status: 'assigned',
-    reward: 18,
-    category: 'social',
-    priority: 'high',
-    progress: 0,
-  },
-];
-
 const AssignedTasksTab = () => {
-  const [tasks, setTasks] = useState<ExtendedAssignedTask[]>(mockAssignedTasks);
+  const { selectedChildId, children, setSelectedChildId } = useChildContext();
+  
+  const { 
+    tasks: backendTasks, 
+    loading, 
+    error,
+    fetchTasks,
+    unassignTask,
+  } = useAssignedTasks(selectedChildId || '');
+
+  // Fetch tasks on mount and when selected child changes
+  useEffect(() => {
+    if (selectedChildId) {
+      fetchTasks();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedChildId]); // Only re-fetch when selectedChildId changes
+
+  // Create child name lookup map
+  const childMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    children.forEach(c => map[c.id] = c.name);
+    return map;
+  }, [children]);
+
+  // Transform backend tasks to UI format
+  const tasks = useMemo(() => {
+    return backendTasks.map(task => {
+      // Get child name from map, fallback to 'Unknown Child'
+      const childName = childMap[selectedChildId || ''] || 'Unknown Child';
+      return mapToUIAssignedTask(task, childName);
+    });
+  }, [backendTasks, childMap, selectedChildId]);
 
   const getCategoryIcon = (category: ExtendedAssignedTask['category']) => {
     const iconClass = "w-4 h-4";
@@ -213,11 +180,17 @@ const AssignedTasksTab = () => {
     setDeleteModalOpen(true);
   };
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (taskToDelete) {
-      setTasks(tasks.filter((task) => task.id !== taskToDelete));
-      setTaskToDelete(null);
-      setDeleteModalOpen(false);
+      try {
+        await unassignTask(taskToDelete);
+        setTaskToDelete(null);
+        setDeleteModalOpen(false);
+        // Tasks will auto-refresh via the hook
+      } catch (err) {
+        console.error('Failed to delete task:', err);
+        // TODO: Show error toast notification
+      }
     }
   };
 
@@ -226,12 +199,23 @@ const AssignedTasksTab = () => {
     setDetailModalOpen(true);
   };
 
-  const handleSaveTask = (updatedTask: ExtendedAssignedTask) => {
-    setTasks(tasks.map(t => t.id === updatedTask.id ? updatedTask : t));
+  const handleSaveTask = async () => {
+    // Task updates are handled in TaskDetailModal
+    // Just close the modal and refresh will happen automatically
+    setDetailModalOpen(false);
+    setSelectedTask(null);
   };
 
-  const handleDeleteTask = (taskId: string) => {
-    setTasks(tasks.filter(t => t.id !== taskId));
+  const handleDeleteTask = async (taskId: string) => {
+    try {
+      await unassignTask(taskId);
+      setDetailModalOpen(false);
+      setSelectedTask(null);
+      // Tasks will auto-refresh via the hook
+    } catch (err) {
+      console.error('Failed to delete task:', err);
+      // TODO: Show error toast notification
+    }
   };
 
   const getStatusBadge = (status: TaskStatus) => {
@@ -248,20 +232,64 @@ const AssignedTasksTab = () => {
 
   return (
     <div>
-      {/* Search */}
-      <div className="mb-4">
-        <div className="relative max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-          <Input
-            type="text"
-            placeholder="Search tasks or child name..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
-            fullWidth
-          />
+      {/* Child Selector */}
+      {!loading && children.length > 0 && (
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Select Child
+          </label>
+          <select
+            value={selectedChildId || ''}
+            onChange={(e) => setSelectedChildId(e.target.value)}
+            className="w-full max-w-xs px-4 py-2 border border-gray-300 rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+          >
+            {children.map((child) => (
+              <option key={child.id} value={child.id}>
+                {child.name}
+              </option>
+            ))}
+          </select>
         </div>
-      </div>
+      )}
+
+      {/* Loading State */}
+      {loading && (
+        <div className="flex items-center justify-center py-12">
+          <Loading />
+        </div>
+      )}
+
+      {/* Error State */}
+      {error && !loading && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4">
+          <p className="font-semibold">Error loading tasks</p>
+          <p className="text-sm">{error}</p>
+        </div>
+      )}
+
+      {/* No Child Selected */}
+      {!selectedChildId && !loading && (
+        <div className="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded-lg mb-4">
+          <p className="text-sm">Please select a child to view their assigned tasks.</p>
+        </div>
+      )}
+
+      {/* Search */}
+      {selectedChildId && !loading && (
+        <>
+          <div className="mb-4">
+            <div className="relative max-w-md">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <Input
+                type="text"
+                placeholder="Search tasks or child name..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10"
+                fullWidth
+              />
+            </div>
+          </div>
 
       {/* Table */}
       <div className="overflow-x-auto border border-gray-200 rounded-xl shadow-md">
@@ -440,6 +468,8 @@ const AssignedTasksTab = () => {
           </div>
         )}
       </div>
+        </>
+      )}
 
       {/* Delete Confirmation Modal */}
       <Modal
@@ -474,6 +504,11 @@ const AssignedTasksTab = () => {
           task={selectedTask}
           onSave={handleSaveTask}
           onDelete={handleDeleteTask}
+          onUpdate={async () => {
+            await fetchTasks(); // Refresh task list
+            setSelectedTask(null); // Clear selected task to force re-render
+            setDetailModalOpen(false); // Close modal after refresh
+          }}
         />
       )}
     </div>
