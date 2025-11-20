@@ -28,6 +28,7 @@ export interface UserResponse {
   id: string;
   email: string;
   full_name: string;
+  onboarding_completed: boolean;
   created_at: string;
 }
 
@@ -95,7 +96,7 @@ export const login = async (credentials: LoginRequest): Promise<AuthResponse> =>
         email: userInfo.email,
         displayName: userInfo.full_name,
         role: 'parent', // Default role for now
-        hasCompletedOnboarding: false, // TODO: Get from backend
+        hasCompletedOnboarding: userInfo.onboarding_completed,
       },
     };
 

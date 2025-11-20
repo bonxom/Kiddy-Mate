@@ -45,8 +45,16 @@ const LoginPage = () => {
       // Call API through AuthProvider
       await login(credentials);
       
-      // Navigate to parent dashboard on success
-      navigate('/parent/dashboard');
+      // Check if user has completed onboarding
+      const storedUser = JSON.parse(localStorage.getItem('auth_user') || '{}');
+      
+      if (storedUser.hasCompletedOnboarding) {
+        // Navigate to parent dashboard if onboarding completed
+        navigate('/parent/dashboard');
+      } else {
+        // Navigate to onboarding if not completed
+        navigate('/onboarding');
+      }
     } catch (error) {
       console.error('Login error:', error);
       
