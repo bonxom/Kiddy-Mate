@@ -26,7 +26,14 @@ class UserPublic(UserInDB):
 class ChildBase(BaseModel):
     name: str
     birth_date: datetime
-    initial_traits: Optional[dict]
+    initial_traits: Optional[dict] = None
+    nickname: Optional[str] = None
+    gender: Optional[str] = None
+    avatar_url: Optional[str] = None
+    personality: Optional[list[str]] = None
+    interests: Optional[list[str]] = None
+    strengths: Optional[list[str]] = None
+    challenges: Optional[list[str]] = None
 
 class ChildCreate(ChildBase):
     pass
@@ -98,14 +105,14 @@ class TaskBase(BaseModel):
     type: TaskType
     difficulty: int
     suggested_age_range: str
+    reward_coins: Optional[int] = 50
+    reward_badge_name: Optional[str] = None
 
 class TaskCreate(TaskBase):
     pass
 
 class TaskInDB(TaskBase):
     id: str
-    reward_coins: int = 50
-    reward_badge_name: Optional[str] = None
     model_config = ConfigDict(from_attributes=True)
 
 class TaskPublic(TaskInDB):

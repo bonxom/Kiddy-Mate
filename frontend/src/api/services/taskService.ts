@@ -5,7 +5,7 @@
 
 import axiosClient from '../client/axiosClient';
 
-// Updated to match backend TaskCategory enum (6 categories + backward compatibility)
+// Updated to match backend TaskCategory enum (8 categories)
 export type TaskCategory = 
   | 'Independence' 
   | 'Logic' 
@@ -16,8 +16,9 @@ export type TaskCategory =
   | 'IQ'  // Backward compatibility
   | 'EQ'; // Backward compatibility
 
-export type TaskType = 'logic' | 'emotion'; // Match backend TaskType
+export type TaskType = 'logic' | 'emotion';
 export type ChildTaskStatus = 'suggested' | 'in_progress' | 'completed' | 'verified';
+export type ChildTaskPriority = 'low' | 'medium' | 'high';
 
 export interface Task {
   id: string;
@@ -31,6 +32,28 @@ export interface Task {
   reward_badge_name?: string;
 }
 
+export interface TaskCreate {
+  title: string;
+  description: string;
+  category: TaskCategory;
+  type: TaskType;
+  difficulty: number;
+  suggested_age_range: string;
+  reward_coins?: number;
+  reward_badge_name?: string;
+}
+
+export interface TaskUpdate {
+  title?: string;
+  description?: string;
+  category?: TaskCategory;
+  type?: TaskType;
+  difficulty?: number;
+  suggested_age_range?: string;
+  reward_coins?: number;
+  reward_badge_name?: string;
+}
+
 export interface ChildTask {
   id: string;
   status: ChildTaskStatus;
@@ -39,7 +62,18 @@ export interface ChildTask {
 }
 
 export interface ChildTaskWithDetails extends ChildTask {
+  priority?: ChildTaskPriority;
+  due_date?: string;
+  progress?: number;
+  notes?: string;
   task: Task;
+}
+
+export interface ChildTaskUpdate {
+  priority?: ChildTaskPriority;
+  due_date?: string;
+  progress?: number;
+  notes?: string;
 }
 
 export interface GetChildTasksParams {
@@ -47,6 +81,10 @@ export interface GetChildTasksParams {
   category?: string;
   status?: ChildTaskStatus;
 }
+
+// ============================================================================
+// TASK LIBRARY MANAGEMENT
+// ============================================================================
 
 /**
  * Get all available tasks in library
@@ -57,7 +95,35 @@ export const getAllTasks = async (): Promise<Task[]> => {
 };
 
 /**
- * Get suggested tasks for child (max 5)
+ * Create custom task
+ */
+export const createTask = async (task: TaskCreate): Promise<Task> => {
+  const response = await axiosClient.post<Task>('/tasks', task);
+  return response.data;
+};
+
+/**
+ * Update task details
+ */
+export const updateTask = async (taskId: string, task: TaskUpdate): Promise<Task> => {
+  const response = await axiosClient.put<Task>(`/tasks/${taskId}`, task);
+  return response.data;
+};
+
+/**
+ * Delete task from library (cascade delete assigned tasks)
+ */
+export const deleteTask = async (taskId: string): Promise<{ message: string }> => {
+  const response = await axiosClient.delete<{ message: string }>(`/tasks/${taskId}`);
+  return response.data;
+};
+
+// ============================================================================
+// TASK SUGGESTIONS
+// ============================================================================
+
+/**
+ * Get suggested tasks for child (max 5, excludes already assigned)
  */
 export const getSuggestedTasks = async (childId: string): Promise<Task[]> => {
   const response = await axiosClient.get<Task[]>(
@@ -66,9 +132,12 @@ export const getSuggestedTasks = async (childId: string): Promise<Task[]> => {
   return response.data;
 };
 
+// ============================================================================
+// ASSIGNED TASKS MANAGEMENT
+// ============================================================================
+
 /**
- * Get child's assigned tasks with full details (ENHANCED)
- * Backend now returns full task details populated
+ * Get child's assigned tasks with full details (supports filtering)
  */
 export const getChildTasks = async (
   childId: string,
@@ -81,12 +150,10 @@ export const getChildTasks = async (
   return response.data;
 };
 
-
-
 /**
- * Start/assign a task to child
+ * Assign task to child
  */
-export const startTask = async (
+export const assignTask = async (
   childId: string,
   taskId: string
 ): Promise<ChildTask> => {
@@ -95,6 +162,38 @@ export const startTask = async (
   );
   return response.data;
 };
+
+/**
+ * Update assigned task (priority, due_date, progress, notes)
+ */
+export const updateAssignedTask = async (
+  childId: string,
+  childTaskId: string,
+  updates: ChildTaskUpdate
+): Promise<ChildTaskWithDetails> => {
+  const response = await axiosClient.put<ChildTaskWithDetails>(
+    `/children/${childId}/tasks/${childTaskId}`,
+    updates
+  );
+  return response.data;
+};
+
+/**
+ * Unassign task from child
+ */
+export const unassignTask = async (
+  childId: string,
+  childTaskId: string
+): Promise<{ message: string }> => {
+  const response = await axiosClient.delete<{ message: string }>(
+    `/children/${childId}/tasks/${childTaskId}`
+  );
+  return response.data;
+};
+
+// ============================================================================
+// TASK LIFECYCLE ACTIONS
+// ============================================================================
 
 /**
  * Mark task as completed (waiting for verification)
@@ -123,10 +222,22 @@ export const verifyTask = async (
 };
 
 export default {
+  // Library Management
   getAllTasks,
+  createTask,
+  updateTask,
+  deleteTask,
+  
+  // Suggestions
   getSuggestedTasks,
+  
+  // Assigned Tasks
   getChildTasks,
-  startTask,
+  assignTask,
+  updateAssignedTask,
+  unassignTask,
+  
+  // Lifecycle
   completeTask,
   verifyTask,
 };

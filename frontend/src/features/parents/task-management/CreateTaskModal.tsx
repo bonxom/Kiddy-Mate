@@ -3,6 +3,10 @@ import Modal from '../../../components/ui/Modal';
 import Input from '../../../components/ui/Input';
 import Button from '../../../components/ui/Button';
 import { Star, Target, Brain, Dumbbell, Palette, Users, BookOpen } from 'lucide-react';
+import { useTaskLibrary } from '../../../hooks/useTasks';
+import { mapToBackendCategory } from '../../../utils/taskMappers';
+import type { TaskCreate } from '../../../api/services/taskService';
+import { useChildContext } from '../../../contexts/ChildContext';
 
 interface CreateTaskModalProps {
   isOpen: boolean;
@@ -10,9 +14,13 @@ interface CreateTaskModalProps {
 }
 
 const CreateTaskModal = ({ isOpen, onClose }: CreateTaskModalProps) => {
+  const { createTask } = useTaskLibrary();
+  const { children } = useChildContext();
+  
   const [formData, setFormData] = useState({
     childId: '',
     taskName: '',
+    description: '',
     category: 'self-discipline' as 'self-discipline' | 'logic' | 'physical' | 'creativity' | 'social' | 'academic',
     priority: 'medium' as 'high' | 'medium' | 'low',
     reward: 10,
@@ -48,20 +56,41 @@ const CreateTaskModal = ({ isOpen, onClose }: CreateTaskModalProps) => {
     'academic': 'Academic',
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: Implement API call
-    console.log('Create task:', formData);
-    onClose();
-    // Reset form
-    setFormData({
-      childId: '',
-      taskName: '',
-      category: 'self-discipline',
-      priority: 'medium',
-      reward: 10,
-      dueDate: '',
-    });
+    
+    try {
+      // Create task data matching backend schema
+      const taskData: TaskCreate = {
+        title: formData.taskName,
+        description: formData.description,
+        category: mapToBackendCategory(formData.category),
+        type: 'logic', // Default type - can be made configurable
+        difficulty: formData.priority === 'high' ? 3 : formData.priority === 'medium' ? 2 : 1,
+        suggested_age_range: '6-12', // Default - can be made configurable
+        reward_coins: formData.reward,
+      };
+
+      await createTask(taskData);
+      
+      onClose();
+      
+      // Reset form
+      setFormData({
+        childId: '',
+        taskName: '',
+        description: '',
+        category: 'self-discipline',
+        priority: 'medium',
+        reward: 10,
+        dueDate: '',
+      });
+      
+      // TODO: Show success toast notification
+    } catch (error) {
+      console.error('Failed to create task:', error);
+      // TODO: Show error toast notification
+    }
   };
 
   return (
@@ -79,8 +108,11 @@ const CreateTaskModal = ({ isOpen, onClose }: CreateTaskModalProps) => {
             required
           >
             <option value="">-- Select Child --</option>
-            <option value="1">Minh An</option>
-            <option value="2">Thu Hà</option>
+            {children.map((child) => (
+              <option key={child.id} value={child.id}>
+                {child.name}
+              </option>
+            ))}
           </select>
         </div>
 

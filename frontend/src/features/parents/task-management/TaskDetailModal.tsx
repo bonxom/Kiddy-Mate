@@ -3,13 +3,19 @@ import Modal from '../../../components/ui/Modal';
 import Input from '../../../components/ui/Input';
 import Button from '../../../components/ui/Button';
 import Badge from '../../../components/ui/Badge';
-import { Star, Target, Brain, Dumbbell, Palette, Users, BookOpen, AlertCircle, TrendingUp, Minus } from 'lucide-react';
+import { Target, Brain, Dumbbell, Palette, Users, BookOpen, Star, AlertCircle, TrendingUp, Minus } from 'lucide-react';
 import type { AssignedTask } from '../../../types/task.types';
+import { useAssignedTasks } from '../../../hooks/useTasks';
+import { mapToBackendPriority } from '../../../utils/taskMappers';
+import type { ChildTaskUpdate } from '../../../api/services/taskService';
+import { useChildContext } from '../../../contexts/ChildContext';
 
 interface ExtendedAssignedTask extends AssignedTask {
   category: 'self-discipline' | 'logic' | 'creativity' | 'social' | 'physical' | 'academic';
   priority: 'high' | 'medium' | 'low';
   progress?: number;
+  notes?: string;
+  dueDate?: string;
 }
 
 interface TaskDetailModalProps {
@@ -18,16 +24,35 @@ interface TaskDetailModalProps {
   task: ExtendedAssignedTask;
   onSave?: (task: ExtendedAssignedTask) => void;
   onDelete?: (taskId: string) => void;
+  onUpdate?: () => void; // Callback to refresh task list after update
 }
 
-const TaskDetailModal = ({ isOpen, onClose, task, onSave, onDelete }: TaskDetailModalProps) => {
+const TaskDetailModal = ({ isOpen, onClose, task, onSave, onDelete, onUpdate }: TaskDetailModalProps) => {
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState<ExtendedAssignedTask>(task);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  
+  const { children } = useChildContext();
+  
+  // Get childId from task's child_id field (assuming backend returns this)
+  // or from the child name mapping
+  const getChildIdFromName = (childName: string): string => {
+    const child = children.find(c => c.name === childName);
+    return child?.id || '';
+  };
+  
+  const childId = getChildIdFromName(formData.child);
+  const { updateTask } = useAssignedTasks(childId);
 
   useEffect(() => {
     setFormData(task);
     setIsEditing(false);
+    console.log('📋 TaskDetailModal - Task loaded:', {
+      task,
+      childName: task.child,
+      resolvedChildId: getChildIdFromName(task.child),
+      availableChildren: children
+    });
   }, [task, isOpen]);
 
   const getCategoryIcon = (category: string) => {
@@ -103,13 +128,62 @@ const TaskDetailModal = ({ isOpen, onClose, task, onSave, onDelete }: TaskDetail
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (onSave) {
-      onSave(formData);
+    
+    try {
+      // Prepare update data - only include fields that have changed
+      const updates: ChildTaskUpdate = {};
+      
+      if (formData.priority) {
+        updates.priority = mapToBackendPriority(formData.priority);
+      }
+      
+      if (formData.progress !== undefined && formData.progress !== null) {
+        updates.progress = formData.progress;
+      }
+      
+      if (formData.date) {
+        // Convert date string to ISO datetime format for backend
+        updates.due_date = new Date(formData.date).toISOString();
+      }
+
+      console.log('🔍 DEBUG - Update Task:', {
+        childId,
+        taskId: task.id,
+        updates,
+        formData
+      });
+
+      // Call API to update
+      if (childId && Object.keys(updates).length > 0) {
+        const result = await updateTask(task.id, updates);
+        console.log('✅ Update successful:', result);
+      } else {
+        console.warn('⚠️ No updates to send or missing childId:', { childId, updates });
+      }
+      
+      // Call parent callback if provided
+      if (onSave) {
+        onSave(formData);
+      }
+      
+      setIsEditing(false);
+      
+      // Trigger refresh of task list BEFORE closing modal
+      if (onUpdate) {
+        await onUpdate(); // Wait for refresh to complete
+      }
+      
+      onClose();
+      
+      // TODO: Show success toast notification
+      console.log('Task updated successfully');
+    } catch (error) {
+      console.error('Failed to update task:', error);
+      // TODO: Show error toast notification
+      alert('Failed to update task. Please try again.');
     }
-    setIsEditing(false);
-    onClose();
   };
 
   const handleDelete = () => {
@@ -148,8 +222,11 @@ const TaskDetailModal = ({ isOpen, onClose, task, onSave, onDelete }: TaskDetail
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
                   required
                 >
-                  <option value="Minh An">Minh An</option>
-                  <option value="Thu Hà">Thu Hà</option>
+                  {children.map((child) => (
+                    <option key={child.id} value={child.name}>
+                      {child.name}
+                    </option>
+                  ))}
                 </select>
               </div>
 
@@ -256,6 +333,24 @@ const TaskDetailModal = ({ isOpen, onClose, task, onSave, onDelete }: TaskDetail
                   fullWidth
                 />
               </div>
+
+              {/* Progress */}
+              {formData.progress !== undefined && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Progress: {formData.progress}%
+                  </label>
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    step="5"
+                    value={formData.progress}
+                    onChange={(e) => setFormData({ ...formData, progress: parseInt(e.target.value) })}
+                    className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-accent"
+                  />
+                </div>
+              )}
             </>
           ) : (
             <>

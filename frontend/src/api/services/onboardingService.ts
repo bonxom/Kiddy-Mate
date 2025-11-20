@@ -8,6 +8,10 @@ export interface ChildOnboardingData {
   date_of_birth: string; // ISO format YYYY-MM-DD
   gender: string;
   favorite_topics: string[];
+  personality?: string[];
+  interests?: string[];
+  strengths?: string[];
+  challenges?: string[];
   discipline_autonomy: Record<string, string | null>;
   emotional_intelligence: Record<string, string | null>;
   social_interaction: Record<string, string | null>;

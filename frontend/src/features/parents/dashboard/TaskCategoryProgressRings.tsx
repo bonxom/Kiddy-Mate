@@ -107,7 +107,7 @@ const TaskProgressRings = ({ data }: TaskProgressRingsProps) => {
         {categories.map((category, index) => {
           const percentage = calculatePercentage(category.completed, category.total);
           const { circumference, offset } = getCircleProgress(percentage);
-          const Icon = category.icon;
+          const Icon = category.icon as any;
           const isHovered = hoveredIndex === index;
 
           return (

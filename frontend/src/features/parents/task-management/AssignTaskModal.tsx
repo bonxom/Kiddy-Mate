@@ -4,6 +4,8 @@ import Input from '../../../components/ui/Input';
 import Button from '../../../components/ui/Button';
 import { Star, Target, Brain, Dumbbell, Palette, Users, BookOpen } from 'lucide-react';
 import type { LibraryTask } from '../../../types/task.types';
+import { useAssignedTasks } from '../../../hooks/useTasks';
+import { useChildContext } from '../../../contexts/ChildContext';
 
 interface AssignTaskModalProps {
   isOpen: boolean;
@@ -12,6 +14,7 @@ interface AssignTaskModalProps {
 }
 
 const AssignTaskModal = ({ isOpen, onClose, task }: AssignTaskModalProps) => {
+  const { children } = useChildContext();
   const [formData, setFormData] = useState({
     childId: '',
     taskName: task.task,
@@ -20,6 +23,9 @@ const AssignTaskModal = ({ isOpen, onClose, task }: AssignTaskModalProps) => {
     reward: task.suggestedReward || 10,
     dueDate: '',
   });
+
+  // Hook will be initialized with childId after selection
+  const { assignTask } = useAssignedTasks(formData.childId);
 
   const getCategoryIcon = (category: string) => {
     const iconClass = "w-4 h-4";
@@ -50,14 +56,25 @@ const AssignTaskModal = ({ isOpen, onClose, task }: AssignTaskModalProps) => {
     'academic': 'Academic',
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: Implement API call
-    console.log('Assign task:', {
-      taskId: task.id,
-      ...formData,
-    });
-    onClose();
+    
+    if (!formData.childId) {
+      console.error('Child ID is required');
+      return;
+    }
+
+    try {
+      // Assign task to child
+      await assignTask(task.id);
+      
+      onClose();
+      
+      // TODO: Show success toast notification
+    } catch (error) {
+      console.error('Failed to assign task:', error);
+      // TODO: Show error toast notification
+    }
   };
 
   return (
@@ -81,8 +98,11 @@ const AssignTaskModal = ({ isOpen, onClose, task }: AssignTaskModalProps) => {
             required
           >
             <option value="">-- Select Child --</option>
-            <option value="1">Minh An</option>
-            <option value="2">Thu Hà</option>
+            {children.map((child) => (
+              <option key={child.id} value={child.id}>
+                {child.name}
+              </option>
+            ))}
           </select>
         </div>
 

@@ -1,33 +1,25 @@
 from fastapi import APIRouter, HTTPException, status, Depends, Query
-from app.models.task_models import Task
+from app.models.task_models import Task, TaskCategory, TaskType
 from app.models.child_models import Child
-from app.models.childtask_models import ChildTask, ChildTaskStatus
-from app.schemas.schemas import TaskPublic, ChildTaskPublic, ChildTaskWithDetails
+from app.models.childtask_models import ChildTask, ChildTaskStatus, ChildTaskPriority
+from app.schemas.schemas import TaskPublic, TaskCreate, ChildTaskPublic, ChildTaskWithDetails
 from typing import List, Optional
 from datetime import datetime
 from app.dependencies import verify_child_ownership
 from app.models.reward_models import ChildReward, Reward
-from pydantic import ValidationError
+from app.services.auth import get_current_user
+from app.models.user_models import User
+from pydantic import ValidationError, BaseModel
 
 router = APIRouter()
 
-@router.get("/tasks", response_model=List[TaskPublic])
-async def list_all_tasks() -> List[TaskPublic]:
-    tasks = await Task.find_all().to_list()
-    return [
-        TaskPublic(
-            id=str(t.id),
-            title=t.title,
-            description=t.description,
-            category=t.category,
-            type=t.type,
-            difficulty=t.difficulty,
-            suggested_age_range=t.suggested_age_range,
-            reward_coins=t.reward_coins,
-            reward_badge_name=t.reward_badge_name,
-        )
-        for t in tasks
-    ]
+# Request schema for update operations
+class ChildTaskUpdateRequest(BaseModel):
+    priority: Optional[ChildTaskPriority] = None
+    due_date: Optional[datetime] = None
+    progress: Optional[int] = None
+    notes: Optional[str] = None
+
 
 @router.get("/{child_id}/tasks/suggested", response_model=List[TaskPublic])
 async def get_suggested_tasks(
@@ -101,6 +93,10 @@ async def get_child_tasks(
                 status=ct.status,
                 assigned_at=ct.assigned_at,
                 completed_at=ct.completed_at,
+                priority=ct.priority.value if ct.priority else None,
+                due_date=ct.due_date,
+                progress=ct.progress,
+                notes=ct.notes,
                 task=TaskPublic(
                     id=str(task.id),
                     title=task.title,
@@ -258,3 +254,99 @@ async def verify_task(
     await child.save()
 
     return {"message": "Xác nhận nhiệm vụ thành công."}
+
+@router.put("/{child_id}/tasks/{child_task_id}", response_model=ChildTaskWithDetails)
+async def update_assigned_task(
+    child_id: str,
+    child_task_id: str,
+    task_update: ChildTaskUpdateRequest,
+    child: Child = Depends(verify_child_ownership)
+):
+    """Update an assigned task's priority, due_date, progress, or notes."""
+    child_task = await ChildTask.get(child_task_id)
+    if not child_task:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Child task not found."
+        )
+    
+    # Verify ownership
+    link_child_id = None
+    if getattr(child_task.child, "id", None) is not None:
+        link_child_id = str(child_task.child.id)
+    elif getattr(child_task.child, "ref", None) is not None:
+        ref_obj = child_task.child.ref
+        link_child_id = str(getattr(ref_obj, "id", ref_obj))
+    if link_child_id != str(child.id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not own this task."
+        )
+    
+    # Update fields if provided
+    if task_update.priority is not None:
+        child_task.priority = task_update.priority
+    if task_update.due_date is not None:
+        child_task.due_date = task_update.due_date
+    if task_update.progress is not None:
+        child_task.progress = task_update.progress
+    if task_update.notes is not None:
+        child_task.notes = task_update.notes
+    
+    await child_task.save()
+    
+    # Fetch task details for response
+    task = await child_task.task.fetch()
+    
+    return ChildTaskWithDetails(
+        id=str(child_task.id),
+        status=child_task.status,
+        assigned_at=child_task.assigned_at,
+        completed_at=child_task.completed_at,
+        priority=child_task.priority.value if child_task.priority else None,
+        due_date=child_task.due_date,
+        progress=child_task.progress,
+        notes=child_task.notes,
+        task=TaskPublic(
+            id=str(task.id),
+            title=task.title,
+            description=task.description,
+            category=task.category,
+            type=task.type,
+            difficulty=task.difficulty,
+            suggested_age_range=task.suggested_age_range,
+            reward_coins=task.reward_coins,
+            reward_badge_name=task.reward_badge_name,
+        )
+    )
+
+@router.delete("/{child_id}/tasks/{child_task_id}", response_model=dict)
+async def delete_assigned_task(
+    child_id: str,
+    child_task_id: str,
+    child: Child = Depends(verify_child_ownership)
+):
+    """Unassign (delete) a task from a child."""
+    child_task = await ChildTask.get(child_task_id)
+    if not child_task:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Child task not found."
+        )
+    
+    # Verify ownership
+    link_child_id = None
+    if getattr(child_task.child, "id", None) is not None:
+        link_child_id = str(child_task.child.id)
+    elif getattr(child_task.child, "ref", None) is not None:
+        ref_obj = child_task.child.ref
+        link_child_id = str(getattr(ref_obj, "id", ref_obj))
+    if link_child_id != str(child.id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not own this task."
+        )
+    
+    await child_task.delete()
+    
+    return {"message": f"Task {child_task_id} unassigned successfully."}

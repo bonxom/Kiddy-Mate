@@ -6,7 +6,6 @@
 import axiosClient from '../client/axiosClient';
 import { getChild } from './childService';
 import { getChildTasks } from './taskService';
-import type { ChildTaskWithDetails } from './taskService';
 import { getLatestAssessment, calculateSkillScores } from './assessmentService';
 import { getEmotionData } from './interactionService';
 import type { EmotionData } from './interactionService';
