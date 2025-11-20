@@ -5,7 +5,11 @@ import Badge from '../../../components/ui/Badge';
 import type { RedemptionRequest, RedemptionStatus } from '../../../types/reward.types';
 import { getRedemptionRequests, approveRedemption, rejectRedemption } from '../../../api/services/rewardService';
 
-const RedemptionRequestsTab = () => {
+interface RedemptionRequestsTabProps {
+  onPendingCountChange?: (count: number) => void;
+}
+
+const RedemptionRequestsTab = ({ onPendingCountChange }: RedemptionRequestsTabProps) => {
   const [requests, setRequests] = useState<RedemptionRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -20,6 +24,12 @@ const RedemptionRequestsTab = () => {
   useEffect(() => {
     fetchRequests();
   }, []);
+
+  // Notify parent when pending count changes
+  useEffect(() => {
+    const pendingCount = requests.filter(r => r.status === 'pending').length;
+    onPendingCountChange?.(pendingCount);
+  }, [requests, onPendingCountChange]);
 
   const fetchRequests = async () => {
     try {

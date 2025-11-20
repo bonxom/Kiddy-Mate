@@ -9,6 +9,7 @@ import EmotionPieChart from '../../features/parents/dashboard/EmotionPieChart';
 import TaskProgressRings from '../../features/parents/dashboard/TaskCategoryProgressRings';
 import ActivityTimeline from '../../features/parents/dashboard/ActivityTimeline';
 import DashboardSidebar from '../../features/parents/dashboard/DashboardSidebar';
+import ChildSelector from '../../components/common/ChildSelector';
 import { Loading } from '../../components/ui';
 
 const DashboardPage = () => {
@@ -77,15 +78,21 @@ const DashboardPage = () => {
       {/* Main Content */}
       <div className="flex-1 overflow-y-scroll scrollbar-hide p-4 md:p-6 lg:p-8 scrollbar-none">
         <div className="max-w-7xl mx-auto space-y-6">
-          {/* Header */}
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">
-              Dashboard
-              <span className="ml-3 text-lg font-normal text-gray-500">
+          {/* Header with Child Selector */}
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex-1">
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">
+                Dashboard
+              </h1>
+              <p className="text-gray-600">Track your children's progress and celebrate their achievements</p>
+            </div>
+            
+            <div className="flex items-center gap-3">
+              <ChildSelector />
+              <span className="text-lg font-normal text-gray-500 whitespace-nowrap">
                 Welcome back! 👋
               </span>
-            </h1>
-            <p className="text-gray-600">Track your children's progress and celebrate their achievements</p>
+            </div>
           </div>
         
           {/* Stats Cards */}

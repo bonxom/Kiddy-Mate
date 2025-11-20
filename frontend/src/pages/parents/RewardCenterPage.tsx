@@ -1,29 +1,58 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Plus, Store, Gift } from 'lucide-react';
 import Button from '../../components/ui/Button';
 import Badge from '../../components/ui/Badge';
 import ShopManagementTab from '../../features/parents/reward-management/ShopManagementTab.tsx';
 import RedemptionRequestsTab from '../../features/parents/reward-management/RedemptionRequestsTab.tsx';
+import { getAllRewards, getRedemptionRequests } from '../../api/services/rewardService';
 
 type TabType = 'shop' | 'redemption';
 
 const RewardCenterPage = () => {
   const [activeTab, setActiveTab] = useState<TabType>('shop');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [rewardsCount, setRewardsCount] = useState(0);
+  const [pendingRequestsCount, setPendingRequestsCount] = useState(0);
+
+  // Fetch counts on mount
+  useEffect(() => {
+    const fetchCounts = async () => {
+      try {
+        const [rewards, requests] = await Promise.all([
+          getAllRewards(),
+          getRedemptionRequests()
+        ]);
+        setRewardsCount(rewards.length);
+        setPendingRequestsCount(requests.filter(r => r.status === 'pending').length);
+      } catch (error) {
+        console.error('Failed to fetch counts:', error);
+      }
+    };
+    fetchCounts();
+  }, []);
+
+  // Callback to update counts from child components
+  const handleRewardsCountChange = (count: number) => {
+    setRewardsCount(count);
+  };
+
+  const handlePendingRequestsCountChange = (count: number) => {
+    setPendingRequestsCount(count);
+  };
 
   const tabs = [
     {
       id: 'shop' as TabType,
       label: 'Shop Management',
       icon: Store,
-      count: 6,
+      count: rewardsCount,
     },
     {
       id: 'redemption' as TabType,
       label: 'Redemption Requests',
       icon: Gift,
-      count: 4,
-      badge: true,
+      count: pendingRequestsCount,
+      badge: pendingRequestsCount > 0,
     },
   ];
 
@@ -103,9 +132,12 @@ const RewardCenterPage = () => {
                 <ShopManagementTab 
                   isCreateModalOpen={isCreateModalOpen}
                   setIsCreateModalOpen={setIsCreateModalOpen}
+                  onRewardsCountChange={handleRewardsCountChange}
                 />
               ) : (
-                <RedemptionRequestsTab />
+                <RedemptionRequestsTab 
+                  onPendingCountChange={handlePendingRequestsCountChange}
+                />
               )}
             </div>
           </div>

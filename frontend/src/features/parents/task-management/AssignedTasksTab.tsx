@@ -26,8 +26,12 @@ interface ExtendedAssignedTask extends AssignedTask {
   progress?: number;
 }
 
-const AssignedTasksTab = () => {
-  const { selectedChildId, children, setSelectedChildId } = useChildContext();
+interface AssignedTasksTabProps {
+  onCountChange?: (count: number) => void;
+}
+
+const AssignedTasksTab = ({ onCountChange }: AssignedTasksTabProps) => {
+  const { selectedChildId, children } = useChildContext();
   
   const { 
     tasks: backendTasks, 
@@ -55,6 +59,11 @@ const AssignedTasksTab = () => {
       return mapToUIAssignedTask(task, childName);
     });
   }, [backendTasks, children, selectedChildId]);
+
+  // Update parent count when tasks change
+  useEffect(() => {
+    onCountChange?.(tasks.length);
+  }, [tasks.length, onCountChange]);
 
   // Local state for UI interactions
   const [searchQuery, setSearchQuery] = useState('');

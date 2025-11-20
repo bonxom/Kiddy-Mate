@@ -13,9 +13,10 @@ import RewardModal from './RewardModal.tsx';
 interface ShopManagementTabProps {
   isCreateModalOpen: boolean;
   setIsCreateModalOpen: (value: boolean) => void;
+  onRewardsCountChange?: (count: number) => void;
 }
 
-const ShopManagementTab = ({ isCreateModalOpen, setIsCreateModalOpen }: ShopManagementTabProps) => {
+const ShopManagementTab = ({ isCreateModalOpen, setIsCreateModalOpen, onRewardsCountChange }: ShopManagementTabProps) => {
   const [rewards, setRewards] = useState<Reward[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -24,11 +25,17 @@ const ShopManagementTab = ({ isCreateModalOpen, setIsCreateModalOpen }: ShopMana
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<'name' | 'cost' | 'remain'>('name');
   const [filterStock, setFilterStock] = useState<'all' | 'in-stock' | 'low-stock' | 'out-of-stock'>('all');
+  const [filterType, setFilterType] = useState<'all' | 'badge' | 'skin' | 'item'>('all');
 
   // Fetch rewards on mount
   useEffect(() => {
     fetchRewards();
   }, []);
+
+  // Notify parent when rewards count changes
+  useEffect(() => {
+    onRewardsCountChange?.(rewards.length);
+  }, [rewards.length, onRewardsCountChange]);
 
   const fetchRewards = async () => {
     setLoading(true);
@@ -130,7 +137,10 @@ const ShopManagementTab = ({ isCreateModalOpen, setIsCreateModalOpen }: ShopMana
         filterStock === 'low-stock' ? reward.remain > 0 && reward.remain < 5 :
         reward.remain >= 5;
       
-      return matchesSearch && matchesStock;
+      // Type filter
+      const matchesType = filterType === 'all' ? true : reward.type === filterType;
+      
+      return matchesSearch && matchesStock && matchesType;
     })
     .sort((a, b) => {
       if (sortBy === 'name') return a.name.localeCompare(b.name);
@@ -185,7 +195,30 @@ const ShopManagementTab = ({ isCreateModalOpen, setIsCreateModalOpen }: ShopMana
 
         {/* Filters */}
         <div className="flex flex-wrap gap-3 items-center">
-          <span className="text-sm font-medium text-gray-700">Filter by:</span>
+          <span className="text-sm font-medium text-gray-700">Type:</span>
+          <div className="flex gap-2">
+            {[
+              { value: 'all', label: 'All', icon: '📦' },
+              { value: 'item', label: 'Items', icon: '🎁' },
+              { value: 'badge', label: 'Badges', icon: '🏅' },
+              { value: 'skin', label: 'Skins', icon: '👤' },
+            ].map((filter) => (
+              <button
+                key={filter.value}
+                onClick={() => setFilterType(filter.value as typeof filterType)}
+                className={`px-3 py-1.5 text-sm font-medium rounded-lg border transition-all flex items-center gap-1 ${
+                  filterType === filter.value
+                    ? 'border-primary-500 bg-primary-50 text-primary-700'
+                    : 'border-gray-300 bg-white text-gray-600 hover:border-primary-300'
+                }`}
+              >
+                <span>{filter.icon}</span>
+                <span>{filter.label}</span>
+              </button>
+            ))}
+          </div>
+          
+          <span className="text-sm font-medium text-gray-700 ml-4">Stock:</span>
           <div className="flex gap-2">
             {['all', 'in-stock', 'low-stock', 'out-of-stock'].map((filter) => (
               <button

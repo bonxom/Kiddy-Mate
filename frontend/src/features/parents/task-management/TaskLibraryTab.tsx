@@ -9,7 +9,11 @@ import { useTaskLibrary } from '../../../hooks/useTasks';
 import { mapToLibraryTask } from '../../../utils/taskMappers';
 import { getCategoryConfig, TASK_CATEGORY_LABELS, ICON_SIZES } from '../../../constants/taskConfig';
 
-const TaskLibraryTab = () => {
+interface TaskLibraryTabProps {
+  onCountChange?: (count: number) => void;
+}
+
+const TaskLibraryTab = ({ onCountChange }: TaskLibraryTabProps) => {
   // Use real API
   const { tasks: backendTasks, loading, error, fetchTasks } = useTaskLibrary();
 
@@ -22,6 +26,11 @@ const TaskLibraryTab = () => {
   const tasks = useMemo(() => {
     return backendTasks.map(mapToLibraryTask);
   }, [backendTasks]);
+
+  // Update parent count when tasks change
+  useEffect(() => {
+    onCountChange?.(tasks.length);
+  }, [tasks.length, onCountChange]);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<TaskCategory | 'all'>('all');
