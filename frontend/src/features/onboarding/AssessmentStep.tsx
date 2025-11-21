@@ -160,10 +160,10 @@ const AssessmentStep = ({
                 <button
                   key={category.id}
                   onClick={() => setActiveCategory(category.id)}
-                  className={`relative p-5 rounded-2xl border-2 transition-all duration-300 ${
+                  className={`relative p-5 rounded-2xl border-2 transition-all duration-300 shadow-soft hover:shadow-medium active:scale-95 ${
                     isActive
-                      ? 'border-purple-500 bg-linear-to-br from-blue-50 via-purple-50 to-pink-50 shadow-glow-accent scale-105'
-                      : 'border-gray-200 hover:border-purple-300 bg-white/90 backdrop-blur-sm hover:scale-102'
+                      ? 'border-purple-500 bg-linear-to-br from-blue-50 via-purple-50 to-pink-50 shadow-strong scale-105'
+                      : 'border-gray-200 hover:border-purple-300 bg-white/90 backdrop-blur-sm'
                   }`}
                 >
                   <div className="flex items-center gap-3 mb-3">
@@ -236,10 +236,10 @@ const AssessmentStep = ({
                           key={rating.value}
                           type="button"
                           onClick={() => setAnswerForQuestion(question.id, rating.value as 1 | 2 | 3 | 4 | 5)}
-                          className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all duration-300 ${
+                          className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all duration-300 shadow-soft hover:shadow-medium active:scale-95 ${
                             isSelected
-                              ? 'border-purple-500 bg-linear-to-br from-blue-50 to-purple-50 shadow-glow-accent scale-105'
-                              : 'border-gray-200 hover:border-purple-300 hover:bg-purple-50 hover:scale-102'
+                              ? 'border-purple-500 bg-linear-to-br from-blue-50 to-purple-50 shadow-strong scale-105'
+                              : 'border-gray-200 hover:border-purple-300 hover:bg-purple-50'
                           }`}
                         >
                           <span className={`text-2xl sm:text-3xl transition-transform ${isSelected ? 'scale-125' : ''}`}>
@@ -264,7 +264,7 @@ const AssessmentStep = ({
               variant="secondary"
               onClick={onBack}
               icon={<ArrowLeft className="w-5 h-5" />}
-              className="hover:scale-105 transition-transform"
+              className="shadow-soft hover:shadow-medium active:scale-95 transition-all duration-300"
             >
               Back
             </Button>
@@ -276,7 +276,7 @@ const AssessmentStep = ({
                   variant="outline"
                   onClick={handleNext}
                   disabled={!canProceedToNext}
-                  className="hover:scale-105 transition-transform disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="shadow-soft hover:shadow-medium active:scale-95 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Next Category →
                 </Button>
@@ -288,7 +288,7 @@ const AssessmentStep = ({
                 disabled={!allQuestionsAnswered}
                 size="lg"
                 icon={<CheckCircle2 className="w-5 h-5" />}
-                className="bg-linear-to-r from-purple-600 via-pink-600 to-orange-600 hover:from-purple-700 hover:via-pink-700 hover:to-orange-700 shadow-glow-accent hover:scale-105 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="bg-linear-to-r from-purple-600 via-pink-600 to-orange-600 hover:from-purple-700 hover:via-pink-700 hover:to-orange-700 shadow-soft hover:shadow-strong active:scale-95 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {childNumber < totalChildren ? 'Next Child 🎉' : 'Complete Onboarding 🚀'}
               </Button>

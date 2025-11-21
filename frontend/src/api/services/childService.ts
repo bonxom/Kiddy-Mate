@@ -9,7 +9,14 @@ export interface Child {
   id: string;
   name: string;
   birth_date: string;
-  initial_traits?: string;
+  nickname?: string;
+  gender?: string;
+  avatar_url?: string;
+  personality?: string[];
+  interests?: string[];
+  strengths?: string[];
+  challenges?: string[];
+  initial_traits?: any;
   current_coins: number;
   level: number;
 }
@@ -17,7 +24,14 @@ export interface Child {
 export interface CreateChildRequest {
   name: string;
   birth_date: string;
-  initial_traits?: string;
+  nickname?: string;
+  gender?: string;
+  avatar_url?: string;
+  personality?: string[];
+  interests?: string[];
+  strengths?: string[];
+  challenges?: string[];
+  initial_traits?: any;
 }
 
 /**
@@ -56,6 +70,14 @@ export const updateChild = async (
 };
 
 /**
+ * Delete child
+ */
+export const deleteChild = async (childId: string): Promise<{ message: string }> => {
+  const response = await axiosClient.delete<{ message: string }>(`/children/${childId}`);
+  return response.data;
+};
+
+/**
  * Select active child (for context)
  */
 export const selectChild = async (childId: string): Promise<{ message: string }> => {
@@ -70,5 +92,6 @@ export default {
   getChild,
   createChild,
   updateChild,
+  deleteChild,
   selectChild,
 };

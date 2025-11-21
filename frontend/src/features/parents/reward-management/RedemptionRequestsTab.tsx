@@ -1,61 +1,48 @@
-import { useState } from 'react';
-import { Check, X, Star } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Check, X, Gift } from 'lucide-react';
 import Button from '../../../components/ui/Button';
 import Badge from '../../../components/ui/Badge';
 import type { RedemptionRequest, RedemptionStatus } from '../../../types/reward.types';
+import { getRedemptionRequests, approveRedemption, rejectRedemption } from '../../../api/services/rewardService';
 
-// Mock data
-const mockRequests: RedemptionRequest[] = [
-  {
-    id: '1',
-    child: 'Minh An',
-    childId: '1',
-    rewardName: '30 minutes gaming time',
-    rewardId: '1',
-    dateCreated: '2025-11-10',
-    cost: 50,
-    status: 'pending',
-  },
-  {
-    id: '2',
-    child: 'Thu Hà',
-    childId: '2',
-    rewardName: 'New storybook',
-    rewardId: '6',
-    dateCreated: '2025-11-11',
-    cost: 40,
-    status: 'pending',
-  },
-  {
-    id: '3',
-    child: 'Minh An',
-    childId: '1',
-    rewardName: 'Custom pizza',
-    rewardId: '4',
-    dateCreated: '2025-11-12',
-    cost: 80,
-    status: 'pending',
-  },
-  {
-    id: '4',
-    child: 'Thu Hà',
-    childId: '2',
-    rewardName: 'Park visit',
-    rewardId: '5',
-    dateCreated: '2025-11-13',
-    cost: 60,
-    status: 'pending',
-  },
-];
+interface RedemptionRequestsTabProps {
+  onPendingCountChange?: (count: number) => void;
+}
 
-const RedemptionRequestsTab = () => {
-  const [requests, setRequests] = useState<RedemptionRequest[]>(mockRequests);
+const RedemptionRequestsTab = ({ onPendingCountChange }: RedemptionRequestsTabProps) => {
+  const [requests, setRequests] = useState<RedemptionRequest[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<{
     show: boolean;
     message: string;
     type: 'success' | 'error';
   }>({ show: false, message: '', type: 'success' });
   const [filterStatus, setFilterStatus] = useState<'all' | RedemptionStatus>('all');
+
+  // Fetch redemption requests
+  useEffect(() => {
+    fetchRequests();
+  }, []);
+
+  // Notify parent when pending count changes
+  useEffect(() => {
+    const pendingCount = requests.filter(r => r.status === 'pending').length;
+    onPendingCountChange?.(pendingCount);
+  }, [requests, onPendingCountChange]);
+
+  const fetchRequests = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await getRedemptionRequests();
+      setRequests(data);
+    } catch (err: any) {
+      setError(err.message || 'Failed to load redemption requests');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const showToast = (message: string, type: 'success' | 'error') => {
     setToast({ show: true, message, type });
@@ -64,22 +51,24 @@ const RedemptionRequestsTab = () => {
     }, 3000);
   };
 
-  const handleApprove = (requestId: string) => {
-    setRequests(
-      requests.map((r) =>
-        r.id === requestId ? { ...r, status: 'approved' as RedemptionStatus } : r
-      )
-    );
-    showToast('Redemption request approved', 'success');
+  const handleApprove = async (requestId: string) => {
+    try {
+      await approveRedemption(requestId);
+      await fetchRequests(); // Refresh the list
+      showToast('Redemption request approved', 'success');
+    } catch (err: any) {
+      showToast(err.message || 'Failed to approve request', 'error');
+    }
   };
 
-  const handleReject = (requestId: string) => {
-    setRequests(
-      requests.map((r) =>
-        r.id === requestId ? { ...r, status: 'rejected' as RedemptionStatus } : r
-      )
-    );
-    showToast('Redemption request rejected', 'success');
+  const handleReject = async (requestId: string) => {
+    try {
+      await rejectRedemption(requestId);
+      await fetchRequests(); // Refresh the list
+      showToast('Redemption request rejected', 'success');
+    } catch (err: any) {
+      showToast(err.message || 'Failed to reject request', 'error');
+    }
   };
 
   const getStatusBadge = (status: RedemptionStatus) => {
@@ -102,8 +91,32 @@ const RedemptionRequestsTab = () => {
 
   return (
     <div>
-      {/* Filter */}
-      <div className="mb-4 flex items-center gap-3">
+      {/* Error State */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4">
+          <p className="font-semibold">Error loading redemption requests</p>
+          <p className="text-sm">{error}</p>
+          <button 
+            onClick={fetchRequests}
+            className="mt-2 text-sm underline hover:no-underline"
+          >
+            Try again
+          </button>
+        </div>
+      )}
+
+      {/* Loading State */}
+      {loading && (
+        <div className="text-center py-12">
+          <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-primary-200 border-t-primary-600"></div>
+          <p className="text-gray-500 mt-2">Loading redemption requests...</p>
+        </div>
+      )}
+
+      {!loading && !error && (
+        <>
+          {/* Filter */}
+          <div className="mb-4 flex items-center gap-3">
         <span className="text-sm font-medium text-gray-700">Filter by status:</span>
         <div className="flex gap-2">
           {[{ value: 'all', label: 'All' }, { value: 'pending', label: 'Pending' }, { value: 'approved', label: 'Approved' }, { value: 'rejected', label: 'Rejected' }].map((filter) => (
@@ -126,7 +139,7 @@ const RedemptionRequestsTab = () => {
       </div>
 
       {/* Table */}
-      <div className="overflow-x-auto border border-gray-200 rounded-lg shadow-sm">
+      <div className="overflow-x-auto border border-gray-200 rounded-2xl shadow-soft">
         <style>{`
           @keyframes fadeIn {
             from { opacity: 0; transform: translateY(10px); }
@@ -134,7 +147,7 @@ const RedemptionRequestsTab = () => {
           }
         `}</style>
         <table className="w-full">
-          <thead style={{ background: 'linear-gradient(to right, rgb(249 250 251), rgb(243 244 246))' }}>
+          <thead className="bg-linear-to-r from-gray-50 to-gray-100 border-b border-gray-200">
             <tr>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 ID
@@ -165,12 +178,14 @@ const RedemptionRequestsTab = () => {
                   key={request.id}
                   onMouseEnter={() => setHoveredRow(request.id)}
                   onMouseLeave={() => setHoveredRow(null)}
-                  className={`transition-all ${
+                  className={`transition-all duration-200 ${
                     request.status !== 'pending' ? 'opacity-50' : ''
+                  } ${
+                    hoveredRow === request.id && request.status === 'pending' ? 'shadow-soft' : ''
                   }`}
                   style={{
                     background: hoveredRow === request.id && request.status === 'pending'
-                      ? 'linear-gradient(to right, rgba(239, 246, 255, 0.3), rgba(250, 245, 255, 0.3))'
+                      ? 'linear-gradient(to right, rgba(239, 246, 255, 0.5), rgba(250, 245, 255, 0.5))'
                       : request.status !== 'pending' ? 'rgb(249 250 251)' : 'transparent',
                     animation: `fadeIn 0.3s ease-in-out ${index * 0.05}s both`
                   }}
@@ -188,12 +203,7 @@ const RedemptionRequestsTab = () => {
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-1.5">
                       <span className="text-sm font-semibold text-gray-900">{request.cost}</span>
-                      <div 
-                        className="flex items-center justify-center w-6 h-6 rounded-md" 
-                        style={{ background: 'linear-gradient(to right, rgb(254 252 232), rgb(254 243 199))' }}
-                      >
-                        <Star className="w-3.5 h-3.5 text-yellow-600 fill-yellow-500" />
-                      </div>
+                      <span className="text-xs text-gray-600">Coins</span>
                     </div>
                   </td>
                   <td className="px-4 py-3">{getStatusBadge(request.status)}</td>
@@ -228,17 +238,27 @@ const RedemptionRequestsTab = () => {
         </table>
 
         {filteredRequests.length === 0 && requests.length > 0 && (
-          <div className="text-center py-8 text-gray-500">
-            No requests match your filter
+          <div className="text-center py-12 bg-gray-50">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 mb-4">
+              <Gift className="w-8 h-8 text-gray-400" />
+            </div>
+            <p className="text-gray-500 font-medium">No requests match your filter</p>
+            <p className="text-sm text-gray-400 mt-1">Try changing the filter to see more requests</p>
           </div>
         )}
         
         {requests.length === 0 && (
-          <div className="text-center py-8 text-gray-500">
-            No redemption requests
+          <div className="text-center py-12 bg-gray-50">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 mb-4">
+              <Gift className="w-8 h-8 text-gray-400" />
+            </div>
+            <p className="text-gray-500 font-medium">No redemption requests yet</p>
+            <p className="text-sm text-gray-400 mt-1">Requests will appear here when children redeem rewards</p>
           </div>
         )}
       </div>
+      </>
+      )}
 
       {/* Toast Notification */}
       {toast.show && (

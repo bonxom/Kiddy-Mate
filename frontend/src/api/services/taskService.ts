@@ -17,7 +17,7 @@ export type TaskCategory =
   | 'EQ'; // Backward compatibility
 
 export type TaskType = 'logic' | 'emotion';
-export type ChildTaskStatus = 'suggested' | 'in_progress' | 'completed' | 'verified';
+export type ChildTaskStatus = 'assigned' | 'in_progress' | 'need_verify' | 'completed' | 'missed';
 export type ChildTaskPriority = 'low' | 'medium' | 'high';
 
 export interface Task {

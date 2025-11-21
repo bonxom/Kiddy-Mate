@@ -1,6 +1,6 @@
 import { Star, Plus, Minus, Package } from 'lucide-react';
 import Badge from '../../../components/ui/Badge';
-import type { Reward } from '../../../types/reward.types';
+import type { Reward } from '../../../api/services/rewardService';
 
 interface RewardCardProps {
   reward: Reward;
@@ -17,6 +17,20 @@ const RewardCard = ({ reward, onClick, onQuantityChange }: RewardCardProps) => {
   const isLowStock = reward.remain < 5 && reward.remain > 0;
   const isOutOfStock = reward.remain === 0;
 
+  const getTypeBadge = () => {
+    switch (reward.type) {
+      case 'badge':
+        return { icon: '🏅', label: 'Badge', color: 'bg-purple-100 text-purple-700' };
+      case 'skin':
+        return { icon: '👤', label: 'Skin', color: 'bg-blue-100 text-blue-700' };
+      case 'item':
+      default:
+        return { icon: '🎁', label: 'Item', color: 'bg-green-100 text-green-700' };
+    }
+  };
+
+  const typeBadge = getTypeBadge();
+
   return (
     <div
       onClick={onClick}
@@ -25,7 +39,7 @@ const RewardCard = ({ reward, onClick, onQuantityChange }: RewardCardProps) => {
       {/* Thumbnail */}
       <div className="relative h-52 bg-linear-to-br from-gray-50 to-gray-100 overflow-hidden">
         <img
-          src={reward.url_thumbnail}
+          src={reward.url_thumbnail || 'https://via.placeholder.com/400x300?text=No+Image'}
           alt={reward.name}
           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
           onError={(e) => {
@@ -37,7 +51,14 @@ const RewardCard = ({ reward, onClick, onQuantityChange }: RewardCardProps) => {
         <div className="absolute inset-0 bg-linear-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
         
         {/* Stock Status Badge */}
-        <div className="absolute top-3 right-3">
+        <div className="absolute top-3 right-3 flex flex-col gap-2 items-end">
+          {/* Type Badge */}
+          <div className={`px-2 py-1 rounded-lg text-xs font-semibold ${typeBadge.color} shadow-sm flex items-center gap-1`}>
+            <span>{typeBadge.icon}</span>
+            <span>{typeBadge.label}</span>
+          </div>
+          
+          {/* Stock Badge */}
           {isOutOfStock ? (
             <Badge variant="danger" size="sm">
               Out of Stock
@@ -66,7 +87,7 @@ const RewardCard = ({ reward, onClick, onQuantityChange }: RewardCardProps) => {
           >
             <Star className="w-5 h-5 text-yellow-600 fill-yellow-500" />
             <span className="font-bold text-gray-900 text-lg">{reward.cost}</span>
-            <span className="text-sm text-gray-700">Stars</span>
+            <span className="text-sm text-gray-700">Coins</span>
           </div>
         </div>
 

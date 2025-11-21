@@ -10,7 +10,7 @@ const TestimonialsSection = () => {
       avatar: 'S',
       avatarGradient: 'bg-linear-to-br from-pink-500 to-rose-600',
       rating: 5,
-      text: 'Game changer! My kids actually ASK to do their chores now. The star system is pure magic! ✨',
+      text: 'Game changer! My kids actually ASK to do their chores now. The coin system is pure magic! ✨',
     },
     {
       name: 'John Davis',

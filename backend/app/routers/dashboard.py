@@ -12,8 +12,15 @@ async def get_dashboard(
     child: Child = Depends(verify_child_ownership)
 ):
     """
-    Get comprehensive dashboard data for a child.
-    Returns child info, task stats, rewards, and progress metrics.
+    Get comprehensive dashboard statistics for a child.
+    
+    Returns:
+        - Child basic info (name, level, coins)
+        - Task completion metrics (completed, total, rate)
+        - Badge/reward count
+        
+    All counts are calculated in real-time from database.
+    Frontend should use child.coins directly.
     """
     # Count verified tasks (completed and approved by parent)
     tasks_completed = await ChildTask.find(
@@ -34,12 +41,6 @@ async def get_dashboard(
     # Calculate completion rate (verified / total assigned)
     completion_rate = round((tasks_completed / total_tasks * 100), 1) if total_tasks > 0 else 0
 
-    # Total stars = coins (in this system, stars = coins earned)
-    total_stars = child.current_coins
-
-    # Achievements = badges earned
-    achievements = badges_earned
-
     return {
         "child": {
             "name": child.name,
@@ -48,7 +49,5 @@ async def get_dashboard(
         },
         "tasks_completed": tasks_completed,
         "badges_earned": badges_earned,
-        "total_stars": total_stars,
-        "achievements": achievements,
         "completion_rate": completion_rate
     }

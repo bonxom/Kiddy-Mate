@@ -1,26 +1,12 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Gift, AlertCircle, TrendingDown, FileText, Check, X } from 'lucide-react';
 import Card from '../../../components/ui/Card';
 import Button from '../../../components/ui/Button';
 import type { NotificationSettings } from '../../../types/user.types';
-
-// Mock data
-const mockNotificationSettings: NotificationSettings = {
-  emailNotifications: {
-    enabled: true,
-    redemptionRequests: true,
-    missedTasks: true,
-    emotionTrends: false,
-    weeklyReport: true,
-  },
-  pushNotifications: {
-    enabled: false,
-    redemptionRequests: false,
-    missedTasks: false,
-    emotionTrends: false,
-    weeklyReport: false,
-  },
-};
+import {
+  getNotificationSettings,
+  updateNotificationSettings,
+} from '../../../api/services/userService';
 
 interface ToggleSwitchProps {
   enabled: boolean;
@@ -30,12 +16,12 @@ interface ToggleSwitchProps {
 
 const ToggleSwitch = ({ enabled, onChange, label }: ToggleSwitchProps) => {
   return (
-    <div className="flex items-center justify-between py-3 px-4 rounded-lg hover:bg-gray-50 transition-colors">
+    <div className="flex items-center justify-between py-3 px-4 rounded-xl hover:bg-gray-50 transition-all duration-200">
       <span className="text-sm font-medium text-gray-700">{label}</span>
       <button
         type="button"
         onClick={() => onChange(!enabled)}
-        className="relative inline-flex h-6 w-11 items-center rounded-full transition-all duration-300"
+        className="relative inline-flex h-6 w-11 items-center rounded-full transition-all duration-300 shadow-soft active:scale-95"
         style={{
           background: enabled
             ? 'linear-gradient(to right, #3b82f6, #8b5cf6)'
@@ -65,13 +51,13 @@ interface CheckboxPropsWithIcon extends CheckboxProps {
 
 const Checkbox = ({ checked, onChange, label, disabled, icon }: CheckboxPropsWithIcon) => {
   return (
-    <label className={`flex items-start gap-3 py-2.5 px-3 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors ${disabled ? 'opacity-50' : ''}`}>
+    <label className={`flex items-start gap-3 py-2.5 px-3 rounded-xl hover:bg-gray-50 cursor-pointer transition-all duration-200 ${disabled ? 'opacity-50' : ''}`}>
       <input
         type="checkbox"
         checked={checked}
         onChange={(e) => onChange(e.target.checked)}
         disabled={disabled}
-        className="mt-1 w-4 h-4 border-gray-300 rounded focus:ring-2 focus:ring-primary-500 cursor-pointer disabled:cursor-not-allowed"
+        className="mt-1 w-4 h-4 border-gray-300 rounded focus:ring-2 focus:ring-primary-500 cursor-pointer disabled:cursor-not-allowed transition-all"
         style={{
           accentColor: checked ? '#3b82f6' : undefined
         }}
@@ -83,9 +69,25 @@ const Checkbox = ({ checked, onChange, label, disabled, icon }: CheckboxPropsWit
 };
 
 const NotificationSettingsTab = () => {
-  const [settings, setSettings] = useState<NotificationSettings>(
-    mockNotificationSettings
-  );
+  const [settings, setSettings] = useState<NotificationSettings>({
+    emailNotifications: {
+      enabled: true,
+      redemptionRequests: true,
+      missedTasks: true,
+      emotionTrends: false,
+      weeklyReport: true,
+    },
+    pushNotifications: {
+      enabled: false,
+      redemptionRequests: false,
+      missedTasks: false,
+      emotionTrends: false,
+      weeklyReport: false,
+    },
+  });
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<{
     show: boolean;
     message: string;
@@ -97,6 +99,43 @@ const NotificationSettingsTab = () => {
     setTimeout(() => {
       setToast({ show: false, message: '', type: 'success' });
     }, 3000);
+  };
+
+  // Fetch notification settings on mount
+  useEffect(() => {
+    fetchSettings();
+  }, []);
+
+  const fetchSettings = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const fetchedSettings = await getNotificationSettings();
+      
+      // Map backend snake_case to frontend camelCase
+      setSettings({
+        emailNotifications: {
+          enabled: fetchedSettings.email.enabled,
+          redemptionRequests: fetchedSettings.email.coin_redemption,
+          missedTasks: fetchedSettings.email.task_reminders,
+          emotionTrends: fetchedSettings.email.emotional_trends,
+          weeklyReport: fetchedSettings.email.weekly_reports,
+        },
+        pushNotifications: {
+          enabled: fetchedSettings.push.enabled,
+          redemptionRequests: fetchedSettings.push.coin_redemption,
+          missedTasks: fetchedSettings.push.task_reminders,
+          emotionTrends: fetchedSettings.push.emotional_trends,
+          weeklyReport: fetchedSettings.push.weekly_reports,
+        },
+      });
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : 'Failed to load settings';
+      setError(errorMsg);
+      showToast(errorMsg, 'error');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleEmailToggle = (enabled: boolean) => {
@@ -139,14 +178,59 @@ const NotificationSettingsTab = () => {
     });
   };
 
-  const handleSave = () => {
-    // TODO: Implement API call
-    console.log('Save notification settings:', settings);
-    showToast('Notification settings saved', 'success');
+  const handleSave = async () => {
+    try {
+      setSaving(true);
+      setError(null);
+      
+      // Map frontend camelCase to backend snake_case
+      const backendSettings = {
+        email: {
+          enabled: settings.emailNotifications.enabled,
+          coin_redemption: settings.emailNotifications.redemptionRequests,
+          task_reminders: settings.emailNotifications.missedTasks,
+          emotional_trends: settings.emailNotifications.emotionTrends,
+          weekly_reports: settings.emailNotifications.weeklyReport,
+        },
+        push: {
+          enabled: settings.pushNotifications.enabled,
+          coin_redemption: settings.pushNotifications.redemptionRequests,
+          task_reminders: settings.pushNotifications.missedTasks,
+          emotional_trends: settings.pushNotifications.emotionTrends,
+          weekly_reports: settings.pushNotifications.weeklyReport,
+        },
+      };
+      
+      await updateNotificationSettings(backendSettings);
+      
+      showToast('Notification settings saved', 'success');
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : 'Failed to update settings';
+      setError(errorMsg);
+      showToast(errorMsg, 'error');
+    } finally {
+      setSaving(false);
+    }
   };
+
+  // Loading state
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 max-w-3xl">
+      {/* Error Alert */}
+      {error && (
+        <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 shadow-soft">
+          {error}
+        </div>
+      )}
+
       {/* Title */}
       <div>
         <h2 className="text-xl font-semibold text-gray-900">Notification Management</h2>
@@ -163,7 +247,7 @@ const NotificationSettingsTab = () => {
 
           <div className={`space-y-1 ${
             !settings.emailNotifications.enabled ? 'opacity-50' : ''
-          }`} style={{ background: 'linear-gradient(to right, rgb(249 250 251), transparent)', borderRadius: '0.5rem', padding: '0.5rem' }}>
+          }`} style={{ background: 'linear-gradient(to right, rgb(249 250 251), transparent)', borderRadius: '0.75rem', padding: '0.75rem' }}>
             <Checkbox
               checked={settings.emailNotifications.redemptionRequests}
               onChange={(checked) => handleEmailCheckbox('redemptionRequests', checked)}
@@ -207,7 +291,7 @@ const NotificationSettingsTab = () => {
 
           <div className={`space-y-1 ${
             !settings.pushNotifications.enabled ? 'opacity-50' : ''
-          }`} style={{ background: 'linear-gradient(to right, rgb(250 245 255), transparent)', borderRadius: '0.5rem', padding: '0.5rem' }}>
+          }`} style={{ background: 'linear-gradient(to right, rgb(250 245 255), transparent)', borderRadius: '0.75rem', padding: '0.75rem' }}>
             <Checkbox
               checked={settings.pushNotifications.redemptionRequests}
               onChange={(checked) => handlePushCheckbox('redemptionRequests', checked)}
@@ -242,7 +326,9 @@ const NotificationSettingsTab = () => {
 
       {/* Save Button */}
       <div className="flex justify-end">
-        <Button onClick={handleSave}>Save Settings</Button>
+        <Button onClick={handleSave} disabled={saving}>
+          {saving ? 'Saving...' : 'Save Settings'}
+        </Button>
       </div>
 
       {/* Toast Notification */}

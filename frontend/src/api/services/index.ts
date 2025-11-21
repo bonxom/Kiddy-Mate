@@ -6,6 +6,9 @@
 // Export auth service
 export * from './authService';
 
+// Export user service
+export * from './userService';
+
 // Export child service
 export * from './childService';
 

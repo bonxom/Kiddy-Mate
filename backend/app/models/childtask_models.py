@@ -6,10 +6,11 @@ from app.models.task_models import Task
 import enum
 
 class ChildTaskStatus(str, enum.Enum):
-    UNASSIGNED = "unassigned"
-    IN_PROGRESS = "in_progress"
-    NEED_VERIFY = "need_verify"
-    COMPLETED = "completed"
+    ASSIGNED = "assigned"           # Newly assigned task
+    IN_PROGRESS = "in_progress"     # Child is working on it
+    NEED_VERIFY = "need_verify"     # Waiting for parent verification
+    COMPLETED = "completed"         # Task verified and finished
+    MISSED = "missed"               # Task not completed by due date
 
 class ChildTaskPriority(str, enum.Enum):
     LOW = "low"
@@ -19,7 +20,7 @@ class ChildTaskPriority(str, enum.Enum):
 class ChildTask(Document):
     child: Link[Child]
     task: Link[Task]
-    status: ChildTaskStatus = ChildTaskStatus.UNASSIGNED
+    status: ChildTaskStatus = ChildTaskStatus.ASSIGNED
     assigned_at: datetime = datetime.utcnow()
     completed_at: Optional[datetime] = None
     

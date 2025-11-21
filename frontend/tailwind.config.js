@@ -94,8 +94,8 @@ export default {
         // Neutral Backgrounds
         'light-bg': '#f8fafc',
         'card-bg': '#ffffff',
-        // Star/Reward Color
-        'star': {
+        // Coin/Reward Color
+        'coin': {
           DEFAULT: '#fbbf24',
           light: '#fef3c7',
           dark: '#f59e0b',

@@ -4,7 +4,7 @@
  */
 
 import type { ChildTaskWithDetails, ChildTaskPriority, Task } from '../api/services/taskService';
-import type { LibraryTask } from '../types/task.types';
+import type { LibraryTask, TaskCategory } from '../types/task.types';
 
 // Frontend UI model for AssignedTasksTab
 export interface UIAssignedTask {
@@ -12,14 +12,97 @@ export interface UIAssignedTask {
   child: string;
   task: string;
   date: string;
-  status: 'assigned' | 'in-progress' | 'completed' | 'missed';
+  status: 'assigned' | 'in-progress' | 'need-verify' | 'completed' | 'missed';
   reward: number;
-  category: 'self-discipline' | 'logic' | 'creativity' | 'social' | 'physical' | 'academic';
+  category: TaskCategory;
   priority: 'high' | 'medium' | 'low';
   progress?: number;
   dueDate?: string;
   notes?: string;
 }
+
+// ============================================================================
+// CATEGORY MAPPINGS (Backend ↔ Frontend)
+// ============================================================================
+
+const BACKEND_TO_FRONTEND_CATEGORY: Record<string, TaskCategory> = {
+  Independence: 'self-discipline',
+  Logic: 'logic',
+  Physical: 'physical',
+  Creativity: 'creativity',
+  Social: 'social',
+  Academic: 'academic',
+  IQ: 'logic',        // Backward compatibility
+  EQ: 'social',       // Backward compatibility
+};
+
+const FRONTEND_TO_BACKEND_CATEGORY: Record<TaskCategory, string> = {
+  'self-discipline': 'Independence',
+  logic: 'Logic',
+  physical: 'Physical',
+  creativity: 'Creativity',
+  social: 'Social',
+  academic: 'Academic',
+};
+
+/**
+ * Map backend category to frontend category
+ */
+export const mapBackendCategory = (category: string): TaskCategory => {
+  return BACKEND_TO_FRONTEND_CATEGORY[category] || 'self-discipline';
+};
+
+/**
+ * Map frontend category to backend category
+ */
+export const mapToBackendCategory = (
+  category: string
+): import('../api/services/taskService').TaskCategory => {
+  return (FRONTEND_TO_BACKEND_CATEGORY[category as TaskCategory] || 'Independence') as any;
+};
+
+// ============================================================================
+// STATUS MAPPINGS (Backend ↔ Frontend)
+// ============================================================================
+
+/**
+ * Map backend status to frontend status
+ * Now aligned with new backend ChildTaskStatus enum
+ */
+const mapBackendStatus = (
+  status: 'assigned' | 'in_progress' | 'need_verify' | 'completed' | 'missed'
+): 'assigned' | 'in-progress' | 'need-verify' | 'completed' | 'missed' => {
+  // Direct mapping with underscore to hyphen conversion
+  return status.replace(/_/g, '-') as 'assigned' | 'in-progress' | 'need-verify' | 'completed' | 'missed';
+};
+
+// ============================================================================
+// PRIORITY MAPPINGS (Backend ↔ Frontend)
+// ============================================================================
+
+/**
+ * Map backend priority to frontend priority
+ */
+const mapBackendPriority = (
+  priority?: ChildTaskPriority | string
+): 'high' | 'medium' | 'low' => {
+  if (!priority) return 'medium';
+  const priorityValue = typeof priority === 'string' ? priority.toLowerCase() : priority;
+  return (priorityValue === 'high' || priorityValue === 'low') ? priorityValue : 'medium';
+};
+
+/**
+ * Map frontend priority to backend priority
+ */
+export const mapToBackendPriority = (
+  priority: 'high' | 'medium' | 'low'
+): ChildTaskPriority => {
+  return priority as ChildTaskPriority;
+};
+
+// ============================================================================
+// TASK MAPPERS
+// ============================================================================
 
 /**
  * Map backend Task to frontend LibraryTask
@@ -31,7 +114,6 @@ export const mapToLibraryTask = (backendTask: Task): LibraryTask => {
     category: mapBackendCategory(backendTask.category),
     description: backendTask.description || '',
     suggestedReward: backendTask.reward_coins,
-    // These fields don't exist in backend Task model
     suggestedChild: undefined,
   };
 };
@@ -60,92 +142,3 @@ export const mapToUIAssignedTask = (
   };
 };
 
-/**
- * Map backend status to frontend status
- */
-const mapBackendStatus = (
-  status: 'suggested' | 'in_progress' | 'completed' | 'verified'
-): 'assigned' | 'in-progress' | 'completed' | 'missed' => {
-  switch (status) {
-    case 'suggested':
-      return 'assigned';
-    case 'in_progress':
-      return 'in-progress';
-    case 'completed':
-    case 'verified':
-      return 'completed';
-    default:
-      return 'assigned';
-  }
-};
-
-/**
- * Map backend category to frontend category
- */
-const mapBackendCategory = (
-  category: string
-): 'self-discipline' | 'logic' | 'creativity' | 'social' | 'physical' | 'academic' => {
-  const categoryMap: Record<string, any> = {
-    Independence: 'self-discipline',
-    Logic: 'logic',
-    Physical: 'physical',
-    Creativity: 'creativity',
-    Social: 'social',
-    Academic: 'academic',
-    IQ: 'logic',
-    EQ: 'social',
-  };
-  return categoryMap[category] || 'self-discipline';
-};
-
-/**
- * Map backend priority to frontend priority
- */
-const mapBackendPriority = (
-  priority?: ChildTaskPriority | string
-): 'high' | 'medium' | 'low' => {
-  if (!priority) return 'medium';
-  
-  const priorityValue = typeof priority === 'string' ? priority : priority;
-  switch (priorityValue.toLowerCase()) {
-    case 'high':
-      return 'high';
-    case 'low':
-      return 'low';
-    default:
-      return 'medium';
-  }
-};
-
-/**
- * Map frontend priority to backend priority
- */
-export const mapToBackendPriority = (
-  priority: 'high' | 'medium' | 'low'
-): ChildTaskPriority => {
-  switch (priority) {
-    case 'high':
-      return 'high';
-    case 'low':
-      return 'low';
-    default:
-      return 'medium';
-  }
-};
-
-/**
- * Map frontend category to backend category
- */
-export const mapToBackendCategory = (
-  category: string
-): import('../api/services/taskService').TaskCategory => {
-  const categoryMap: Record<string, import('../api/services/taskService').TaskCategory> = {
-    'self-discipline': 'Independence',
-    logic: 'Logic',
-    physical: 'Physical',
-    creativity: 'Creativity',
-    social: 'Social',
-    academic: 'Academic',
-  };
-  return categoryMap[category] || 'Independence';
-};

@@ -9,28 +9,29 @@ import { ChildProvider } from '../../contexts/ChildContext';
 
 type TabType = 'assigned' | 'library';
 
-const TaskCenterPage = () => {
+const TaskCenterContent = () => {
   const [activeTab, setActiveTab] = useState<TabType>('assigned');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [assignedCount, setAssignedCount] = useState(0);
+  const [libraryCount, setLibraryCount] = useState(0);
 
   const tabs = [
     {
       id: 'assigned' as TabType,
       label: 'Assigned Tasks',
       icon: ListTodo,
-      count: 12,
+      count: assignedCount,
     },
     {
       id: 'library' as TabType,
       label: 'Task Library',
       icon: Library,
-      count: 24,
+      count: libraryCount,
     },
   ];
 
   return (
-    <ChildProvider>
-    <div className="min-h-screen overflow-y-auto p-4 md:p-6 lg:p-8 scrollbar-thin">
+    <div className="min-h-screen overflow-y-auto p-4 md:p-6 lg:p-8 scrollbar-thin bg-gray-50">
       <div className="max-w-7xl mx-auto space-y-6 animate-fade-in">
         {/* Header */}
         <div>
@@ -54,10 +55,10 @@ const TaskCenterPage = () => {
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
                   className={`
-                    flex items-center gap-3 px-6 py-4 text-sm font-semibold transition-all relative whitespace-nowrap
+                    flex items-center gap-3 px-6 py-4 text-sm font-semibold transition-all duration-300 relative whitespace-nowrap
                     ${activeTab === tab.id
                       ? 'text-primary-700 bg-white shadow-sm'
-                      : 'text-gray-600 hover:text-gray-900 hover:bg-white/50'
+                      : 'text-gray-600 hover:text-gray-900 hover:bg-white/70 hover:shadow-soft'
                     }
                   `}
                 >
@@ -101,9 +102,9 @@ const TaskCenterPage = () => {
           <div className="p-6">
             <div className="animate-fade-in">
               {activeTab === 'assigned' ? (
-                <AssignedTasksTab />
+                <AssignedTasksTab onCountChange={setAssignedCount} />
               ) : (
-                <TaskLibraryTab />
+                <TaskLibraryTab onCountChange={setLibraryCount} />
               )}
             </div>
           </div>
@@ -116,6 +117,13 @@ const TaskCenterPage = () => {
         onClose={() => setIsCreateModalOpen(false)}
       />
     </div>
+  );
+};
+
+const TaskCenterPage = () => {
+  return (
+    <ChildProvider>
+      <TaskCenterContent />
     </ChildProvider>
   );
 };

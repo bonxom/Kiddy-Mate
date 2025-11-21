@@ -1,13 +1,16 @@
-import { CheckCircle2, Circle, Target, Brain, Dumbbell, Palette, Users } from 'lucide-react';
+import { CheckCircle2, Circle, CheckCircle } from 'lucide-react';
 import { Badge } from '../../../components/ui';
-
 import type { ActivityTimelineItem } from '../../../api/services/dashboardService';
+import { getCategoryIconType, getCategoryColorClasses } from '../../../constants/categoryConfig';
+import { verifyTask } from '../../../api/services/taskService';
+import { useChild } from '../../../providers/ChildProvider';
 
 interface Activity {
   id: string;
   time: string;
   task: string;
   category: string;
+  status: string;
   completed: boolean;
   reward: string;
   childName: string;
@@ -20,20 +23,38 @@ interface GroupedActivities {
 
 interface ActivityTimelineProps {
   data: ActivityTimelineItem[];
+  onRefresh?: () => void;
 }
 
-const ActivityTimeline = ({ data }: ActivityTimelineProps) => {
+const ActivityTimeline = ({ data, onRefresh }: ActivityTimelineProps) => {
+  const { selectedChildId } = useChild();
+  
   // Use data from API instead of mock
   const activities: Activity[] = data.map((item) => ({
     id: item.id,
     time: item.time,
     task: item.task,
     category: item.category,
+    status: item.status,
     completed: item.completed,
     reward: item.reward,
     childName: item.childName,
     childAvatar: item.childAvatar,
   }));
+
+  const handleVerifyClick = async (childTaskId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!selectedChildId) return;
+    
+    try {
+      await verifyTask(selectedChildId, childTaskId);
+      // Refresh dashboard if callback provided
+      onRefresh?.();
+    } catch (err) {
+      console.error('Failed to verify task:', err);
+      // TODO: Show error toast notification
+    }
+  };
 
   // Show empty state if no activities yet
   if (activities.length === 0) {
@@ -61,48 +82,12 @@ const ActivityTimeline = ({ data }: ActivityTimelineProps) => {
     return acc;
   }, {} as GroupedActivities);
 
-  const getCategoryIcon = (category: string) => {
-    const iconClass = "w-4 h-4";
-    switch (category) {
-      case 'Independence':
-        return <Target className={iconClass} />;
-      case 'Logic':
-      case 'IQ':
-        return <Brain className={iconClass} />;
-      case 'Physical':
-        return <Dumbbell className={iconClass} />;
-      case 'Creativity':
-        return <Palette className={iconClass} />;
-      case 'Social':
-      case 'EQ':
-        return <Users className={iconClass} />;
-      case 'Academic':
-        return <Brain className={iconClass} />;
-      default:
-        return <Target className={iconClass} />;
-    }
+  const renderCategoryIcon = (category: string) => {
+    const Icon = getCategoryIconType(category);
+    return <Icon className="w-4 h-4" />;
   };
 
-  const getCategoryColor = (category: string) => {
-    switch (category) {
-      case 'Independence':
-        return 'text-blue-600 bg-blue-50';
-      case 'Logic':
-      case 'IQ':
-        return 'text-purple-600 bg-purple-50';
-      case 'Physical':
-        return 'text-green-600 bg-green-50';
-      case 'Creativity':
-        return 'text-pink-600 bg-pink-50';
-      case 'Social':
-      case 'EQ':
-        return 'text-orange-600 bg-orange-50';
-      case 'Academic':
-        return 'text-indigo-600 bg-indigo-50';
-      default:
-        return 'text-gray-600 bg-gray-50';
-    }
-  };
+  const getCategoryColor = getCategoryColorClasses;
 
   const getChildStats = (activities: Activity[]) => {
     const completed = activities.filter(a => a.completed).length;
@@ -178,6 +163,9 @@ const ActivityTimeline = ({ data }: ActivityTimelineProps) => {
                       <th className="text-right py-2 px-3 text-xs font-semibold text-gray-700 rounded-tr-lg w-24">
                         Reward
                       </th>
+                      <th className="text-center py-2 px-3 text-xs font-semibold text-gray-700 w-20">
+                        Action
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
@@ -207,7 +195,7 @@ const ActivityTimeline = ({ data }: ActivityTimelineProps) => {
                         </td>
                         <td className="py-2.5 px-3">
                           <div className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium ${getCategoryColor(activity.category)}`}>
-                            {getCategoryIcon(activity.category)}
+                            {renderCategoryIcon(activity.category)}
                             <span>{activity.category}</span>
                           </div>
                         </td>
@@ -218,6 +206,18 @@ const ActivityTimeline = ({ data }: ActivityTimelineProps) => {
                           }`}>
                             {activity.reward}
                           </span>
+                        </td>
+
+                        <td className="py-2.5 px-3 text-center">
+                          {activity.status === 'need_verify' && (
+                            <button
+                              onClick={(e) => handleVerifyClick(activity.id, e)}
+                              className="p-1.5 text-green-500 hover:bg-green-50 rounded-lg transition-all duration-200 hover:scale-110"
+                              title="Duyệt nhiệm vụ"
+                            >
+                              <CheckCircle className="w-4 h-4" />
+                            </button>
+                          )}
                         </td>
                       </tr>
                     ))}

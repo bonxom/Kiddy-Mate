@@ -28,6 +28,7 @@ export interface UserResponse {
   id: string;
   email: string;
   full_name: string;
+  onboarding_completed: boolean;
   created_at: string;
 }
 
@@ -95,7 +96,7 @@ export const login = async (credentials: LoginRequest): Promise<AuthResponse> =>
         email: userInfo.email,
         displayName: userInfo.full_name,
         role: 'parent', // Default role for now
-        hasCompletedOnboarding: false, // TODO: Get from backend
+        hasCompletedOnboarding: userInfo.onboarding_completed,
       },
     };
 
@@ -123,11 +124,20 @@ export const getCurrentUser = async (): Promise<UserResponse> => {
 };
 
 /**
- * Logout user - clear local storage
+ * Logout user - call API and clear local storage
  */
-export const logout = (): void => {
-  localStorage.removeItem(STORAGE_KEYS.AUTH_TOKEN);
-  localStorage.removeItem(STORAGE_KEYS.AUTH_USER);
+export const logout = async (): Promise<void> => {
+  try {
+    // Call logout endpoint to invalidate session on server
+    await axiosClient.post(API_ENDPOINTS.AUTH.LOGOUT);
+  } catch (error) {
+    console.error('Logout API error:', error);
+    // Continue with local logout even if API fails
+  } finally {
+    // Clear local storage
+    localStorage.removeItem(STORAGE_KEYS.AUTH_TOKEN);
+    localStorage.removeItem(STORAGE_KEYS.AUTH_USER);
+  }
 };
 
 /**

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
 import type { EmotionData } from '../../../api/services/interactionService';
+import { EMOTION_COLORS } from '../../../constants/categoryConfig';
 
 interface EmotionPieChartProps {
   data: EmotionData[];
@@ -8,8 +9,6 @@ interface EmotionPieChartProps {
 
 const EmotionPieChart = ({ data }: EmotionPieChartProps) => {
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
-
-  const COLORS = ['#34d399', '#fbbf24', '#60a5fa', '#f87171', '#a78bfa'];
 
   // Show empty state if no emotion data yet
   if (!data || data.length === 0) {
@@ -60,7 +59,7 @@ const EmotionPieChart = ({ data }: EmotionPieChartProps) => {
             {data.map((_entry, index) => (
               <Cell
                 key={`cell-${index}`}
-                fill={COLORS[index % COLORS.length]}
+                fill={EMOTION_COLORS[index % EMOTION_COLORS.length]}
                 stroke="#fff"
                 strokeWidth={1}
                 style={{

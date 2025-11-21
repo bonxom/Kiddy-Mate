@@ -1,15 +1,23 @@
 import { useState, useMemo, useEffect } from 'react';
-import { Search, Trash2, ArrowUpDown, Target, Brain, Dumbbell, Palette, Users, BookOpen, Star, AlertCircle, TrendingUp, Minus } from 'lucide-react';
+import { Search, Trash2, ArrowUpDown, CheckCircle, ListTodo } from 'lucide-react';
 import Input from '../../../components/ui/Input';
 import Badge from '../../../components/ui/Badge';
 import Modal from '../../../components/ui/Modal';
 import Button from '../../../components/ui/Button';
 import Loading from '../../../components/ui/Loading';
 import TaskDetailModal from './TaskDetailModal';
-import type { AssignedTask, TaskStatus } from '../../../types/task.types';
+import type { AssignedTask } from '../../../types/task.types';
 import { useAssignedTasks } from '../../../hooks/useTasks';
 import { mapToUIAssignedTask } from '../../../utils/taskMappers';
 import { useChildContext } from '../../../contexts/ChildContext';
+import { 
+  getCategoryConfig, 
+  getPriorityConfig, 
+  getStatusConfig,
+  getProgressGradient,
+  ICON_SIZES 
+} from '../../../constants/taskConfig';
+import { Star } from 'lucide-react';
 
 // Extended interface for UI
 interface ExtendedAssignedTask extends AssignedTask {
@@ -18,8 +26,12 @@ interface ExtendedAssignedTask extends AssignedTask {
   progress?: number;
 }
 
-const AssignedTasksTab = () => {
-  const { selectedChildId, children, setSelectedChildId } = useChildContext();
+interface AssignedTasksTabProps {
+  onCountChange?: (count: number) => void;
+}
+
+const AssignedTasksTab = ({ onCountChange }: AssignedTasksTabProps) => {
+  const { selectedChildId, children } = useChildContext();
   
   const { 
     tasks: backendTasks, 
@@ -27,6 +39,7 @@ const AssignedTasksTab = () => {
     error,
     fetchTasks,
     unassignTask,
+    verifyTask,
   } = useAssignedTasks(selectedChildId || '');
 
   // Fetch tasks on mount and when selected child changes
@@ -37,103 +50,22 @@ const AssignedTasksTab = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedChildId]); // Only re-fetch when selectedChildId changes
 
-  // Create child name lookup map
-  const childMap = useMemo(() => {
-    const map: Record<string, string> = {};
-    children.forEach(c => map[c.id] = c.name);
-    return map;
-  }, [children]);
-
   // Transform backend tasks to UI format
   const tasks = useMemo(() => {
     return backendTasks.map(task => {
-      // Get child name from map, fallback to 'Unknown Child'
-      const childName = childMap[selectedChildId || ''] || 'Unknown Child';
+      // Get child name directly
+      const child = children.find(c => c.id === selectedChildId);
+      const childName = child?.name || 'Unknown Child';
       return mapToUIAssignedTask(task, childName);
     });
-  }, [backendTasks, childMap, selectedChildId]);
+  }, [backendTasks, children, selectedChildId]);
 
-  const getCategoryIcon = (category: ExtendedAssignedTask['category']) => {
-    const iconClass = "w-4 h-4";
-    switch (category) {
-      case 'self-discipline':
-        return <Target className={iconClass} />;
-      case 'logic':
-        return <Brain className={iconClass} />;
-      case 'physical':
-        return <Dumbbell className={iconClass} />;
-      case 'creativity':
-        return <Palette className={iconClass} />;
-      case 'social':
-        return <Users className={iconClass} />;
-      case 'academic':
-        return <BookOpen className={iconClass} />;
-    }
-  };
+  // Update parent count when tasks change
+  useEffect(() => {
+    onCountChange?.(tasks.length);
+  }, [tasks.length, onCountChange]);
 
-  const getCategoryColor = (category: ExtendedAssignedTask['category']) => {
-    switch (category) {
-      case 'self-discipline':
-        return 'text-blue-600 bg-blue-50 border-blue-200';
-      case 'logic':
-        return 'text-purple-600 bg-purple-50 border-purple-200';
-      case 'physical':
-        return 'text-green-600 bg-green-50 border-green-200';
-      case 'creativity':
-        return 'text-pink-600 bg-pink-50 border-pink-200';
-      case 'social':
-        return 'text-orange-600 bg-orange-50 border-orange-200';
-      case 'academic':
-        return 'text-indigo-600 bg-indigo-50 border-indigo-200';
-    }
-  };
-
-  const getCategoryLabel = (category: ExtendedAssignedTask['category']) => {
-    switch (category) {
-      case 'self-discipline':
-        return 'Independence';
-      case 'logic':
-        return 'Logic';
-      case 'physical':
-        return 'Physical';
-      case 'creativity':
-        return 'Creativity';
-      case 'social':
-        return 'Social';
-      case 'academic':
-        return 'Academic';
-    }
-  };
-
-  const getPriorityBadge = (priority: ExtendedAssignedTask['priority']) => {
-    const priorityConfig = {
-      high: { 
-        icon: AlertCircle, 
-        color: 'text-red-600 bg-red-50 border-red-200',
-        label: 'High'
-      },
-      medium: { 
-        icon: TrendingUp, 
-        color: 'text-yellow-600 bg-yellow-50 border-yellow-200',
-        label: 'Medium'
-      },
-      low: { 
-        icon: Minus, 
-        color: 'text-gray-600 bg-gray-50 border-gray-200',
-        label: 'Low'
-      },
-    };
-    
-    const config = priorityConfig[priority];
-    const Icon = config.icon;
-    
-    return (
-      <div className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-semibold border ${config.color}`}>
-        <Icon className="w-3 h-3" />
-        <span>{config.label}</span>
-      </div>
-    );
-  };
+  // Local state for UI interactions
   const [searchQuery, setSearchQuery] = useState('');
   const [sortColumn, setSortColumn] = useState<keyof ExtendedAssignedTask | null>(null);
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
@@ -180,6 +112,17 @@ const AssignedTasksTab = () => {
     setDeleteModalOpen(true);
   };
 
+  const handleVerifyClick = async (taskId: string, e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent row click
+    try {
+      await verifyTask(taskId);
+      // Tasks will auto-refresh via the hook
+    } catch (err) {
+      console.error('Failed to verify task:', err);
+      // TODO: Show error toast notification
+    }
+  };
+
   const handleConfirmDelete = async () => {
     if (taskToDelete) {
       try {
@@ -218,40 +161,10 @@ const AssignedTasksTab = () => {
     }
   };
 
-  const getStatusBadge = (status: TaskStatus) => {
-    const statusConfig = {
-      assigned: { variant: 'info' as const, label: 'Assigned' },
-      'in-progress': { variant: 'warning' as const, label: 'In Progress' },
-      completed: { variant: 'success' as const, label: 'Completed' },
-      missed: { variant: 'danger' as const, label: 'Missed' },
-    };
 
-    const config = statusConfig[status];
-    return <Badge variant={config.variant}>{config.label}</Badge>;
-  };
 
   return (
     <div>
-      {/* Child Selector */}
-      {!loading && children.length > 0 && (
-        <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Select Child
-          </label>
-          <select
-            value={selectedChildId || ''}
-            onChange={(e) => setSelectedChildId(e.target.value)}
-            className="w-full max-w-xs px-4 py-2 border border-gray-300 rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-          >
-            {children.map((child) => (
-              <option key={child.id} value={child.id}>
-                {child.name}
-              </option>
-            ))}
-          </select>
-        </div>
-      )}
-
       {/* Loading State */}
       {loading && (
         <div className="flex items-center justify-center py-12">
@@ -292,9 +205,9 @@ const AssignedTasksTab = () => {
           </div>
 
       {/* Table */}
-      <div className="overflow-x-auto border border-gray-200 rounded-xl shadow-md">
+      <div className="overflow-x-auto border border-gray-200 rounded-2xl shadow-soft">
         <table className="w-full">
-          <thead style={{ background: 'linear-gradient(to right, rgb(249 250 251), rgb(243 244 246))' }}>
+          <thead className="bg-linear-to-r from-gray-50 to-gray-100 border-b border-gray-200">
             <tr>
               <th
                 className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-200 transition-colors"
@@ -386,15 +299,30 @@ const AssignedTasksTab = () => {
 
                 {/* Category */}
                 <td className="px-4 py-4">
-                  <div className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition-all duration-200 group-hover:scale-105 ${getCategoryColor(task.category)}`}>
-                    {getCategoryIcon(task.category)}
-                    <span>{getCategoryLabel(task.category)}</span>
-                  </div>
+                  {(() => {
+                    const config = getCategoryConfig(task.category);
+                    const Icon = config.icon;
+                    return (
+                      <div className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition-all duration-200 group-hover:scale-105 ${config.color}`}>
+                        <Icon className={ICON_SIZES.sm} />
+                        <span>{config.label}</span>
+                      </div>
+                    );
+                  })()}
                 </td>
 
                 {/* Priority */}
                 <td className="px-4 py-4">
-                  {getPriorityBadge(task.priority)}
+                  {(() => {
+                    const config = getPriorityConfig(task.priority);
+                    const Icon = config.icon;
+                    return (
+                      <div className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-semibold border ${config.color}`}>
+                        <Icon className={ICON_SIZES.xs} />
+                        <span>{config.label}</span>
+                      </div>
+                    );
+                  })()}
                 </td>
 
                 {/* Progress */}
@@ -410,11 +338,7 @@ const AssignedTasksTab = () => {
                         className="h-full rounded-full transition-all duration-700 ease-out"
                         style={{
                           width: `${task.progress || 0}%`,
-                          background: task.status === 'completed' 
-                            ? 'linear-gradient(to right, #10b981, #059669)'
-                            : task.status === 'in-progress'
-                            ? 'linear-gradient(to right, #3b82f6, #2563eb)'
-                            : 'linear-gradient(to right, #94a3b8, #64748b)'
+                          background: getProgressGradient(task.status, task.progress || 0)
                         }}
                       />
                     </div>
@@ -423,7 +347,10 @@ const AssignedTasksTab = () => {
 
                 {/* Status */}
                 <td className="px-4 py-4">
-                  {getStatusBadge(task.status)}
+                  {(() => {
+                    const config = getStatusConfig(task.status);
+                    return <Badge variant={config.variant}>{config.label}</Badge>;
+                  })()}
                 </td>
 
                 {/* Reward */}
@@ -444,18 +371,33 @@ const AssignedTasksTab = () => {
                     }`}>
                       {task.reward}
                     </span>
+                    <span className="text-xs text-yellow-600">Coins</span>
                   </div>
                 </td>
 
                 {/* Actions */}
                 <td className="px-4 py-4 text-center">
-                  <button
-                    onClick={() => handleDeleteClick(task.id)}
-                    className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-all duration-200 hover:scale-110 hover:shadow-md"
-                    title="Xóa nhiệm vụ"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                  <div className="flex items-center justify-center gap-2">
+                    {task.status === 'need-verify' && (
+                      <button
+                        onClick={(e) => handleVerifyClick(task.id, e)}
+                        className="p-2 text-green-500 hover:bg-green-50 rounded-lg transition-all duration-200 hover:scale-110 hover:shadow-md"
+                        title="Duyệt nhiệm vụ"
+                      >
+                        <CheckCircle className="w-4 h-4" />
+                      </button>
+                    )}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteClick(task.id);
+                      }}
+                      className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-all duration-200 hover:scale-110 hover:shadow-md"
+                      title="Xóa nhiệm vụ"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}
@@ -463,8 +405,12 @@ const AssignedTasksTab = () => {
         </table>
 
         {filteredTasks.length === 0 && (
-          <div className="text-center py-8 text-gray-500">
-            No tasks found
+          <div className="text-center py-12 bg-gray-50">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 mb-4">
+              <ListTodo className="w-8 h-8 text-gray-400" />
+            </div>
+            <p className="text-gray-500 font-medium">No tasks found</p>
+            <p className="text-sm text-gray-400 mt-1">Try adjusting your search or assign new tasks</p>
           </div>
         )}
       </div>
@@ -479,9 +425,14 @@ const AssignedTasksTab = () => {
         size="sm"
       >
         <div className="space-y-4">
-          <p className="text-gray-900 font-medium text-base">
-            Are you sure you want to delete this task?
-          </p>
+          <div className="p-4 bg-red-50 border border-red-200 rounded-xl">
+            <p className="text-gray-900 font-semibold text-base">
+              Are you sure you want to delete this task?
+            </p>
+            <p className="text-sm text-gray-600 mt-2">
+              This action cannot be undone.
+            </p>
+          </div>
           <div className="flex gap-3 justify-end">
             <Button variant="secondary" onClick={() => setDeleteModalOpen(false)}>
               Cancel

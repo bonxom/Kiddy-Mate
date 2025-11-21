@@ -8,7 +8,9 @@ class User(Document):
     full_name: str
     phone_number: str | None = None
     onboarding_completed: bool = False
+    notification_settings: dict | None = None
     created_at: datetime = datetime.utcnow()
+    updated_at: datetime | None = None
 
     class Settings:
         name = "users"

@@ -1,5 +1,5 @@
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
-import { TrendingUp, /*Trophy, Target*/ } from 'lucide-react';
+import { TrendingUp } from 'lucide-react';
 import type { CompletionTrendDataPoint } from '../../../api/services/dashboardService';
 
 interface CompletionLineChartProps {

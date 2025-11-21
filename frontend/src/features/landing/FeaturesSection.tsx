@@ -15,7 +15,7 @@ const FeaturesSection = () => {
     {
       icon: Zap,
       title: 'Gamification',
-      description: 'Transform boring tasks into exciting quests with stars, levels, and achievements',
+      description: 'Transform boring tasks into exciting quests with coins, levels, and achievements',
       iconBg: 'bg-linear-to-br from-purple-100 to-purple-200',
       iconColor: 'text-purple-700',
       cardGradient: 'hover:bg-linear-to-br hover:from-purple-50 hover:to-transparent',

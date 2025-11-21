@@ -1,7 +1,7 @@
 from motor.motor_asyncio import AsyncIOMotorClient
 from beanie import init_beanie
 from app.models.beanie_models import (
-    User, Child, ChildDevelopmentAssessment, Task, Reward, ChildReward, MiniGame,
+    User, Child, ChildDevelopmentAssessment, Task, Reward, ChildReward, RedemptionRequest, MiniGame,
     GameSession, InteractionLog, Report, ChildTask
 )
 from app.config import settings
@@ -17,6 +17,7 @@ async def init_database():
         Task,
         Reward,
         ChildReward,
+        RedemptionRequest,
         MiniGame,
         GameSession,
         InteractionLog,

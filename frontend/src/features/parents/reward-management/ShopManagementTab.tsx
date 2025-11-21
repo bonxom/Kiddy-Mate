@@ -1,113 +1,126 @@
-import { useState } from 'react';
-import type { Reward } from '../../../types/reward.types';
+import { useState, useEffect } from 'react';
+import type { Reward } from '../../../api/services/rewardService';
+import { 
+  getAllRewards, 
+  createReward, 
+  updateReward, 
+  deleteReward, 
+  updateRewardQuantity 
+} from '../../../api/services/rewardService';
 import RewardCard from './RewardCard.tsx';
 import RewardModal from './RewardModal.tsx';
-
-// Mock data
-const mockRewards: Reward[] = [
-  {
-    id: '1',
-    url_thumbnail: 'https://images.unsplash.com/photo-1585435557343-3b092031a831?w=400',
-    name: '30 minutes gaming time',
-    cost: 50,
-    remain: 10,
-    description: 'Play favorite games for 30 minutes',
-  },
-  {
-    id: '2',
-    url_thumbnail: 'https://images.unsplash.com/photo-1481349518771-20055b2a7b24?w=400',
-    name: 'Movie theater trip',
-    cost: 100,
-    remain: 3,
-    description: 'Family movie outing at the cinema',
-  },
-  {
-    id: '3',
-    url_thumbnail: 'https://images.unsplash.com/photo-1560769629-975ec94e6a86?w=400',
-    name: 'New toy',
-    cost: 150,
-    remain: 2,
-    description: 'Purchase one favorite toy',
-  },
-  {
-    id: '4',
-    url_thumbnail: 'https://images.unsplash.com/photo-1551024506-0bccd828d307?w=400',
-    name: 'Custom pizza',
-    cost: 80,
-    remain: 5,
-    description: 'Choose your own pizza toppings',
-  },
-  {
-    id: '5',
-    url_thumbnail: 'https://images.unsplash.com/photo-1512909006721-3d6018887383?w=400',
-    name: 'Park visit',
-    cost: 60,
-    remain: 8,
-    description: 'Weekend park outing',
-  },
-  {
-    id: '6',
-    url_thumbnail: 'https://images.unsplash.com/photo-1532012197267-da84d127e765?w=400',
-    name: 'New storybook',
-    cost: 40,
-    remain: 15,
-    description: 'Purchase one new storybook',
-  },
-];
 
 interface ShopManagementTabProps {
   isCreateModalOpen: boolean;
   setIsCreateModalOpen: (value: boolean) => void;
+  onRewardsCountChange?: (count: number) => void;
 }
 
-const ShopManagementTab = ({ isCreateModalOpen, setIsCreateModalOpen }: ShopManagementTabProps) => {
-  const [rewards, setRewards] = useState<Reward[]>(mockRewards);
+const ShopManagementTab = ({ isCreateModalOpen, setIsCreateModalOpen, onRewardsCountChange }: ShopManagementTabProps) => {
+  const [rewards, setRewards] = useState<Reward[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [selectedReward, setSelectedReward] = useState<Reward | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<'name' | 'cost' | 'remain'>('name');
   const [filterStock, setFilterStock] = useState<'all' | 'in-stock' | 'low-stock' | 'out-of-stock'>('all');
+  const [filterType, setFilterType] = useState<'all' | 'badge' | 'skin' | 'item'>('all');
+
+  // Fetch rewards on mount
+  useEffect(() => {
+    fetchRewards();
+  }, []);
+
+  // Notify parent when rewards count changes
+  useEffect(() => {
+    onRewardsCountChange?.(rewards.length);
+  }, [rewards.length, onRewardsCountChange]);
+
+  const fetchRewards = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await getAllRewards();
+      setRewards(data);
+    } catch (err: any) {
+      console.error('Failed to fetch rewards:', err);
+      setError(err.message || 'Failed to load rewards');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleCardClick = (reward: Reward) => {
     setSelectedReward(reward);
     setIsEditModalOpen(true);
   };
 
-  const handleQuantityChange = (rewardId: string, delta: number) => {
-    setRewards(
-      rewards.map((r) =>
-        r.id === rewardId
-          ? { ...r, remain: Math.max(0, r.remain + delta) }
-          : r
-      )
-    );
-  };
-
-  const handleSaveReward = (rewardData: Omit<Reward, 'id'>) => {
-    if (selectedReward) {
-      // Edit existing reward
+  const handleQuantityChange = async (rewardId: string, delta: number) => {
+    try {
+      const result = await updateRewardQuantity(rewardId, delta);
       setRewards(
         rewards.map((r) =>
-          r.id === selectedReward.id ? { ...r, ...rewardData } : r
+          r.id === rewardId
+            ? { ...r, remain: result.remain }
+            : r
         )
       );
-      setIsEditModalOpen(false);
-      setSelectedReward(null);
-    } else {
-      // Create new reward
-      const newReward: Reward = {
-        id: Date.now().toString(),
-        ...rewardData,
-      };
-      setRewards([...rewards, newReward]);
-      setIsCreateModalOpen(false);
+    } catch (err: any) {
+      console.error('Failed to update quantity:', err);
+      alert('Failed to update quantity: ' + (err.message || 'Unknown error'));
     }
   };
 
-  const handleDeleteReward = (rewardId: string) => {
-    setRewards(rewards.filter((r) => r.id !== rewardId));
-    setIsEditModalOpen(false);
-    setSelectedReward(null);
+  const handleSaveReward = async (rewardData: Omit<Reward, 'id'>) => {
+    try {
+      if (selectedReward) {
+        // Edit existing reward
+        const updated = await updateReward(selectedReward.id, {
+          name: rewardData.name,
+          description: rewardData.description,
+          image_url: rewardData.url_thumbnail,
+          cost_coins: rewardData.cost,
+          stock_quantity: rewardData.remain,
+          is_active: rewardData.is_active,
+        });
+        setRewards(
+          rewards.map((r) =>
+            r.id === selectedReward.id ? updated : r
+          )
+        );
+        setIsEditModalOpen(false);
+        setSelectedReward(null);
+      } else {
+        // Create new reward
+        const newReward = await createReward({
+          name: rewardData.name,
+          description: rewardData.description,
+          type: 'item',  // Default type
+          image_url: rewardData.url_thumbnail,
+          cost_coins: rewardData.cost,
+          stock_quantity: rewardData.remain,
+          is_active: true,
+        });
+        setRewards([...rewards, newReward]);
+        setIsCreateModalOpen(false);
+      }
+    } catch (err: any) {
+      console.error('Failed to save reward:', err);
+      alert('Failed to save reward: ' + (err.message || 'Unknown error'));
+    }
+  };
+
+  const handleDeleteReward = async (rewardId: string) => {
+    try {
+      await deleteReward(rewardId);
+      setRewards(rewards.filter((r) => r.id !== rewardId));
+      setIsEditModalOpen(false);
+      setSelectedReward(null);
+    } catch (err: any) {
+      console.error('Failed to delete reward:', err);
+      alert('Failed to delete reward: ' + (err.message || 'Unknown error'));
+    }
   };
 
   // Filter and sort rewards
@@ -124,7 +137,10 @@ const ShopManagementTab = ({ isCreateModalOpen, setIsCreateModalOpen }: ShopMana
         filterStock === 'low-stock' ? reward.remain > 0 && reward.remain < 5 :
         reward.remain >= 5;
       
-      return matchesSearch && matchesStock;
+      // Type filter
+      const matchesType = filterType === 'all' ? true : reward.type === filterType;
+      
+      return matchesSearch && matchesStock && matchesType;
     })
     .sort((a, b) => {
       if (sortBy === 'name') return a.name.localeCompare(b.name);
@@ -137,8 +153,32 @@ const ShopManagementTab = ({ isCreateModalOpen, setIsCreateModalOpen }: ShopMana
       {/* Description */}
       <p className="text-gray-600 mb-6">Manage your reward shop items</p>
 
-      {/* Search and Filters */}
-      <div className="mb-6 space-y-4">
+      {/* Error State */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4">
+          <p className="font-semibold">Error loading rewards</p>
+          <p className="text-sm">{error}</p>
+          <button 
+            onClick={fetchRewards}
+            className="mt-2 text-sm underline hover:no-underline"
+          >
+            Try again
+          </button>
+        </div>
+      )}
+
+      {/* Loading State */}
+      {loading && (
+        <div className="text-center py-12">
+          <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-primary-200 border-t-primary-600"></div>
+          <p className="text-gray-500 mt-2">Loading rewards...</p>
+        </div>
+      )}
+
+      {!loading && !error && (
+        <>
+          {/* Search and Filters */}
+          <div className="mb-6 space-y-4">
         {/* Search Bar */}
         <div className="relative">
           <input
@@ -146,7 +186,7 @@ const ShopManagementTab = ({ isCreateModalOpen, setIsCreateModalOpen }: ShopMana
             placeholder="Search rewards by name or description..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full px-4 py-2.5 pl-10 border border-gray-300 rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+            className="w-full px-4 py-2.5 pl-10 border border-gray-200 rounded-xl text-base bg-white shadow-soft focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent focus:shadow-medium transition-all duration-200"
           />
           <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -155,16 +195,39 @@ const ShopManagementTab = ({ isCreateModalOpen, setIsCreateModalOpen }: ShopMana
 
         {/* Filters */}
         <div className="flex flex-wrap gap-3 items-center">
-          <span className="text-sm font-medium text-gray-700">Filter by:</span>
+          <span className="text-sm font-medium text-gray-700">Type:</span>
+          <div className="flex gap-2">
+            {[
+              { value: 'all', label: 'All', icon: '📦' },
+              { value: 'item', label: 'Items', icon: '🎁' },
+              { value: 'badge', label: 'Badges', icon: '🏅' },
+              { value: 'skin', label: 'Skins', icon: '👤' },
+            ].map((filter) => (
+              <button
+                key={filter.value}
+                onClick={() => setFilterType(filter.value as typeof filterType)}
+                className={`px-4 py-2 text-sm font-semibold rounded-xl border shadow-soft transition-all duration-200 flex items-center gap-2 hover:shadow-medium active:scale-95 ${
+                  filterType === filter.value
+                    ? 'border-primary-500 bg-linear-to-r from-blue-50 to-purple-50 text-primary-700'
+                    : 'border-gray-200 bg-white text-gray-600 hover:border-primary-300 hover:bg-gray-50'
+                }`}
+              >
+                <span className="text-base">{filter.icon}</span>
+                <span>{filter.label}</span>
+              </button>
+            ))}
+          </div>
+          
+          <span className="text-sm font-medium text-gray-700 ml-4">Stock:</span>
           <div className="flex gap-2">
             {['all', 'in-stock', 'low-stock', 'out-of-stock'].map((filter) => (
               <button
                 key={filter}
                 onClick={() => setFilterStock(filter as typeof filterStock)}
-                className={`px-3 py-1.5 text-sm font-medium rounded-lg border transition-all ${
+                className={`px-4 py-2 text-sm font-semibold rounded-xl border shadow-soft transition-all duration-200 hover:shadow-medium active:scale-95 ${
                   filterStock === filter
-                    ? 'border-primary-500 bg-primary-50 text-primary-700'
-                    : 'border-gray-300 bg-white text-gray-600 hover:border-primary-300'
+                    ? 'border-primary-500 bg-linear-to-r from-blue-50 to-purple-50 text-primary-700'
+                    : 'border-gray-200 bg-white text-gray-600 hover:border-primary-300 hover:bg-gray-50'
                 }`}
               >
                 {filter === 'all' ? 'All' : filter === 'in-stock' ? 'In Stock' : filter === 'low-stock' ? 'Low Stock' : 'Out of Stock'}
@@ -176,7 +239,7 @@ const ShopManagementTab = ({ isCreateModalOpen, setIsCreateModalOpen }: ShopMana
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
-            className="px-3 py-1.5 text-sm font-medium border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+            className="px-4 py-2 text-sm font-semibold border border-gray-200 rounded-xl bg-white shadow-soft focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent transition-all duration-200 hover:border-gray-300"
           >
             <option value="name">Name</option>
             <option value="cost">Cost (High to Low)</option>
@@ -211,18 +274,22 @@ const ShopManagementTab = ({ isCreateModalOpen, setIsCreateModalOpen }: ShopMana
         ))}
       </div>
 
-      {filteredAndSortedRewards.length === 0 && rewards.length > 0 && (
+      {/* Empty State - No Results */}
+      {!loading && !error && filteredAndSortedRewards.length === 0 && rewards.length > 0 && (
         <div className="text-center py-12 text-gray-500">
           <p className="text-lg">No rewards match your filters</p>
           <p className="text-sm mt-2">Try adjusting your search or filters</p>
         </div>
       )}
 
-      {rewards.length === 0 && (
+      {/* Empty State - No Rewards at All */}
+      {!loading && !error && rewards.length === 0 && (
         <div className="text-center py-12 text-gray-500">
           <p className="text-lg">No rewards yet</p>
           <p className="text-sm mt-2">Click "Add Reward" button to create a new reward</p>
         </div>
+      )}
+      </>
       )}
 
       {/* Create Modal */}

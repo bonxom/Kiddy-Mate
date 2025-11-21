@@ -3,12 +3,19 @@ import Modal from '../../../components/ui/Modal';
 import Input from '../../../components/ui/Input';
 import Button from '../../../components/ui/Button';
 import Badge from '../../../components/ui/Badge';
-import { Target, Brain, Dumbbell, Palette, Users, BookOpen, Star, AlertCircle, TrendingUp, Minus } from 'lucide-react';
+import { Star } from 'lucide-react';
 import type { AssignedTask } from '../../../types/task.types';
 import { useAssignedTasks } from '../../../hooks/useTasks';
 import { mapToBackendPriority } from '../../../utils/taskMappers';
 import type { ChildTaskUpdate } from '../../../api/services/taskService';
 import { useChildContext } from '../../../contexts/ChildContext';
+import { 
+  getCategoryConfig, 
+  getPriorityConfig, 
+  getStatusConfig, 
+  TASK_CATEGORY_LABELS, 
+  ICON_SIZES 
+} from '../../../constants/taskConfig';
 
 interface ExtendedAssignedTask extends AssignedTask {
   category: 'self-discipline' | 'logic' | 'creativity' | 'social' | 'physical' | 'academic';
@@ -54,79 +61,6 @@ const TaskDetailModal = ({ isOpen, onClose, task, onSave, onDelete, onUpdate }: 
       availableChildren: children
     });
   }, [task, isOpen]);
-
-  const getCategoryIcon = (category: string) => {
-    const iconClass = "w-4 h-4";
-    switch (category) {
-      case 'self-discipline':
-        return <Target className={iconClass} />;
-      case 'logic':
-        return <Brain className={iconClass} />;
-      case 'physical':
-        return <Dumbbell className={iconClass} />;
-      case 'creativity':
-        return <Palette className={iconClass} />;
-      case 'social':
-        return <Users className={iconClass} />;
-      case 'academic':
-        return <BookOpen className={iconClass} />;
-      default:
-        return <Target className={iconClass} />;
-    }
-  };
-
-  const categoryLabels: Record<string, string> = {
-    'self-discipline': 'Independence',
-    'logic': 'Logic',
-    'physical': 'Physical',
-    'creativity': 'Creativity',
-    'social': 'Social',
-    'academic': 'Academic',
-  };
-
-  const getCategoryColor = (category: string) => {
-    switch (category) {
-      case 'self-discipline':
-        return 'text-blue-600 bg-blue-50 border-blue-200';
-      case 'logic':
-        return 'text-purple-600 bg-purple-50 border-purple-200';
-      case 'physical':
-        return 'text-green-600 bg-green-50 border-green-200';
-      case 'creativity':
-        return 'text-pink-600 bg-pink-50 border-pink-200';
-      case 'social':
-        return 'text-orange-600 bg-orange-50 border-orange-200';
-      case 'academic':
-        return 'text-indigo-600 bg-indigo-50 border-indigo-200';
-      default:
-        return 'text-gray-600 bg-gray-50 border-gray-200';
-    }
-  };
-
-  const getStatusBadge = (status: AssignedTask['status']) => {
-    const statusConfig = {
-      assigned: { variant: 'info' as const, label: 'Assigned' },
-      'in-progress': { variant: 'warning' as const, label: 'In Progress' },
-      completed: { variant: 'success' as const, label: 'Completed' },
-      missed: { variant: 'danger' as const, label: 'Missed' },
-    };
-
-    const config = statusConfig[status];
-    return <Badge variant={config.variant}>{config.label}</Badge>;
-  };
-
-  const getPriorityIcon = (priority: string) => {
-    switch (priority) {
-      case 'high':
-        return <AlertCircle className="w-4 h-4" />;
-      case 'medium':
-        return <TrendingUp className="w-4 h-4" />;
-      case 'low':
-        return <Minus className="w-4 h-4" />;
-      default:
-        return <Minus className="w-4 h-4" />;
-    }
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -200,15 +134,20 @@ const TaskDetailModal = ({ isOpen, onClose, task, onSave, onDelete, onUpdate }: 
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Status and Priority Row */}
           <div className="flex items-center gap-3 pb-3 border-b border-gray-100">
-            {getStatusBadge(formData.status)}
-            <div className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold border ${
-              formData.priority === 'high' ? 'text-red-600 bg-red-50 border-red-200' :
-              formData.priority === 'medium' ? 'text-yellow-600 bg-yellow-50 border-yellow-200' :
-              'text-gray-600 bg-gray-50 border-gray-200'
-            }`}>
-              {getPriorityIcon(formData.priority)}
-              <span>{formData.priority.charAt(0).toUpperCase() + formData.priority.slice(1)} Priority</span>
-            </div>
+            {(() => {
+              const statusConfig = getStatusConfig(formData.status);
+              return <Badge variant={statusConfig.variant}>{statusConfig.label}</Badge>;
+            })()}
+            {(() => {
+              const priorityConfig = getPriorityConfig(formData.priority);
+              const Icon = priorityConfig.icon;
+              return (
+                <div className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold border ${priorityConfig.color}`}>
+                  <Icon className={ICON_SIZES.sm} />
+                  <span>{priorityConfig.label} Priority</span>
+                </div>
+              );
+            })()}
           </div>
 
           {isEditing ? (
@@ -246,21 +185,25 @@ const TaskDetailModal = ({ isOpen, onClose, task, onSave, onDelete, onUpdate }: 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Category</label>
                 <div className="grid grid-cols-2 gap-2">
-                  {Object.entries(categoryLabels).map(([value, label]) => (
-                    <button
-                      key={value}
-                      type="button"
-                      onClick={() => setFormData({ ...formData, category: value as any })}
-                      className={`flex items-center gap-2 px-3 py-2 rounded-lg border-2 transition-all duration-200 ${
-                        formData.category === value
-                          ? 'border-primary-500 bg-primary-50 text-primary-700'
-                          : 'border-gray-200 bg-white text-gray-700 hover:border-primary-300'
-                      }`}
-                    >
-                      {getCategoryIcon(value)}
-                      <span className="text-sm font-semibold">{label}</span>
-                    </button>
-                  ))}
+                  {Object.entries(TASK_CATEGORY_LABELS).map(([value, label]) => {
+                    const config = getCategoryConfig(value as any);
+                    const Icon = config.icon;
+                    return (
+                      <button
+                        key={value}
+                        type="button"
+                        onClick={() => setFormData({ ...formData, category: value as any })}
+                        className={`flex items-center gap-2 px-3 py-2 rounded-lg border-2 transition-all duration-200 ${
+                          formData.category === value
+                            ? 'border-primary-500 bg-primary-50 text-primary-700'
+                            : 'border-gray-200 bg-white text-gray-700 hover:border-primary-300'
+                        }`}
+                      >
+                        <Icon className={ICON_SIZES.sm} />
+                        <span className="text-sm font-semibold">{label}</span>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
@@ -306,7 +249,7 @@ const TaskDetailModal = ({ isOpen, onClose, task, onSave, onDelete, onUpdate }: 
 
               {/* Reward */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Reward (Stars)</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Reward (Coins)</label>
                 <div className="flex items-center gap-3">
                   <input
                     type="range"
@@ -365,10 +308,16 @@ const TaskDetailModal = ({ isOpen, onClose, task, onSave, onDelete, onUpdate }: 
                 {/* Category */}
                 <div className="p-4 bg-gray-50 rounded-lg border border-gray-100">
                   <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Category</label>
-                  <div className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold border ${getCategoryColor(formData.category)}`}>
-                    {getCategoryIcon(formData.category)}
-                    <span>{categoryLabels[formData.category]}</span>
-                  </div>
+                  {(() => {
+                    const config = getCategoryConfig(formData.category);
+                    const Icon = config.icon;
+                    return (
+                      <div className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold border ${config.color}`}>
+                        <Icon className={ICON_SIZES.sm} />
+                        <span>{config.label}</span>
+                      </div>
+                    );
+                  })()}
                 </div>
 
                 {/* Task Name - Full Width */}
@@ -458,9 +407,14 @@ const TaskDetailModal = ({ isOpen, onClose, task, onSave, onDelete, onUpdate }: 
         size="sm"
       >
         <div className="space-y-4">
-          <p className="text-gray-900 font-medium text-base">
-            Are you sure you want to delete the task "{task.task}"?
-          </p>
+          <div className="p-4 bg-red-50 border border-red-200 rounded-xl">
+            <p className="text-gray-900 font-semibold text-base">
+              Are you sure you want to delete the task "{task.task}"?
+            </p>
+            <p className="text-sm text-gray-600 mt-2">
+              This action cannot be undone.
+            </p>
+          </div>
           <div className="flex gap-3 justify-end">
             <Button variant="secondary" onClick={() => setShowDeleteConfirm(false)}>
               Cancel

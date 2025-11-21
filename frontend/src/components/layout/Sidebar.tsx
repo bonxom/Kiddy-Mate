@@ -1,4 +1,4 @@
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import {
   Aperture,
   LayoutDashboard,
@@ -7,8 +7,11 @@ import {
   Settings,
   LogOut,
 } from 'lucide-react';
+import { useAuth } from '../../providers/AuthProvider';
 
 const Sidebar = () => {
+  const navigate = useNavigate();
+  const { logout } = useAuth();
   const navItems = [
     {
       to: '/parent/dashboard',
@@ -72,9 +75,13 @@ const Sidebar = () => {
       {/* Logout Button */}
       <button
         className="group relative flex items-center justify-center w-full h-14 rounded-lg transition-all duration-200 hover:bg-white/10 px-3"
-        onClick={() => {
-          // TODO: Implement logout logic
-          console.log('Logout clicked');
+        onClick={async () => {
+          try {
+            await logout();
+            navigate('/login');
+          } catch (error) {
+            console.error('Logout error:', error);
+          }
         }}
       >
         <LogOut
