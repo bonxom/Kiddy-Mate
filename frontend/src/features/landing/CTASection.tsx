@@ -6,12 +6,12 @@ const CTASection = () => {
   const navigate = useNavigate();
 
   return (
-    <section className="py-20 px-4 sm:px-6 lg:px-8 bg-linear-to-br from-primary-700 via-blue-700 to-accent-600 text-white overflow-hidden relative">
+    <section className="py-20 px-4 sm:px-6 lg:px-8 bg-linear-to-br from-blue-600 via-purple-600 to-pink-600 text-white overflow-hidden relative">
       {/* Animated Background Elements */}
       <div className="absolute inset-0 opacity-20">
-        <div className="absolute top-10 left-10 w-32 h-32 bg-white rounded-full blur-3xl animate-pulse" />
-        <div className="absolute bottom-10 right-10 w-40 h-40 bg-white rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-purple-400 rounded-full blur-3xl animate-pulse-soft" />
+        <div className="absolute top-10 left-10 w-32 h-32 bg-blue-200 rounded-full blur-3xl animate-pulse" />
+        <div className="absolute bottom-10 right-10 w-40 h-40 bg-pink-200 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-purple-300 rounded-full blur-3xl animate-pulse-soft" />
       </div>
 
       <div className="max-w-4xl mx-auto text-center relative z-10">
