@@ -43,6 +43,21 @@ export interface TaskCreate {
   reward_badge_name?: string;
 }
 
+export interface CreateAndAssignTaskRequest {
+  title: string;
+  description?: string;
+  category: TaskCategory;
+  type: TaskType;
+  difficulty: number;
+  suggested_age_range: string;
+  reward_coins: number;
+  reward_badge_name?: string;
+  // Assignment params
+  due_date?: string;
+  priority?: ChildTaskPriority;
+  notes?: string;
+}
+
 export interface TaskUpdate {
   title?: string;
   description?: string;
@@ -66,6 +81,8 @@ export interface ChildTaskWithDetails extends ChildTask {
   due_date?: string;
   progress?: number;
   notes?: string;
+  custom_title?: string;
+  custom_reward_coins?: number;
   task: Task;
 }
 
@@ -74,6 +91,8 @@ export interface ChildTaskUpdate {
   due_date?: string;
   progress?: number;
   notes?: string;
+  custom_title?: string;
+  custom_reward_coins?: number;
 }
 
 export interface GetChildTasksParams {
@@ -170,6 +189,20 @@ export const assignTask = async (
 };
 
 /**
+ * Create and assign task in one step
+ */
+export const createAndAssignTask = async (
+  childId: string,
+  request: CreateAndAssignTaskRequest
+): Promise<ChildTaskWithDetails> => {
+  const response = await axiosClient.post<ChildTaskWithDetails>(
+    `/children/${childId}/tasks/create-and-assign`,
+    request
+  );
+  return response.data;
+};
+
+/**
  * Update assigned task (priority, due_date, progress, notes)
  */
 export const updateAssignedTask = async (
@@ -240,6 +273,7 @@ export default {
   // Assigned Tasks
   getChildTasks,
   assignTask,
+  createAndAssignTask,
   updateAssignedTask,
   unassignTask,
 

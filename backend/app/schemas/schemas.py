@@ -144,6 +144,9 @@ class ChildTaskWithDetails(BaseModel):
     due_date: Optional[datetime] = None
     progress: int = 0
     notes: Optional[str] = None
+    # Custom override fields
+    custom_title: Optional[str] = None
+    custom_reward_coins: Optional[int] = None
     task: TaskPublic  # Full task details
     model_config = ConfigDict(from_attributes=True)
 

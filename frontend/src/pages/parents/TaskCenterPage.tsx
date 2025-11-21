@@ -14,6 +14,13 @@ const TaskCenterContent = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [assignedCount, setAssignedCount] = useState(0);
   const [libraryCount, setLibraryCount] = useState(0);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+  const handleTaskCreated = () => {
+    // Switch to assigned tab and trigger refresh
+    setActiveTab('assigned');
+    setRefreshTrigger(prev => prev + 1);
+  };
 
   const tabs = [
     {
@@ -101,7 +108,10 @@ const TaskCenterContent = () => {
           <div className="p-6">
             <div className="animate-fade-in">
               {activeTab === 'assigned' ? (
-                <AssignedTasksTab onCountChange={setAssignedCount} />
+                <AssignedTasksTab 
+                  onCountChange={setAssignedCount}
+                  key={refreshTrigger} 
+                />
               ) : (
                 <TaskLibraryTab onCountChange={setLibraryCount} />
               )}
@@ -114,6 +124,7 @@ const TaskCenterContent = () => {
       <CreateTaskModal
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
+        onTaskCreated={handleTaskCreated}
       />
     </div>
   );

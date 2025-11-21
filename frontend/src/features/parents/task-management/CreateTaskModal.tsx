@@ -4,36 +4,47 @@ import { handleApiError } from '../../../utils/errorHandler';
 import Modal from '../../../components/ui/Modal';
 import Input from '../../../components/ui/Input';
 import Button from '../../../components/ui/Button';
-import { Star } from 'lucide-react';
-import { useTaskLibrary } from '../../../hooks/useTasks';
+import { Star, User } from 'lucide-react';
+import { useChildContext } from '../../../providers/ChildProvider';
+import { createAndAssignTask } from '../../../api/services/taskService';
+import type { CreateAndAssignTaskRequest } from '../../../api/services/taskService';
 import { mapToBackendCategory } from '../../../utils/taskMappers';
-import type { TaskCreate } from '../../../api/services/taskService';
 import { getCategoryConfig, TASK_CATEGORY_LABELS, ICON_SIZES } from '../../../constants/taskConfig';
 
 interface CreateTaskModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onTaskCreated?: () => void; // Callback to refresh assigned tasks
 }
 
-const CreateTaskModal = ({ isOpen, onClose }: CreateTaskModalProps) => {
-  const { createTask } = useTaskLibrary();
+const CreateTaskModal = ({ isOpen, onClose, onTaskCreated }: CreateTaskModalProps) => {
+  const { children, selectedChildId, setSelectedChildId } = useChildContext();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [formData, setFormData] = useState({
+    childId: selectedChildId || '',
     taskName: '',
     description: '',
     category: 'self-discipline' as 'self-discipline' | 'logic' | 'physical' | 'creativity' | 'social' | 'academic',
     priority: 'medium' as 'high' | 'medium' | 'low',
     reward: 10,
+    dueDate: '',
+    notes: '',
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!formData.childId) {
+      toast.error('Please select a child');
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
       // Create task data matching backend schema
-      const taskData: TaskCreate = {
+      const taskData: CreateAndAssignTaskRequest = {
         title: formData.taskName,
         description: formData.description,
         category: mapToBackendCategory(formData.category),
@@ -41,32 +52,70 @@ const CreateTaskModal = ({ isOpen, onClose }: CreateTaskModalProps) => {
         difficulty: formData.priority === 'high' ? 3 : formData.priority === 'medium' ? 2 : 1,
         suggested_age_range: '6-12', // Default - can be made configurable
         reward_coins: formData.reward,
+        // Assignment params
+        priority: formData.priority,
+        due_date: formData.dueDate || undefined,
+        notes: formData.notes || undefined,
       };
 
-      await createTask(taskData);
+      await createAndAssignTask(formData.childId, taskData);
+
+      // Update selected child if different
+      if (formData.childId !== selectedChildId) {
+        setSelectedChildId(formData.childId);
+      }
+
+      // Notify parent to refresh
+      onTaskCreated?.();
 
       onClose();
 
       // Reset form
       setFormData({
+        childId: selectedChildId || '',
         taskName: '',
         description: '',
         category: 'self-discipline',
         priority: 'medium',
         reward: 10,
+        dueDate: '',
+        notes: '',
       });
 
-      toast.success('Task created successfully!');
+      toast.success('Task created and assigned successfully! 🎉');
     } catch (error) {
-      handleApiError(error, 'Failed to create task');
+      handleApiError(error, 'Failed to create and assign task');
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Create Task Template" size="md">
+    <Modal isOpen={isOpen} onClose={onClose} title="Create & Assign Task" size="md">
       <form onSubmit={handleSubmit} className="space-y-4">
+        {/* Child Selector */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Assign to Child <span className="text-red-500">*</span>
+          </label>
+          <div className="relative">
+            <select
+              value={formData.childId}
+              onChange={(e) => setFormData({ ...formData, childId: e.target.value })}
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent appearance-none bg-white"
+              required
+            >
+              <option value="">Select a child</option>
+              {children.map((child) => (
+                <option key={child.id} value={child.id}>
+                  {child.name}
+                </option>
+              ))}
+            </select>
+            <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
+          </div>
+        </div>
+
         {/* Task Name */}
         <Input
           label="Task Name"
@@ -181,13 +230,36 @@ const CreateTaskModal = ({ isOpen, onClose }: CreateTaskModalProps) => {
           </div>
         </div>
 
+        {/* Due Date (Optional) */}
+        <Input
+          label="Due Date (Optional)"
+          type="date"
+          value={formData.dueDate}
+          onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
+          fullWidth
+        />
+
+        {/* Notes (Optional) */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Notes (Optional)
+          </label>
+          <textarea
+            placeholder="Add any special instructions..."
+            value={formData.notes}
+            onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent resize-none"
+            rows={2}
+          />
+        </div>
+
         {/* Actions */}
         <div className="flex gap-3 pt-4">
           <Button type="button" variant="secondary" onClick={onClose} fullWidth disabled={isSubmitting}>
             Cancel
           </Button>
           <Button type="submit" fullWidth disabled={isSubmitting}>
-            {isSubmitting ? 'Creating...' : 'Create Task'}
+            {isSubmitting ? 'Creating...' : 'Create & Assign'}
           </Button>
         </div>
       </form>

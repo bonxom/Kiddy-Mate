@@ -125,18 +125,26 @@ export const mapToUIAssignedTask = (
   backendTask: ChildTaskWithDetails,
   childName: string
 ): UIAssignedTask => {
+  // Use custom_title if available, otherwise use task.title
+  const taskTitle = backendTask.custom_title || backendTask.task.title;
+  
+  // Use custom_reward_coins if available, otherwise use task.reward_coins
+  const rewardCoins = backendTask.custom_reward_coins !== undefined 
+    ? backendTask.custom_reward_coins 
+    : backendTask.task.reward_coins;
+
   return {
     id: backendTask.id,
     child: childName,
-    task: backendTask.task.title,
+    task: taskTitle,
     date: new Date(backendTask.assigned_at).toISOString().split('T')[0],
     status: mapBackendStatus(backendTask.status),
-    reward: backendTask.task.reward_coins,
+    reward: rewardCoins,
     category: mapBackendCategory(backendTask.task.category),
     priority: mapBackendPriority(backendTask.priority),
     progress: backendTask.progress,
     dueDate: backendTask.due_date
-      ? new Date(backendTask.due_date).toISOString().split('T')[0]
+      ? backendTask.due_date.split('T')[0]  // Extract YYYY-MM-DD directly without timezone conversion
       : undefined,
     notes: backendTask.notes,
   };

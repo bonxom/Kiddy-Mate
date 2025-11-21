@@ -81,9 +81,22 @@ const TaskDetailModal = ({ isOpen, onClose, task, onSave, onDelete, onUpdate }: 
         updates.progress = formData.progress;
       }
 
-      if (formData.date) {
-        // Convert date string to ISO datetime format for backend
-        updates.due_date = new Date(formData.date).toISOString();
+      if (formData.dueDate) {
+        // Send date string directly in YYYY-MM-DD format
+        updates.due_date = formData.dueDate;
+      }
+
+      if (formData.notes !== undefined) {
+        updates.notes = formData.notes;
+      }
+
+      // Custom override fields
+      if (formData.task !== task.task) {
+        updates.custom_title = formData.task;
+      }
+
+      if (formData.reward !== task.reward) {
+        updates.custom_reward_coins = formData.reward;
       }
 
       console.log('🔍 DEBUG - Update Task:', {
@@ -167,16 +180,17 @@ const TaskDetailModal = ({ isOpen, onClose, task, onSave, onDelete, onUpdate }: 
                 <p className="text-xs text-gray-500 mt-1">Cannot reassign task to different child</p>
               </div>
 
-              {/* Task Name - READ ONLY */}
+              {/* Task Name - Editable */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Task Name</label>
                 <Input
                   type="text"
                   value={formData.task}
-                  disabled
+                  onChange={(e) => setFormData({ ...formData, task: e.target.value })}
                   fullWidth
+                  placeholder="Enter task name"
                 />
-                <p className="text-xs text-gray-500 mt-1">Task name is set in template</p>
+                <p className="text-xs text-gray-500 mt-1">This creates a custom version for this assignment</p>
               </div>
 
               {/* Category - READ ONLY */}
@@ -192,7 +206,7 @@ const TaskDetailModal = ({ isOpen, onClose, task, onSave, onDelete, onUpdate }: 
                     </div>
                   );
                 })()}
-                <p className="text-xs text-gray-500 mt-2">Category is set in task template</p>
+                <p className="text-xs text-gray-500 mt-2">Category is from task template</p>
               </div>
 
               {/* Priority */}
@@ -232,15 +246,18 @@ const TaskDetailModal = ({ isOpen, onClose, task, onSave, onDelete, onUpdate }: 
                 </div>
               </div>
 
-              {/* Reward - READ ONLY */}
+              {/* Reward - Editable */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Reward (Coins)</label>
-                <div className="flex items-center gap-1.5 px-3 py-2 bg-yellow-50 rounded-lg border border-yellow-200 w-fit">
-                  <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
-                  <span className="font-semibold text-gray-900">{formData.reward}</span>
-                  <span className="text-xs text-yellow-600">Coins</span>
-                </div>
-                <p className="text-xs text-gray-500 mt-1">Reward is set in task template</p>
+                <Input
+                  type="number"
+                  min="0"
+                  value={formData.reward}
+                  onChange={(e) => setFormData({ ...formData, reward: parseInt(e.target.value) || 0 })}
+                  fullWidth
+                  placeholder="Enter reward coins"
+                />
+                <p className="text-xs text-gray-500 mt-1">Override default reward for this assignment</p>
               </div>
 
               {/* Due Date */}
@@ -248,8 +265,8 @@ const TaskDetailModal = ({ isOpen, onClose, task, onSave, onDelete, onUpdate }: 
                 <label className="block text-sm font-medium text-gray-700 mb-1">Due Date</label>
                 <Input
                   type="date"
-                  value={formData.date}
-                  onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                  value={formData.dueDate || ''}
+                  onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
                   fullWidth
                 />
               </div>
@@ -271,6 +288,18 @@ const TaskDetailModal = ({ isOpen, onClose, task, onSave, onDelete, onUpdate }: 
                   />
                 </div>
               )}
+
+              {/* Notes */}
+              <div className="col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+                <textarea
+                  value={formData.notes || ''}
+                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                  rows={3}
+                  placeholder="Add notes or special instructions..."
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent resize-none"
+                />
+              </div>
             </>
           ) : (
             <>
@@ -316,9 +345,19 @@ const TaskDetailModal = ({ isOpen, onClose, task, onSave, onDelete, onUpdate }: 
                 {/* Due Date */}
                 <div className="p-4 bg-gray-50 rounded-lg border border-gray-100">
                   <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Due Date</label>
-                  <p className="text-base font-bold text-gray-900">{new Date(formData.date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                  <p className="text-base font-bold text-gray-900">
+                    {formData.dueDate ? new Date(formData.dueDate + 'T00:00:00').toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : 'No due date'}
+                  </p>
                 </div>
               </div>
+
+              {/* Notes - Full Width */}
+              {formData.notes && (
+                <div className="p-4 bg-gray-50 rounded-lg border border-gray-100">
+                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Notes</label>
+                  <p className="text-sm text-gray-700 whitespace-pre-wrap">{formData.notes}</p>
+                </div>
+              )}
             </>
           )}
 

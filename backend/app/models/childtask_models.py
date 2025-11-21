@@ -29,6 +29,10 @@ class ChildTask(Document):
     due_date: Optional[datetime] = None
     progress: int = 0  # 0-100 percentage
     notes: Optional[str] = None
+    
+    # Override fields - allow customization per assignment without affecting template
+    custom_title: Optional[str] = None  # If set, use this instead of task.title
+    custom_reward_coins: Optional[int] = None  # If set, use this instead of task.reward_coins
 
     class Settings:
         name = "child_tasks"

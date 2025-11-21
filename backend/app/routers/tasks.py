@@ -4,7 +4,7 @@ from app.models.child_models import Child
 from app.models.childtask_models import ChildTask, ChildTaskStatus, ChildTaskPriority
 from app.schemas.schemas import TaskPublic, TaskCreate, ChildTaskPublic, ChildTaskWithDetails
 from typing import List, Optional
-from datetime import datetime
+from datetime import datetime, time
 from app.dependencies import verify_child_ownership
 from app.models.reward_models import ChildReward, Reward
 from app.services.auth import get_current_user
@@ -13,16 +13,63 @@ from pydantic import ValidationError, BaseModel
 
 router = APIRouter()
 
+# Helper function to parse date string (YYYY-MM-DD) to datetime
+def parse_date_string(date_str: Optional[str]) -> Optional[datetime]:
+    """Parse date string in YYYY-MM-DD format to datetime at midnight UTC."""
+    if not date_str:
+        return None
+    try:
+        # Parse date and set time to midnight UTC to avoid timezone issues
+        date_obj = datetime.strptime(date_str, '%Y-%m-%d')
+        return datetime.combine(date_obj.date(), time.min)
+    except ValueError:
+        return None
+
+def merge_task_details(child_task: ChildTask, task) -> dict:
+    """
+    Merge ChildTask custom fields with Task template fields.
+    Custom fields take precedence over template fields.
+    """
+    return {
+        "title": child_task.custom_title if child_task.custom_title else task.title,
+        "reward_coins": child_task.custom_reward_coins if child_task.custom_reward_coins is not None else task.reward_coins,
+        # Other fields always from template
+        "description": task.description,
+        "category": task.category,
+        "type": task.type,
+        "difficulty": task.difficulty,
+        "suggested_age_range": task.suggested_age_range,
+        "reward_badge_name": task.reward_badge_name,
+    }
+
 # Request schema for update operations
 class ChildTaskUpdateRequest(BaseModel):
     priority: Optional[ChildTaskPriority] = None
-    due_date: Optional[datetime] = None
+    due_date: Optional[str] = None  # Accept date string in YYYY-MM-DD format
     progress: Optional[int] = None
     notes: Optional[str] = None
+    # Allow updating custom overrides
+    custom_title: Optional[str] = None
+    custom_reward_coins: Optional[int] = None
 
 # Request schema for assigning tasks
 class AssignTaskRequest(BaseModel):
-    due_date: Optional[datetime] = None
+    due_date: Optional[str] = None  # Accept date string in YYYY-MM-DD format
+    priority: Optional[ChildTaskPriority] = None
+    notes: Optional[str] = None
+
+# Request schema for creating and assigning task in one step
+class CreateAndAssignTaskRequest(BaseModel):
+    title: str
+    description: Optional[str] = None
+    category: TaskCategory
+    type: TaskType
+    difficulty: int
+    suggested_age_range: str
+    reward_coins: int
+    reward_badge_name: Optional[str] = None
+    # Assignment params
+    due_date: Optional[str] = None  # Accept date string in YYYY-MM-DD format
     priority: Optional[ChildTaskPriority] = None
     notes: Optional[str] = None
 
@@ -92,6 +139,9 @@ async def get_child_tasks(
         if category and task.category != category:
             continue
         
+        # Merge custom fields with task template
+        merged_details = merge_task_details(ct, task)
+        
         # Build response with full task details
         results.append(
             ChildTaskWithDetails(
@@ -103,16 +153,18 @@ async def get_child_tasks(
                 due_date=ct.due_date,
                 progress=ct.progress,
                 notes=ct.notes,
+                custom_title=ct.custom_title,
+                custom_reward_coins=ct.custom_reward_coins,
                 task=TaskPublic(
                     id=str(task.id),
-                    title=task.title,
-                    description=task.description,
-                    category=task.category,
-                    type=task.type,
-                    difficulty=task.difficulty,
-                    suggested_age_range=task.suggested_age_range,
-                    reward_coins=task.reward_coins,
-                    reward_badge_name=task.reward_badge_name,
+                    title=merged_details["title"],
+                    description=merged_details["description"],
+                    category=merged_details["category"],
+                    type=merged_details["type"],
+                    difficulty=merged_details["difficulty"],
+                    suggested_age_range=merged_details["suggested_age_range"],
+                    reward_coins=merged_details["reward_coins"],
+                    reward_badge_name=merged_details["reward_badge_name"],
                 )
             )
         )
@@ -158,7 +210,7 @@ async def start_task(
         task=task,
         status=ChildTaskStatus.ASSIGNED,
         assigned_at=datetime.utcnow(),
-        due_date=request.due_date,
+        due_date=parse_date_string(request.due_date),
         priority=request.priority,
         notes=request.notes
     )
@@ -312,16 +364,23 @@ async def update_assigned_task(
     if task_update.priority is not None:
         child_task.priority = task_update.priority
     if task_update.due_date is not None:
-        child_task.due_date = task_update.due_date
+        child_task.due_date = parse_date_string(task_update.due_date)
     if task_update.progress is not None:
         child_task.progress = task_update.progress
     if task_update.notes is not None:
         child_task.notes = task_update.notes
+    if task_update.custom_title is not None:
+        child_task.custom_title = task_update.custom_title
+    if task_update.custom_reward_coins is not None:
+        child_task.custom_reward_coins = task_update.custom_reward_coins
     
     await child_task.save()
     
     # Fetch task details for response
     task = await child_task.task.fetch()
+    
+    # Merge custom fields with task template
+    merged_details = merge_task_details(child_task, task)
     
     return ChildTaskWithDetails(
         id=str(child_task.id),
@@ -332,16 +391,75 @@ async def update_assigned_task(
         due_date=child_task.due_date,
         progress=child_task.progress,
         notes=child_task.notes,
+        custom_title=child_task.custom_title,
+        custom_reward_coins=child_task.custom_reward_coins,
         task=TaskPublic(
             id=str(task.id),
-            title=task.title,
-            description=task.description,
-            category=task.category,
-            type=task.type,
-            difficulty=task.difficulty,
-            suggested_age_range=task.suggested_age_range,
-            reward_coins=task.reward_coins,
-            reward_badge_name=task.reward_badge_name,
+            title=merged_details["title"],
+            description=merged_details["description"],
+            category=merged_details["category"],
+            type=merged_details["type"],
+            difficulty=merged_details["difficulty"],
+            suggested_age_range=merged_details["suggested_age_range"],
+            reward_coins=merged_details["reward_coins"],
+            reward_badge_name=merged_details["reward_badge_name"],
+        )
+    )
+
+@router.post("/{child_id}/tasks/create-and-assign", response_model=ChildTaskWithDetails)
+async def create_and_assign_task(
+    child_id: str,
+    request: CreateAndAssignTaskRequest,
+    child: Child = Depends(verify_child_ownership)
+):
+    """Create a custom task and assign it to child in one step."""
+    # Create task in library
+    new_task = Task(
+        title=request.title,
+        description=request.description or '',
+        category=request.category,
+        type=request.type,
+        difficulty=request.difficulty,
+        suggested_age_range=request.suggested_age_range,
+        reward_coins=request.reward_coins,
+        reward_badge_name=request.reward_badge_name,
+    )
+    await new_task.insert()
+    
+    # Assign to child immediately
+    child_task = ChildTask(
+        child=child,
+        task=new_task,
+        status=ChildTaskStatus.ASSIGNED,
+        assigned_at=datetime.utcnow(),
+        priority=request.priority or ChildTaskPriority.MEDIUM,
+        due_date=parse_date_string(request.due_date),
+        notes=request.notes,
+    )
+    await child_task.insert()
+    
+    # Return full details
+    return ChildTaskWithDetails(
+        id=str(child_task.id),
+        status=child_task.status,
+        assigned_at=child_task.assigned_at,
+        completed_at=child_task.completed_at,
+        priority=child_task.priority.value if child_task.priority else None,
+        due_date=child_task.due_date,
+        progress=child_task.progress,
+        notes=child_task.notes,
+        custom_title=child_task.custom_title,
+        custom_reward_coins=child_task.custom_reward_coins,
+        task=TaskPublic(
+            id=str(new_task.id),
+            title=new_task.title,
+            description=new_task.description,
+            category=new_task.category,
+            type=new_task.type,
+            difficulty=new_task.difficulty,
+            suggested_age_range=new_task.suggested_age_range,
+            reward_coins=new_task.reward_coins,
+            reward_badge_name=new_task.reward_badge_name,
         )
     )
 
