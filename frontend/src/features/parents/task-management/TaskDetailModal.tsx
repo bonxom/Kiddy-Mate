@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import toast from 'react-hot-toast';
+import { handleApiError } from '../../../utils/errorHandler';
 import Modal from '../../../components/ui/Modal';
 import Input from '../../../components/ui/Input';
 import Button from '../../../components/ui/Button';
@@ -8,13 +10,12 @@ import type { AssignedTask } from '../../../types/task.types';
 import { useAssignedTasks } from '../../../hooks/useTasks';
 import { mapToBackendPriority } from '../../../utils/taskMappers';
 import type { ChildTaskUpdate } from '../../../api/services/taskService';
-import { useChildContext } from '../../../contexts/ChildContext';
-import { 
-  getCategoryConfig, 
-  getPriorityConfig, 
-  getStatusConfig, 
-  TASK_CATEGORY_LABELS, 
-  ICON_SIZES 
+import { useChildContext } from '../../../providers/ChildProvider';
+import {
+  getCategoryConfig,
+  getPriorityConfig,
+  getStatusConfig,
+  ICON_SIZES
 } from '../../../constants/taskConfig';
 
 interface ExtendedAssignedTask extends AssignedTask {
@@ -36,47 +37,50 @@ interface TaskDetailModalProps {
 
 const TaskDetailModal = ({ isOpen, onClose, task, onSave, onDelete, onUpdate }: TaskDetailModalProps) => {
   const [isEditing, setIsEditing] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState<ExtendedAssignedTask>(task);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  
+
   const { children } = useChildContext();
-  
+
   // Get childId from task's child_id field (assuming backend returns this)
   // or from the child name mapping
   const getChildIdFromName = (childName: string): string => {
     const child = children.find(c => c.name === childName);
     return child?.id || '';
   };
-  
+
   const childId = getChildIdFromName(formData.child);
   const { updateTask } = useAssignedTasks(childId);
 
   useEffect(() => {
     setFormData(task);
     setIsEditing(false);
-    console.log('📋 TaskDetailModal - Task loaded:', {
-      task,
-      childName: task.child,
-      resolvedChildId: getChildIdFromName(task.child),
-      availableChildren: children
-    });
-  }, [task, isOpen]);
+    // console.log('📋 TaskDetailModal - Task loaded:', {
+    //   task,
+    //   childName: task.child,
+    //   resolvedChildId: getChildIdFromName(task.child),
+    //   availableChildren: children
+    // });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [task, isOpen]); // Only re-run when task or isOpen changes
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+    setIsSubmitting(true);
+
     try {
       // Prepare update data - only include fields that have changed
       const updates: ChildTaskUpdate = {};
-      
+
       if (formData.priority) {
         updates.priority = mapToBackendPriority(formData.priority);
       }
-      
+
       if (formData.progress !== undefined && formData.progress !== null) {
         updates.progress = formData.progress;
       }
-      
+
       if (formData.date) {
         // Convert date string to ISO datetime format for backend
         updates.due_date = new Date(formData.date).toISOString();
@@ -96,27 +100,26 @@ const TaskDetailModal = ({ isOpen, onClose, task, onSave, onDelete, onUpdate }: 
       } else {
         console.warn('⚠️ No updates to send or missing childId:', { childId, updates });
       }
-      
+
       // Call parent callback if provided
       if (onSave) {
         onSave(formData);
       }
-      
+
       setIsEditing(false);
-      
+
       // Trigger refresh of task list BEFORE closing modal
       if (onUpdate) {
         await onUpdate(); // Wait for refresh to complete
       }
-      
+
       onClose();
-      
-      // TODO: Show success toast notification
-      console.log('Task updated successfully');
+
+      toast.success('Task updated successfully!');
     } catch (error) {
-      console.error('Failed to update task:', error);
-      // TODO: Show error toast notification
-      alert('Failed to update task. Please try again.');
+      handleApiError(error, 'Failed to update task');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -152,59 +155,44 @@ const TaskDetailModal = ({ isOpen, onClose, task, onSave, onDelete, onUpdate }: 
 
           {isEditing ? (
             <>
-              {/* Child Name */}
+              {/* Child Name - READ ONLY */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Child</label>
-                <select
+                <Input
+                  type="text"
                   value={formData.child}
-                  onChange={(e) => setFormData({ ...formData, child: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
-                  required
-                >
-                  {children.map((child) => (
-                    <option key={child.id} value={child.name}>
-                      {child.name}
-                    </option>
-                  ))}
-                </select>
+                  disabled
+                  fullWidth
+                />
+                <p className="text-xs text-gray-500 mt-1">Cannot reassign task to different child</p>
               </div>
 
-              {/* Task Name */}
+              {/* Task Name - READ ONLY */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Task Name</label>
                 <Input
                   type="text"
                   value={formData.task}
-                  onChange={(e) => setFormData({ ...formData, task: e.target.value })}
-                  required
+                  disabled
                   fullWidth
                 />
+                <p className="text-xs text-gray-500 mt-1">Task name is set in template</p>
               </div>
 
-              {/* Category */}
+              {/* Category - READ ONLY */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Category</label>
-                <div className="grid grid-cols-2 gap-2">
-                  {Object.entries(TASK_CATEGORY_LABELS).map(([value, label]) => {
-                    const config = getCategoryConfig(value as any);
-                    const Icon = config.icon;
-                    return (
-                      <button
-                        key={value}
-                        type="button"
-                        onClick={() => setFormData({ ...formData, category: value as any })}
-                        className={`flex items-center gap-2 px-3 py-2 rounded-lg border-2 transition-all duration-200 ${
-                          formData.category === value
-                            ? 'border-primary-500 bg-primary-50 text-primary-700'
-                            : 'border-gray-200 bg-white text-gray-700 hover:border-primary-300'
-                        }`}
-                      >
-                        <Icon className={ICON_SIZES.sm} />
-                        <span className="text-sm font-semibold">{label}</span>
-                      </button>
-                    );
-                  })}
-                </div>
+                {(() => {
+                  const config = getCategoryConfig(formData.category);
+                  const Icon = config.icon;
+                  return (
+                    <div className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold border ${config.color}`}>
+                      <Icon className={ICON_SIZES.sm} />
+                      <span>{config.label}</span>
+                    </div>
+                  );
+                })()}
+                <p className="text-xs text-gray-500 mt-2">Category is set in task template</p>
               </div>
 
               {/* Priority */}
@@ -214,56 +202,45 @@ const TaskDetailModal = ({ isOpen, onClose, task, onSave, onDelete, onUpdate }: 
                   <button
                     type="button"
                     onClick={() => setFormData({ ...formData, priority: 'high' })}
-                    className={`px-3 py-2 rounded-lg border-2 text-sm font-semibold transition-all duration-200 ${
-                      formData.priority === 'high'
-                        ? 'border-red-500 bg-red-50 text-red-700'
-                        : 'border-gray-200 bg-white text-gray-700 hover:border-red-300'
-                    }`}
+                    className={`px-3 py-2 rounded-lg border-2 text-sm font-semibold transition-all duration-200 ${formData.priority === 'high'
+                      ? 'border-red-500 bg-red-50 text-red-700'
+                      : 'border-gray-200 bg-white text-gray-700 hover:border-red-300'
+                      }`}
                   >
                     High
                   </button>
                   <button
                     type="button"
                     onClick={() => setFormData({ ...formData, priority: 'medium' })}
-                    className={`px-3 py-2 rounded-lg border-2 text-sm font-semibold transition-all duration-200 ${
-                      formData.priority === 'medium'
-                        ? 'border-yellow-500 bg-yellow-50 text-yellow-700'
-                        : 'border-gray-200 bg-white text-gray-700 hover:border-yellow-300'
-                    }`}
+                    className={`px-3 py-2 rounded-lg border-2 text-sm font-semibold transition-all duration-200 ${formData.priority === 'medium'
+                      ? 'border-yellow-500 bg-yellow-50 text-yellow-700'
+                      : 'border-gray-200 bg-white text-gray-700 hover:border-yellow-300'
+                      }`}
                   >
                     Medium
                   </button>
                   <button
                     type="button"
                     onClick={() => setFormData({ ...formData, priority: 'low' })}
-                    className={`px-3 py-2 rounded-lg border-2 text-sm font-semibold transition-all duration-200 ${
-                      formData.priority === 'low'
-                        ? 'border-gray-500 bg-gray-50 text-gray-700'
-                        : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
-                    }`}
+                    className={`px-3 py-2 rounded-lg border-2 text-sm font-semibold transition-all duration-200 ${formData.priority === 'low'
+                      ? 'border-gray-500 bg-gray-50 text-gray-700'
+                      : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+                      }`}
                   >
                     Low
                   </button>
                 </div>
               </div>
 
-              {/* Reward */}
+              {/* Reward - READ ONLY */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Reward (Coins)</label>
-                <div className="flex items-center gap-3">
-                  <input
-                    type="range"
-                    min="1"
-                    max="50"
-                    value={formData.reward}
-                    onChange={(e) => setFormData({ ...formData, reward: parseInt(e.target.value) })}
-                    className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-accent"
-                  />
-                  <div className="flex items-center gap-1 min-w-[60px] px-3 py-2 bg-yellow-50 rounded-lg">
-                    <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
-                    <span className="font-semibold text-gray-900">{formData.reward}</span>
-                  </div>
+                <div className="flex items-center gap-1.5 px-3 py-2 bg-yellow-50 rounded-lg border border-yellow-200 w-fit">
+                  <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
+                  <span className="font-semibold text-gray-900">{formData.reward}</span>
+                  <span className="text-xs text-yellow-600">Coins</span>
                 </div>
+                <p className="text-xs text-gray-500 mt-1">Reward is set in task template</p>
               </div>
 
               {/* Due Date */}
@@ -345,8 +322,8 @@ const TaskDetailModal = ({ isOpen, onClose, task, onSave, onDelete, onUpdate }: 
             </>
           )}
 
-          {/* Progress */}
-          {formData.progress !== undefined && (
+          {/* Progress Bar for View Mode */}
+          {(!isEditing && formData.progress !== undefined) && (
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Progress</label>
               <div className="space-y-2">
@@ -358,11 +335,11 @@ const TaskDetailModal = ({ isOpen, onClose, task, onSave, onDelete, onUpdate }: 
                       background: formData.progress === 100
                         ? 'linear-gradient(to right, #10b981, #059669)'
                         : formData.progress >= 50
-                        ? 'linear-gradient(to right, #3b82f6, #8b5cf6)'
-                        : 'linear-gradient(to right, #f59e0b, #d97706)',
+                          ? 'linear-gradient(to right, #3b82f6, #8b5cf6)'
+                          : 'linear-gradient(to right, #f59e0b, #d97706)',
                     }}
                   />
-                </div>
+                </div>  
                 <p className="text-xs text-gray-600 text-right font-medium">{formData.progress}% Complete</p>
               </div>
             </div>
@@ -372,11 +349,11 @@ const TaskDetailModal = ({ isOpen, onClose, task, onSave, onDelete, onUpdate }: 
           <div className="flex gap-3 pt-4 border-t border-gray-100">
             {isEditing ? (
               <>
-                <Button type="button" variant="secondary" onClick={() => setIsEditing(false)}>
+                <Button type="button" variant="secondary" onClick={() => setIsEditing(false)} disabled={isSubmitting}>
                   Cancel
                 </Button>
-                <Button type="submit">
-                  Save Changes
+                <Button type="submit" disabled={isSubmitting}>
+                  {isSubmitting ? 'Saving...' : 'Save Changes'}
                 </Button>
               </>
             ) : (

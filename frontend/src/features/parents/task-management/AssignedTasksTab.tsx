@@ -1,4 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
+import toast from 'react-hot-toast';
+import { handleApiError } from '../../../utils/errorHandler';
+import { TaskEvents } from '../../../utils/events';
 import { Search, Trash2, ArrowUpDown, CheckCircle, ListTodo } from 'lucide-react';
 import Input from '../../../components/ui/Input';
 import Badge from '../../../components/ui/Badge';
@@ -9,13 +12,13 @@ import TaskDetailModal from './TaskDetailModal';
 import type { AssignedTask } from '../../../types/task.types';
 import { useAssignedTasks } from '../../../hooks/useTasks';
 import { mapToUIAssignedTask } from '../../../utils/taskMappers';
-import { useChildContext } from '../../../contexts/ChildContext';
-import { 
-  getCategoryConfig, 
-  getPriorityConfig, 
+import { useChildContext } from '../../../providers/ChildProvider';
+import {
+  getCategoryConfig,
+  getPriorityConfig,
   getStatusConfig,
   getProgressGradient,
-  ICON_SIZES 
+  ICON_SIZES
 } from '../../../constants/taskConfig';
 import { Star } from 'lucide-react';
 
@@ -32,10 +35,10 @@ interface AssignedTasksTabProps {
 
 const AssignedTasksTab = ({ onCountChange }: AssignedTasksTabProps) => {
   const { selectedChildId, children } = useChildContext();
-  
-  const { 
-    tasks: backendTasks, 
-    loading, 
+
+  const {
+    tasks: backendTasks,
+    loading,
     error,
     fetchTasks,
     unassignTask,
@@ -49,6 +52,15 @@ const AssignedTasksTab = ({ onCountChange }: AssignedTasksTabProps) => {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedChildId]); // Only re-fetch when selectedChildId changes
+
+  // Listen for library task updates and refresh assigned tasks
+  useEffect(() => {
+    return TaskEvents.listen(TaskEvents.LIBRARY_UPDATED, () => {
+      if (selectedChildId) {
+        fetchTasks();
+      }
+    });
+  }, [selectedChildId, fetchTasks]);
 
   // Transform backend tasks to UI format
   const tasks = useMemo(() => {
@@ -86,9 +98,9 @@ const AssignedTasksTab = ({ onCountChange }: AssignedTasksTabProps) => {
       filtered.sort((a, b) => {
         const aValue = a[sortColumn];
         const bValue = b[sortColumn];
-        
+
         if (aValue === undefined || bValue === undefined) return 0;
-        
+
         if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
         if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
         return 0;
@@ -116,10 +128,10 @@ const AssignedTasksTab = ({ onCountChange }: AssignedTasksTabProps) => {
     e.stopPropagation(); // Prevent row click
     try {
       await verifyTask(taskId);
+      toast.success('Task verified successfully!');
       // Tasks will auto-refresh via the hook
     } catch (err) {
-      console.error('Failed to verify task:', err);
-      // TODO: Show error toast notification
+      handleApiError(err, 'Failed to verify task');
     }
   };
 
@@ -129,10 +141,10 @@ const AssignedTasksTab = ({ onCountChange }: AssignedTasksTabProps) => {
         await unassignTask(taskToDelete);
         setTaskToDelete(null);
         setDeleteModalOpen(false);
+        toast.success('Task deleted successfully!');
         // Tasks will auto-refresh via the hook
       } catch (err) {
-        console.error('Failed to delete task:', err);
-        // TODO: Show error toast notification
+        handleApiError(err, 'Failed to delete task');
       }
     }
   };
@@ -154,10 +166,10 @@ const AssignedTasksTab = ({ onCountChange }: AssignedTasksTabProps) => {
       await unassignTask(taskId);
       setDetailModalOpen(false);
       setSelectedTask(null);
+      toast.success('Task deleted successfully!');
       // Tasks will auto-refresh via the hook
     } catch (err) {
-      console.error('Failed to delete task:', err);
-      // TODO: Show error toast notification
+      handleApiError(err, 'Failed to delete task');
     }
   };
 
@@ -204,216 +216,213 @@ const AssignedTasksTab = ({ onCountChange }: AssignedTasksTabProps) => {
             </div>
           </div>
 
-      {/* Table */}
-      <div className="overflow-x-auto border border-gray-200 rounded-2xl shadow-soft">
-        <table className="w-full">
-          <thead className="bg-linear-to-r from-gray-50 to-gray-100 border-b border-gray-200">
-            <tr>
-              <th
-                className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-200 transition-colors"
-                onClick={() => handleSort('child')}
-              >
-                <div className="flex items-center gap-2">
-                  Child
-                  <ArrowUpDown className="w-4 h-4" />
-                </div>
-              </th>
-              <th
-                className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-200 transition-colors"
-                onClick={() => handleSort('task')}
-              >
-                <div className="flex items-center gap-2">
-                  Task
-                  <ArrowUpDown className="w-4 h-4" />
-                </div>
-              </th>
-              <th
-                className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-200 transition-colors"
-                onClick={() => handleSort('category')}
-              >
-                <div className="flex items-center gap-2">
-                  Category
-                  <ArrowUpDown className="w-4 h-4" />
-                </div>
-              </th>
-              <th
-                className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-200 transition-colors"
-                onClick={() => handleSort('priority')}
-              >
-                <div className="flex items-center gap-2">
-                  Priority
-                  <ArrowUpDown className="w-4 h-4" />
-                </div>
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                Progress
-              </th>
-              <th
-                className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-200 transition-colors"
-                onClick={() => handleSort('status')}
-              >
-                <div className="flex items-center gap-2">
-                  Status
-                  <ArrowUpDown className="w-4 h-4" />
-                </div>
-              </th>
-              <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                Reward
-              </th>
-              <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                Actions
-              </th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-100">
-            {filteredTasks.map((task, index) => (
-              <tr 
-                key={task.id} 
-                className="hover:shadow-md transition-all duration-200 group cursor-pointer"
-                onClick={() => handleRowClick(task)}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = 'linear-gradient(to right, rgba(239, 246, 255, 0.3), rgba(250, 245, 255, 0.3))';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = '';
-                }}
-                style={{
-                  animation: `fadeIn 0.3s ease-in-out ${index * 0.05}s both`
-                }}
-              >
-                {/* Child Name */}
-                <td className="px-4 py-4">
-                  <span className="text-sm font-semibold text-gray-900 group-hover:text-primary-600 transition-colors">
-                    {task.child}
-                  </span>
-                </td>
-
-                {/* Task Name */}
-                <td className="px-4 py-4">
-                  <span className={`text-sm font-medium ${
-                    task.status === 'completed' ? 'text-gray-500 line-through' : 'text-gray-900'
-                  }`}>
-                    {task.task}
-                  </span>
-                </td>
-
-                {/* Category */}
-                <td className="px-4 py-4">
-                  {(() => {
-                    const config = getCategoryConfig(task.category);
-                    const Icon = config.icon;
-                    return (
-                      <div className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition-all duration-200 group-hover:scale-105 ${config.color}`}>
-                        <Icon className={ICON_SIZES.sm} />
-                        <span>{config.label}</span>
-                      </div>
-                    );
-                  })()}
-                </td>
-
-                {/* Priority */}
-                <td className="px-4 py-4">
-                  {(() => {
-                    const config = getPriorityConfig(task.priority);
-                    const Icon = config.icon;
-                    return (
-                      <div className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-semibold border ${config.color}`}>
-                        <Icon className={ICON_SIZES.xs} />
-                        <span>{config.label}</span>
-                      </div>
-                    );
-                  })()}
-                </td>
-
-                {/* Progress */}
-                <td className="px-4 py-4">
-                  <div className="w-32">
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-xs font-semibold text-gray-700">
-                        {task.progress || 0}%
-                      </span>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
-                      <div
-                        className="h-full rounded-full transition-all duration-700 ease-out"
-                        style={{
-                          width: `${task.progress || 0}%`,
-                          background: getProgressGradient(task.status, task.progress || 0)
-                        }}
-                      />
-                    </div>
-                  </div>
-                </td>
-
-                {/* Status */}
-                <td className="px-4 py-4">
-                  {(() => {
-                    const config = getStatusConfig(task.status);
-                    return <Badge variant={config.variant}>{config.label}</Badge>;
-                  })()}
-                </td>
-
-                {/* Reward */}
-                <td className="px-4 py-4 text-right">
-                  <div 
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-yellow-200 group-hover:shadow-md transition-all duration-200"
-                    style={{ background: 'linear-gradient(to right, rgb(254 252 232), rgb(254 243 199))' }}
+          {/* Table */}
+          <div className="overflow-x-auto border border-gray-200 rounded-2xl shadow-soft">
+            <table className="w-full">
+              <thead className="bg-linear-to-r from-gray-50 to-gray-100 border-b border-gray-200">
+                <tr>
+                  <th
+                    className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-200 transition-colors"
+                    onClick={() => handleSort('child')}
                   >
-                    <Star className={`w-4 h-4 ${
-                      task.status === 'completed' 
-                        ? 'text-yellow-500 fill-yellow-500' 
-                        : 'text-yellow-400'
-                    }`} />
-                    <span className={`text-sm font-bold ${
-                      task.status === 'completed' 
-                        ? 'text-yellow-600' 
-                        : 'text-yellow-500'
-                    }`}>
-                      {task.reward}
-                    </span>
-                    <span className="text-xs text-yellow-600">Coins</span>
-                  </div>
-                </td>
+                    <div className="flex items-center gap-2">
+                      Child
+                      <ArrowUpDown className="w-4 h-4" />
+                    </div>
+                  </th>
+                  <th
+                    className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-200 transition-colors"
+                    onClick={() => handleSort('task')}
+                  >
+                    <div className="flex items-center gap-2">
+                      Task
+                      <ArrowUpDown className="w-4 h-4" />
+                    </div>
+                  </th>
+                  <th
+                    className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-200 transition-colors"
+                    onClick={() => handleSort('category')}
+                  >
+                    <div className="flex items-center gap-2">
+                      Category
+                      <ArrowUpDown className="w-4 h-4" />
+                    </div>
+                  </th>
+                  <th
+                    className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-200 transition-colors"
+                    onClick={() => handleSort('priority')}
+                  >
+                    <div className="flex items-center gap-2">
+                      Priority
+                      <ArrowUpDown className="w-4 h-4" />
+                    </div>
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                    Progress
+                  </th>
+                  <th
+                    className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-200 transition-colors"
+                    onClick={() => handleSort('status')}
+                  >
+                    <div className="flex items-center gap-2">
+                      Status
+                      <ArrowUpDown className="w-4 h-4" />
+                    </div>
+                  </th>
+                  <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                    Reward
+                  </th>
+                  <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-100">
+                {filteredTasks.map((task, index) => (
+                  <tr
+                    key={task.id}
+                    className="hover:shadow-md transition-all duration-200 group cursor-pointer"
+                    onClick={() => handleRowClick(task)}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = 'linear-gradient(to right, rgba(239, 246, 255, 0.3), rgba(250, 245, 255, 0.3))';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = '';
+                    }}
+                    style={{
+                      animation: `fadeIn 0.3s ease-in-out ${index * 0.05}s both`
+                    }}
+                  >
+                    {/* Child Name */}
+                    <td className="px-4 py-4">
+                      <span className="text-sm font-semibold text-gray-900 group-hover:text-primary-600 transition-colors">
+                        {task.child}
+                      </span>
+                    </td>
 
-                {/* Actions */}
-                <td className="px-4 py-4 text-center">
-                  <div className="flex items-center justify-center gap-2">
-                    {task.status === 'need-verify' && (
-                      <button
-                        onClick={(e) => handleVerifyClick(task.id, e)}
-                        className="p-2 text-green-500 hover:bg-green-50 rounded-lg transition-all duration-200 hover:scale-110 hover:shadow-md"
-                        title="Duyệt nhiệm vụ"
+                    {/* Task Name */}
+                    <td className="px-4 py-4">
+                      <span className={`text-sm font-medium ${task.status === 'completed' ? 'text-gray-500 line-through' : 'text-gray-900'
+                        }`}>
+                        {task.task}
+                      </span>
+                    </td>
+
+                    {/* Category */}
+                    <td className="px-4 py-4">
+                      {(() => {
+                        const config = getCategoryConfig(task.category);
+                        const Icon = config.icon;
+                        return (
+                          <div className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition-all duration-200 group-hover:scale-105 ${config.color}`}>
+                            <Icon className={ICON_SIZES.sm} />
+                            <span>{config.label}</span>
+                          </div>
+                        );
+                      })()}
+                    </td>
+
+                    {/* Priority */}
+                    <td className="px-4 py-4">
+                      {(() => {
+                        const config = getPriorityConfig(task.priority);
+                        const Icon = config.icon;
+                        return (
+                          <div className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-semibold border ${config.color}`}>
+                            <Icon className={ICON_SIZES.xs} />
+                            <span>{config.label}</span>
+                          </div>
+                        );
+                      })()}
+                    </td>
+
+                    {/* Progress */}
+                    <td className="px-4 py-4">
+                      <div className="w-32">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-xs font-semibold text-gray-700">
+                            {task.progress || 0}%
+                          </span>
+                        </div>
+                        <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+                          <div
+                            className="h-full rounded-full transition-all duration-700 ease-out"
+                            style={{
+                              width: `${task.progress || 0}%`,
+                              background: getProgressGradient(task.status, task.progress || 0)
+                            }}
+                          />
+                        </div>
+                      </div>
+                    </td>
+
+                    {/* Status */}
+                    <td className="px-4 py-4">
+                      {(() => {
+                        const config = getStatusConfig(task.status);
+                        return <Badge variant={config.variant}>{config.label}</Badge>;
+                      })()}
+                    </td>
+
+                    {/* Reward */}
+                    <td className="px-4 py-4 text-right">
+                      <div
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-yellow-200 group-hover:shadow-md transition-all duration-200"
+                        style={{ background: 'linear-gradient(to right, rgb(254 252 232), rgb(254 243 199))' }}
                       >
-                        <CheckCircle className="w-4 h-4" />
-                      </button>
-                    )}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDeleteClick(task.id);
-                      }}
-                      className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-all duration-200 hover:scale-110 hover:shadow-md"
-                      title="Xóa nhiệm vụ"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                        <Star className={`w-4 h-4 ${task.status === 'completed'
+                          ? 'text-yellow-500 fill-yellow-500'
+                          : 'text-yellow-400'
+                          }`} />
+                        <span className={`text-sm font-bold ${task.status === 'completed'
+                          ? 'text-yellow-600'
+                          : 'text-yellow-500'
+                          }`}>
+                          {task.reward}
+                        </span>
+                        <span className="text-xs text-yellow-600">Coins</span>
+                      </div>
+                    </td>
 
-        {filteredTasks.length === 0 && (
-          <div className="text-center py-12 bg-gray-50">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 mb-4">
-              <ListTodo className="w-8 h-8 text-gray-400" />
-            </div>
-            <p className="text-gray-500 font-medium">No tasks found</p>
-            <p className="text-sm text-gray-400 mt-1">Try adjusting your search or assign new tasks</p>
+                    {/* Actions */}
+                    <td className="px-4 py-4 text-center">
+                      <div className="flex items-center justify-center gap-2">
+                        {task.status === 'need-verify' && (
+                          <button
+                            onClick={(e) => handleVerifyClick(task.id, e)}
+                            className="p-2 text-green-500 hover:bg-green-50 rounded-lg transition-all duration-200 hover:scale-110 hover:shadow-md"
+                            title="Duyệt nhiệm vụ"
+                          >
+                            <CheckCircle className="w-4 h-4" />
+                          </button>
+                        )}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteClick(task.id);
+                          }}
+                          className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-all duration-200 hover:scale-110 hover:shadow-md"
+                          title="Xóa nhiệm vụ"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            {filteredTasks.length === 0 && (
+              <div className="text-center py-12 bg-gray-50">
+                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 mb-4">
+                  <ListTodo className="w-8 h-8 text-gray-400" />
+                </div>
+                <p className="text-gray-500 font-medium">No tasks found</p>
+                <p className="text-sm text-gray-400 mt-1">Try adjusting your search or assign new tasks</p>
+              </div>
+            )}
           </div>
-        )}
-      </div>
         </>
       )}
 

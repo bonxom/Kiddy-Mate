@@ -20,6 +20,12 @@ class ChildTaskUpdateRequest(BaseModel):
     progress: Optional[int] = None
     notes: Optional[str] = None
 
+# Request schema for assigning tasks
+class AssignTaskRequest(BaseModel):
+    due_date: Optional[datetime] = None
+    priority: Optional[ChildTaskPriority] = None
+    notes: Optional[str] = None
+
 
 @router.get("/{child_id}/tasks/suggested", response_model=List[TaskPublic])
 async def get_suggested_tasks(
@@ -121,6 +127,7 @@ async def get_child_tasks(
 async def start_task(
     child_id: str,
     task_id: str,
+    request: AssignTaskRequest = AssignTaskRequest(),
     child: Child = Depends(verify_child_ownership)
 ):
     try:
@@ -150,7 +157,10 @@ async def start_task(
         child=child,
         task=task,
         status=ChildTaskStatus.ASSIGNED,
-        assigned_at=datetime.utcnow()
+        assigned_at=datetime.utcnow(),
+        due_date=request.due_date,
+        priority=request.priority,
+        notes=request.notes
     )
     await new_child_task.insert()
     return ChildTaskPublic(

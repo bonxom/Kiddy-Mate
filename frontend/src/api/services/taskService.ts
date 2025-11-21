@@ -6,12 +6,12 @@
 import axiosClient from '../client/axiosClient';
 
 // Updated to match backend TaskCategory enum (8 categories)
-export type TaskCategory = 
-  | 'Independence' 
-  | 'Logic' 
-  | 'Physical' 
-  | 'Creativity' 
-  | 'Social' 
+export type TaskCategory =
+  | 'Independence'
+  | 'Logic'
+  | 'Physical'
+  | 'Creativity'
+  | 'Social'
   | 'Academic'
   | 'IQ'  // Backward compatibility
   | 'EQ'; // Backward compatibility
@@ -151,14 +151,20 @@ export const getChildTasks = async (
 };
 
 /**
- * Assign task to child
+ * Assign task to child with optional parameters
  */
 export const assignTask = async (
   childId: string,
-  taskId: string
+  taskId: string,
+  params?: {
+    due_date?: string;
+    priority?: ChildTaskPriority;
+    notes?: string;
+  }
 ): Promise<ChildTask> => {
   const response = await axiosClient.post<ChildTask>(
-    `/children/${childId}/tasks/${taskId}/start`
+    `/children/${childId}/tasks/${taskId}/start`,
+    params || {}
   );
   return response.data;
 };
@@ -227,16 +233,16 @@ export default {
   createTask,
   updateTask,
   deleteTask,
-  
+
   // Suggestions
   getSuggestedTasks,
-  
+
   // Assigned Tasks
   getChildTasks,
   assignTask,
   updateAssignedTask,
   unassignTask,
-  
+
   // Lifecycle
   completeTask,
   verifyTask,

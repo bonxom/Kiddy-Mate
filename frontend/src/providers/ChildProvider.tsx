@@ -1,3 +1,9 @@
+/**
+ * Child Context Provider
+ * Consolidated single source of truth for children state management
+ * Manages selected child and children list with auto-fetching
+ */
+
 import { createContext, useContext, useState, useEffect } from 'react';
 import type { ReactNode } from 'react';
 import { getChildren, type Child } from '../api/services/childService';
@@ -28,7 +34,7 @@ export const ChildProvider = ({ children }: ChildProviderProps) => {
     try {
       setLoading(true);
       setError(null);
-      
+
       // Check if user is authenticated
       const token = localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN);
       if (!token) {
@@ -37,13 +43,13 @@ export const ChildProvider = ({ children }: ChildProviderProps) => {
         setLoading(false);
         return;
       }
-      
-      const children = await getChildren();
-      setChildrenList(children);
-      
+
+      const fetchedChildren = await getChildren();
+      setChildrenList(fetchedChildren);
+
       // Auto-select first child if none selected
-      if (children.length > 0 && !selectedChildId) {
-        setSelectedChildId(children[0].id);
+      if (fetchedChildren.length > 0 && !selectedChildId) {
+        setSelectedChildId(fetchedChildren[0].id);
       }
     } catch (err) {
       console.error('Failed to load children:', err);
@@ -58,30 +64,33 @@ export const ChildProvider = ({ children }: ChildProviderProps) => {
     }
   };
 
+  // Fetch children on mount
   useEffect(() => {
     fetchChildren();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const refreshChildren = async () => {
     await fetchChildren();
   };
 
+  const value: ChildContextValue = {
+    selectedChildId,
+    children: childrenList,
+    loading,
+    error,
+    setSelectedChildId,
+    refreshChildren
+  };
+
   return (
-    <ChildContext.Provider 
-      value={{ 
-        selectedChildId, 
-        children: childrenList, 
-        loading,
-        error,
-        setSelectedChildId,
-        refreshChildren
-      }}
-    >
+    <ChildContext.Provider value={value}>
       {children}
     </ChildContext.Provider>
   );
 };
 
+// Custom hook for accessing child context
 export const useChild = () => {
   const context = useContext(ChildContext);
   if (!context) {
@@ -89,3 +98,6 @@ export const useChild = () => {
   }
   return context;
 };
+
+// Export alias for compatibility (some components may use this name)
+export const useChildContext = useChild;
