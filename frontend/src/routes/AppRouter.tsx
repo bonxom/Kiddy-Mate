@@ -7,8 +7,7 @@ import Sidebar from '../components/layout/Sidebar';
 
 // Lazy load pages for better performance
 const LandingPage = lazy(() => import('../pages/public/LandingPage'));
-const LoginPage = lazy(() => import('../pages/public/LoginPage'));
-const RegisterPage = lazy(() => import('../pages/public/RegisterPage'));
+const AuthPage = lazy(() => import('../pages/public/AuthPage'));
 const OnboardingPage = lazy(() => import('../pages/public/OnboardingPage'));
 
 // Parent pages - lazy loaded
@@ -43,8 +42,8 @@ export const AppRouter = () => {
     <Routes>
       {/* Public Routes - Wrapped in Suspense */}
       <Route path="/" element={<RouteSuspense><LandingPage /></RouteSuspense>} />
-      <Route path="/login" element={<RouteSuspense><LoginPage /></RouteSuspense>} />
-      <Route path="/register" element={<RouteSuspense><RegisterPage /></RouteSuspense>} />
+      <Route path="/login" element={<RouteSuspense><AuthPage /></RouteSuspense>} />
+      <Route path="/register" element={<RouteSuspense><AuthPage /></RouteSuspense>} />
       <Route path="/onboarding" element={<RouteSuspense><OnboardingPage /></RouteSuspense>} />
 
       {/* Parent Routes - Protected & Lazy Loaded */}
