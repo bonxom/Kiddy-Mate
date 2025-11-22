@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import toast from 'react-hot-toast';
+import { useQueryClient } from '@tanstack/react-query';
 import { handleApiError } from '../../../utils/errorHandler';
 import Modal from '../../../components/ui/Modal';
 import Input from '../../../components/ui/Input';
@@ -20,6 +21,7 @@ interface CreateTaskModalProps {
 
 const CreateTaskModal = ({ isOpen, onClose, onTaskCreated }: CreateTaskModalProps) => {
   const { children, selectedChildId, setSelectedChildId } = useChildContext();
+  const queryClient = useQueryClient();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [formData, setFormData] = useState({
@@ -65,6 +67,10 @@ const CreateTaskModal = ({ isOpen, onClose, onTaskCreated }: CreateTaskModalProp
       if (formData.childId !== selectedChildId) {
         setSelectedChildId(formData.childId);
       }
+
+      // Invalidate dashboard cache to refresh data
+      queryClient.invalidateQueries({ queryKey: ['dashboard', formData.childId] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
 
       // Emit event to notify AssignedTasksTab to refresh
       TaskEvents.emit(TaskEvents.TASK_ASSIGNED, { childId: formData.childId });

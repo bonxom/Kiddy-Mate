@@ -11,6 +11,7 @@ import ActivityTimeline from '../../features/parents/dashboard/ActivityTimeline'
 import DashboardSidebar from '../../features/parents/dashboard/DashboardSidebar';
 import ChildSelector from '../../components/common/ChildSelector';
 import { Loading } from '../../components/ui';
+import { TaskEvents } from '../../utils/events';
 
 const DashboardPage = () => {
   const navigate = useNavigate();
@@ -76,6 +77,37 @@ const DashboardPage = () => {
     staleTime: 30000, // Cache for 30 seconds
     retry: 2,
   });
+
+  // Listen for task events to refresh dashboard
+  useEffect(() => {
+    const handleTaskAssigned = () => {
+      if (selectedChildId) {
+        refetch();
+      }
+    };
+
+    const cleanup = TaskEvents.listen(TaskEvents.TASK_ASSIGNED, handleTaskAssigned);
+    const cleanupUnassigned = TaskEvents.listen(TaskEvents.TASK_UNASSIGNED, handleTaskAssigned);
+    const cleanupDeleted = TaskEvents.listen(TaskEvents.TASK_DELETED, handleTaskAssigned);
+
+    return () => {
+      cleanup();
+      cleanupUnassigned();
+      cleanupDeleted();
+    };
+  }, [selectedChildId, refetch]);
+
+  // Refetch when page becomes visible (user returns from another tab)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && selectedChildId) {
+        refetch();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [selectedChildId, refetch]);
 
   // Onboarding processing state
   if (isOnboardingProcessing) {
