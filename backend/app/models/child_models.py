@@ -9,7 +9,7 @@ class Child(Document):
     name: str
     birth_date: datetime
     
-    # Dedicated fields (instead of initial_traits dict)
+    
     nickname: Optional[str] = None
     gender: Optional[str] = None
     avatar_url: Optional[str] = None
@@ -18,7 +18,7 @@ class Child(Document):
     strengths: Optional[List[str]] = None
     challenges: Optional[List[str]] = None
     
-    # Keep for backward compatibility and other traits
+    
     initial_traits: Optional[dict] = None
     
     current_coins: int = 0

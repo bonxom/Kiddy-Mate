@@ -7,7 +7,7 @@ from app.models.child_models import Child
 class RewardType(str, enum.Enum):
     BADGE = "badge"
     SKIN = "skin"
-    ITEM = "item"  # Physical rewards like toys, books, etc.
+    ITEM = "item"  
 
 class Reward(Document):
     """Base reward template - can be used for both earned rewards and shop items"""
@@ -16,10 +16,10 @@ class Reward(Document):
     type: RewardType
     image_url: Optional[str] = None
     
-    # Shop-related fields
-    cost_coins: int = 0  # Price in coins (0 means not for sale/already earned)
-    stock_quantity: int = 0  # Stock count (0 = unlimited/not tracked)
-    is_active: bool = True  # Is available in shop
+    
+    cost_coins: int = 0  
+    stock_quantity: int = 0  
+    is_active: bool = True  
     created_at: datetime = datetime.utcnow()
 
     class Settings:
@@ -30,7 +30,7 @@ class ChildReward(Document):
     child: Link[Child]
     reward: Link[Reward]
     earned_at: datetime = datetime.utcnow()
-    is_equipped: bool = False  # Only applicable for SKIN type
+    is_equipped: bool = False  
 
     class Settings:
         name = "child_rewards"
@@ -40,10 +40,10 @@ class RedemptionRequest(Document):
     child: Link[Child]
     reward: Link[Reward]
     cost_coins: int
-    status: str = "pending"  # pending, approved, rejected
+    status: str = "pending"  
     requested_at: datetime = datetime.utcnow()
     processed_at: Optional[datetime] = None
-    processed_by: Optional[str] = None  # parent user_id
+    processed_by: Optional[str] = None  
 
     class Settings:
         name = "redemption_requests"

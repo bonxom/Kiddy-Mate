@@ -22,23 +22,23 @@ async def get_dashboard(
     All counts are calculated in real-time from database.
     Frontend should use child.coins directly.
     """
-    # Count verified tasks (completed and approved by parent)
+    
     tasks_completed = await ChildTask.find(
         ChildTask.child.id == child.id,
         ChildTask.status == ChildTaskStatus.COMPLETED
     ).count()
 
-    # Count all badges/rewards earned
+    
     badges_earned = await ChildReward.find(
         ChildReward.child.id == child.id
     ).count()
 
-    # Count total assigned tasks
+    
     total_tasks = await ChildTask.find(
         ChildTask.child.id == child.id
     ).count()
 
-    # Calculate completion rate (verified / total assigned)
+    
     completion_rate = round((tasks_completed / total_tasks * 100), 1) if total_tasks > 0 else 0
 
     return {

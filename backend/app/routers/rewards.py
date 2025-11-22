@@ -8,9 +8,9 @@ from datetime import datetime
 from pydantic import BaseModel
 
 router = APIRouter()
-shop_router = APIRouter()  # Separate router for shop management (no child_id in path)
+shop_router = APIRouter()  
 
-# ============== SCHEMAS ==============
+
 
 class RewardCreate(BaseModel):
     name: str
@@ -32,7 +32,7 @@ class RewardUpdate(BaseModel):
 class RedemptionRequestCreate(BaseModel):
     reward_id: str
 
-# ============== SHOP MANAGEMENT (PARENT) ==============
+
 
 @shop_router.get("/rewards", response_model=List[dict])
 async def get_all_rewards(
@@ -57,9 +57,9 @@ async def get_all_rewards(
             "name": r.name,
             "description": r.description,
             "type": r.type,
-            "url_thumbnail": r.image_url,  # Map to frontend field name
-            "cost": r.cost_coins,           # Map to frontend field name
-            "remain": r.stock_quantity,     # Map to frontend field name
+            "url_thumbnail": r.image_url,  
+            "cost": r.cost_coins,           
+            "remain": r.stock_quantity,     
             "is_active": r.is_active,
         }
         for r in rewards
@@ -171,7 +171,7 @@ async def update_reward_quantity(
         "remain": reward.stock_quantity,
     }
 
-# ============== REDEMPTION REQUESTS ==============
+
 
 @router.post("/{child_id}/redeem", response_model=dict)
 async def request_redemption(
@@ -193,24 +193,24 @@ async def request_redemption(
             detail="Reward is not available"
         )
     
-    # Check stock (if tracked)
+    
     if reward.stock_quantity > 0 and reward.stock_quantity < 1:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Reward is out of stock"
         )
     
-    # Check coins
+    
     if child.current_coins < reward.cost_coins:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Insufficient coins. Need {reward.cost_coins}, have {child.current_coins}"
         )
     
-    # Create redemption request
+    
     redemption = RedemptionRequest(
-        child=child,  # type: ignore
-        reward=reward,  # type: ignore
+        child=child,  
+        reward=reward,  
         cost_coins=reward.cost_coins,
     )
     await redemption.insert()
@@ -272,30 +272,30 @@ async def approve_redemption(
     child = await redemption.child.fetch()
     reward = await redemption.reward.fetch()
     
-    # Verify child still has enough coins
+    
     if child.current_coins < redemption.cost_coins:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Child has insufficient coins"
         )
     
-    # Deduct coins
+    
     child.current_coins -= redemption.cost_coins
     await child.save()
     
-    # Decrease stock if limited
+    
     if reward.stock_quantity > 0:
         reward.stock_quantity -= 1
         await reward.save()
     
-    # Add to child's inventory
+    
     child_reward = ChildReward(
-        child=child,  # type: ignore
-        reward=reward,  # type: ignore
+        child=child,  
+        reward=reward,  
     )
     await child_reward.insert()
     
-    # Update request status
+    
     redemption.status = "approved"
     redemption.processed_at = datetime.utcnow()
     redemption.processed_by = str(current_user.id)
@@ -332,7 +332,7 @@ async def reject_redemption(
     
     return {"message": "Redemption rejected"}
 
-# ============== CHILD INVENTORY ==============
+
 
 @router.get("/{child_id}/inventory", response_model=List[dict])
 async def get_inventory(
@@ -388,7 +388,7 @@ async def equip_avatar_skin(
             detail="Invalid reward type for equipping. Only skins can be equipped."
         )
     
-    # Unequip all other skins
+    
     all_equipped = await ChildReward.find(
         ChildReward.child.id == child.id,
         ChildReward.is_equipped == True
@@ -399,11 +399,11 @@ async def equip_avatar_skin(
             equipped.is_equipped = False
             await equipped.save()
     
-    # Equip this skin
+    
     child_reward.is_equipped = True
     await child_reward.save()
     
     return {
-        "message": "Trang bị skin thành công.",
+        "message": "Skin equipped successfully.",
         "reward_id": reward_id
     }

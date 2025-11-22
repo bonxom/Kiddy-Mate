@@ -5,7 +5,7 @@ from app.models.childtask_models import ChildTask, ChildTaskStatus, ChildTaskPri
 from app.schemas.schemas import TaskPublic, TaskCreate, ChildTaskPublic, ChildTaskWithDetails
 from typing import List, Optional
 from datetime import datetime
-from app.dependencies import verify_child_ownership
+from app.dependencies import verify_child_ownership, verify_parent_token, verify_child_token, get_child_from_token, get_child_tasks_by_child, extract_id_from_link, fetch_link_or_get_object, ensure_link_references_for_save
 from app.models.reward_models import ChildReward, Reward
 from app.services.auth import get_current_user
 from app.models.user_models import User
@@ -13,7 +13,6 @@ from pydantic import ValidationError, BaseModel
 
 router = APIRouter()
 
-# Request schema for update operations
 class ChildTaskUpdateRequest(BaseModel):
     priority: Optional[ChildTaskPriority] = None
     due_date: Optional[datetime] = None
@@ -26,7 +25,7 @@ async def get_suggested_tasks(
     child_id: str,
     child: Child = Depends(verify_child_ownership)
 ):
-    existing_task_ids = await ChildTask.find(ChildTask.child.id == child.id).to_list()
+    existing_task_ids = await get_child_tasks_by_child(child)
     existing_ids: list[str] = []
     for ct in existing_task_ids:
         task_ref = getattr(ct.task, "id", None) or getattr(ct.task, "ref", None)
@@ -46,6 +45,7 @@ async def get_suggested_tasks(
             suggested_age_range=t.suggested_age_range,
             reward_coins=t.reward_coins,
             reward_badge_name=t.reward_badge_name,
+            unity_type=t.unity_type.value if t.unity_type else None,
         )
         for t in suggested_tasks[:5]
     ]
@@ -62,31 +62,24 @@ async def get_child_tasks(
     Get child's assigned tasks with full task details populated.
     Supports filtering by category and status, and limiting results.
     """
-    query = ChildTask.find(ChildTask.child.id == child.id)
+    all_child_tasks = await get_child_tasks_by_child(child)
     
-    # Apply status filter if provided
     if status_filter:
-        query = query.find(ChildTask.status == status_filter)
+        child_tasks = [ct for ct in all_child_tasks if ct.status == status_filter]
+    else:
+        child_tasks = all_child_tasks
     
-    # Sort by assigned_at descending (most recent first)
-    query = query.sort("-assigned_at")
+    child_tasks = sorted(child_tasks, key=lambda x: x.assigned_at, reverse=True)
     
-    # Get child tasks
-    child_tasks = await query.to_list()
-    
-    # Populate task details and apply category filter
     results = []
     for ct in child_tasks:
-        # Fetch task details
-        task = await ct.task.fetch() if ct.task else None
+        task = await fetch_link_or_get_object(ct.task, Task) if ct.task else None
         if not task:
             continue
         
-        # Apply category filter if specified
         if category and task.category != category:
             continue
         
-        # Build response with full task details
         results.append(
             ChildTaskWithDetails(
                 id=str(ct.id),
@@ -97,6 +90,7 @@ async def get_child_tasks(
                 due_date=ct.due_date,
                 progress=ct.progress,
                 notes=ct.notes,
+                unity_type=ct.unity_type.value if ct.unity_type else None,
                 task=TaskPublic(
                     id=str(task.id),
                     title=task.title,
@@ -107,11 +101,12 @@ async def get_child_tasks(
                     suggested_age_range=task.suggested_age_range,
                     reward_coins=task.reward_coins,
                     reward_badge_name=task.reward_badge_name,
+                    unity_type=task.unity_type.value if task.unity_type else None,
                 )
             )
         )
     
-    # Apply limit if specified
+    
     if limit:
         results = results[:limit]
     
@@ -121,8 +116,13 @@ async def get_child_tasks(
 async def start_task(
     child_id: str,
     task_id: str,
-    child: Child = Depends(verify_child_ownership)
+    child: Child = Depends(verify_child_ownership),
+    current_user: User = Depends(verify_child_token)
 ):
+    """
+    Start a task (CHILD ONLY).
+    Child can start working on an assigned task.
+    """
     try:
         task = await Task.get(task_id)
     except ValidationError:
@@ -136,10 +136,13 @@ async def start_task(
             detail="Task not found. Use /children/{child_id}/tasks/suggested or /tasks to get a valid task id."
         )
 
-    existing = await ChildTask.find_one(
-        ChildTask.child.id == child.id,
-        ChildTask.task.id == task_id
-    )
+    all_child_tasks = await get_child_tasks_by_child(child)
+    existing = None
+    for ct in all_child_tasks:
+        task_ref_id = extract_id_from_link(ct.task)
+        if task_ref_id == task_id:
+            existing = ct
+            break
     if existing:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -164,8 +167,13 @@ async def start_task(
 async def complete_task(
     child_id: str,
     child_task_id: str,
-    child: Child = Depends(verify_child_ownership)
+    child: Child = Depends(verify_child_ownership),
+    current_user: User = Depends(verify_child_token)
 ):
+    """
+    Complete a task (CHILD ONLY).
+    Child marks task as completed, waiting for parent verification.
+    """
     child_task = await ChildTask.get(child_task_id)
     if not child_task:
         raise HTTPException(
@@ -185,42 +193,88 @@ async def complete_task(
             detail="You do not own this task."
         )
 
-    if child_task.status != ChildTaskStatus.IN_PROGRESS:
+    current_status = child_task.status
+    status_value = current_status.value if hasattr(current_status, 'value') else str(current_status)
+    
+    if isinstance(current_status, str):
+        try:
+            current_status = ChildTaskStatus(current_status)
+        except ValueError:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid task status: {current_status}"
+            )
+    
+    if current_status == ChildTaskStatus.NEED_VERIFY:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Task must be in progress to complete."
+            detail="Task has already been completed and is waiting for parent verification. Cannot complete again."
         )
-
-    child_task.status = ChildTaskStatus.NEED_VERIFY
-    child_task.progress = 100
-    await child_task.save()
     
-    return {"message": "Nhiệm vụ đã hoàn thành! Đang chờ phụ huynh xác nhận."}
+    if current_status == ChildTaskStatus.COMPLETED:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Task has already been completed and verified. Cannot complete again."
+        )
+    
+    if current_status == ChildTaskStatus.GIVEUP:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Task has been given up. Cannot complete a task that has been given up."
+        )
+    
+    if current_status == ChildTaskStatus.MISSED:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Task has been missed. Cannot complete a task that has been missed."
+        )
+    
+    if current_status not in [ChildTaskStatus.ASSIGNED, ChildTaskStatus.IN_PROGRESS]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Cannot complete task with status '{status_value}'. Task must be in 'assigned' or 'in_progress' status."
+        )
+    
+    if current_status == ChildTaskStatus.ASSIGNED:
+        await child_task.set({"status": ChildTaskStatus.IN_PROGRESS})
+
+    await child_task.set({
+        "status": ChildTaskStatus.NEED_VERIFY,
+        "progress": 100,
+        "completed_at": datetime.utcnow()
+    })
+    
+    return {"message": "Task completed successfully! Waiting for parent verification."}
 
 @router.post("/{child_id}/tasks/{child_task_id}/verify", response_model=dict)
 async def verify_task(
     child_id: str,
     child_task_id: str,
-    child: Child = Depends(verify_child_ownership)
+    child: Child = Depends(verify_child_ownership),
+    current_user: User = Depends(verify_parent_token)
 ):
-    """Verify/Approve a completed task - parent confirms child's work and awards rewards."""
-    child_task = await ChildTask.get(child_task_id)
+    """Verify/Approve a completed task - parent confirms child's work and awards rewards.
+    PARENT ONLY: Only parents can verify and approve tasks."""
+    try:
+        child_task = await ChildTask.get(child_task_id)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid child task ID format: {child_task_id}"
+        )
+    
     if not child_task:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Child task not found."
+            detail=f"Child task not found with ID: {child_task_id}"
         )
 
-    link_child_id = None
-    if getattr(child_task.child, "id", None) is not None:
-        link_child_id = str(child_task.child.id)
-    elif getattr(child_task.child, "ref", None) is not None:
-        ref_obj = child_task.child.ref
-        link_child_id = str(getattr(ref_obj, "id", ref_obj))
-    if link_child_id != str(child.id):
+    
+    link_child_id = extract_id_from_link(child_task.child)
+    if not link_child_id or link_child_id in ('None', 'null', '') or link_child_id != str(child.id):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="You do not own this task."
+            detail=f"You do not own this task. Child task belongs to child ID: {link_child_id}, but you requested child ID: {str(child.id)}"
         )
 
     if child_task.status != ChildTaskStatus.NEED_VERIFY:
@@ -229,24 +283,14 @@ async def verify_task(
             detail="Task must be waiting for verification."
         )
 
-    # Mark as completed
     child_task.status = ChildTaskStatus.COMPLETED
     child_task.completed_at = datetime.utcnow()
 
-    # Award coins and badges
-    task_link = child_task.task
-    task_id_or_ref = getattr(task_link, "id", None) or getattr(task_link, "ref", None)
-    task_id_str = str(getattr(task_id_or_ref, "id", task_id_or_ref)) if task_id_or_ref is not None else None
-    if not task_id_str:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Task not found."
-        )
-    task_goc = await Task.get(task_id_str)
+    task_goc = await fetch_link_or_get_object(child_task.task, Task)
     if not task_goc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Task not found."
+            detail="Task reference not found in child task."
         )
 
     child.current_coins += task_goc.reward_coins
@@ -265,10 +309,13 @@ async def verify_task(
                 )
                 await new_reward.insert()
 
-    await child_task.save()
+    await child_task.set({
+        "status": ChildTaskStatus.COMPLETED,
+        "completed_at": datetime.utcnow()
+    })
     await child.save()
-
-    return {"message": "Xác nhận nhiệm vụ thành công! Đã trao thưởng."}
+    
+    return {"message": "Task verified successfully! Rewards have been awarded."}
 
 @router.put("/{child_id}/tasks/{child_task_id}", response_model=ChildTaskWithDetails)
 async def update_assigned_task(
@@ -285,7 +332,7 @@ async def update_assigned_task(
             detail="Child task not found."
         )
     
-    # Verify ownership
+    
     link_child_id = None
     if getattr(child_task.child, "id", None) is not None:
         link_child_id = str(child_task.child.id)
@@ -298,7 +345,6 @@ async def update_assigned_task(
             detail="You do not own this task."
         )
     
-    # Update fields if provided
     if task_update.priority is not None:
         child_task.priority = task_update.priority
     if task_update.due_date is not None:
@@ -308,10 +354,21 @@ async def update_assigned_task(
     if task_update.notes is not None:
         child_task.notes = task_update.notes
     
-    await child_task.save()
+    update_data = {}
+    if task_update.priority is not None:
+        update_data["priority"] = task_update.priority
+    if task_update.due_date is not None:
+        update_data["due_date"] = task_update.due_date
+    if task_update.progress is not None:
+        update_data["progress"] = task_update.progress
+    if task_update.notes is not None:
+        update_data["notes"] = task_update.notes
     
-    # Fetch task details for response
-    task = await child_task.task.fetch()
+    if update_data:
+        await child_task.set(update_data)
+        child_task = await ChildTask.get(child_task_id)
+    
+    task = await fetch_link_or_get_object(child_task.task, Task) if child_task.task else None
     
     return ChildTaskWithDetails(
         id=str(child_task.id),
@@ -322,6 +379,7 @@ async def update_assigned_task(
         due_date=child_task.due_date,
         progress=child_task.progress,
         notes=child_task.notes,
+        unity_type=child_task.unity_type.value if child_task.unity_type else None,
         task=TaskPublic(
             id=str(task.id),
             title=task.title,
@@ -349,7 +407,7 @@ async def delete_assigned_task(
             detail="Child task not found."
         )
     
-    # Verify ownership
+    
     link_child_id = None
     if getattr(child_task.child, "id", None) is not None:
         link_child_id = str(child_task.child.id)
@@ -365,3 +423,259 @@ async def delete_assigned_task(
     await child_task.delete()
     
     return {"message": f"Task {child_task_id} unassigned successfully."}
+
+@router.get("/{child_id}/tasks/{task_id}/status", response_model=dict)
+async def check_task_status(
+    child_id: str,
+    task_id: str,
+    child: Child = Depends(verify_child_ownership),
+    current_user: User = Depends(verify_child_token)
+):
+    """
+    Check task status (CHILD ONLY).
+    Returns the current status of a task for the child.
+    """
+    all_child_tasks = await get_child_tasks_by_child(child)
+    child_task = None
+    for ct in all_child_tasks:
+        task_ref_id = extract_id_from_link(ct.task)
+        if task_ref_id == task_id:
+            child_task = ct
+            break
+    
+    if not child_task:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Task not found for this child."
+        )
+    
+    return {"status": child_task.status.value}
+
+@router.post("/{child_id}/tasks/{task_id}/giveup", response_model=dict)
+async def giveup_task(
+    child_id: str,
+    task_id: str,
+    child: Child = Depends(verify_child_ownership),
+    current_user: User = Depends(verify_child_token)
+):
+    """
+    Give up on a task (CHILD ONLY).
+    Changes task status from 'in_progress' to 'giveup'.
+    Accepts both task_id (Task library ID) or child_task_id (ChildTask ID).
+    """
+    child_task = None
+    try:
+        child_task = await ChildTask.get(task_id)
+        if child_task:
+            link_child_id = extract_id_from_link(child_task.child)
+            if link_child_id != str(child.id):
+                child_task = None
+    except Exception:
+        child_task = None
+    
+    if not child_task:
+        try:
+            task = await Task.get(task_id)
+        except Exception:
+            task = None
+        
+        if not task:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Task or ChildTask with ID '{task_id}' not found. Please check the ID and ensure the task is assigned to this child."
+            )
+        
+        all_child_tasks = await get_child_tasks_by_child(child)
+        for ct in all_child_tasks:
+            task_ref_id = extract_id_from_link(ct.task)
+            if task_ref_id == task_id:
+                child_task = ct
+                break
+        
+        if not child_task:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Task '{task_id}' is not assigned to this child. Please assign the task first using POST /children/{child_id}/tasks/{task_id}/start"
+            )
+    
+    link_child_id = None
+    if getattr(child_task.child, "id", None) is not None:
+        link_child_id = str(child_task.child.id)
+    elif getattr(child_task.child, "ref", None) is not None:
+        ref_obj = child_task.child.ref
+        link_child_id = str(getattr(ref_obj, "id", ref_obj))
+    if link_child_id != str(child.id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not own this task."
+        )
+    
+    if child_task.status not in [ChildTaskStatus.ASSIGNED, ChildTaskStatus.IN_PROGRESS]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Cannot give up task with status '{child_task.status.value}'. Task must be assigned or in progress."
+        )
+    
+    if child_task.status == ChildTaskStatus.ASSIGNED:
+        await child_task.set({"status": ChildTaskStatus.IN_PROGRESS})
+    
+    await child_task.set({"status": ChildTaskStatus.GIVEUP})
+    
+    return {"message": "Task marked as given up successfully.", "status": ChildTaskStatus.GIVEUP.value}
+
+@router.post("/{child_id}/tasks/unassigned", response_model=List[ChildTaskWithDetails])
+async def get_unassigned_tasks(
+    child_id: str,
+    child: Child = Depends(verify_child_ownership),
+    current_user: User = Depends(verify_child_token),
+    category: Optional[str] = Query(None, description="Filter by task category")
+):
+    """
+    Get unassigned tasks for a child (CHILD ONLY).
+    Returns tasks with status 'unassigned' that are ready to be assigned.
+    """
+    all_child_tasks = await get_child_tasks_by_child(child)
+    child_tasks = [ct for ct in all_child_tasks if ct.status == ChildTaskStatus.UNASSIGNED]
+    child_tasks = sorted(child_tasks, key=lambda x: x.assigned_at, reverse=True)
+    
+    results = []
+    for ct in child_tasks:
+        task = await fetch_link_or_get_object(ct.task, Task) if ct.task else None
+        if not task:
+            continue
+        
+        if category and task.category != category:
+            continue
+        
+        results.append(
+            ChildTaskWithDetails(
+                id=str(ct.id),
+                status=ct.status,
+                assigned_at=ct.assigned_at,
+                completed_at=ct.completed_at,
+                priority=ct.priority.value if ct.priority else None,
+                due_date=ct.due_date,
+                progress=ct.progress,
+                notes=ct.notes,
+                unity_type=ct.unity_type.value if ct.unity_type else None,
+                task=TaskPublic(
+                    id=str(task.id),
+                    title=task.title,
+                    description=task.description,
+                    category=task.category,
+                    type=task.type,
+                    difficulty=task.difficulty,
+                    suggested_age_range=task.suggested_age_range,
+                    reward_coins=task.reward_coins,
+                    reward_badge_name=task.reward_badge_name,
+                    unity_type=task.unity_type.value if task.unity_type else None,
+                )
+            )
+        )
+    
+    return results
+
+@router.post("/{child_id}/tasks/giveup", response_model=List[ChildTaskWithDetails])
+async def get_giveup_tasks(
+    child_id: str,
+    child: Child = Depends(verify_child_ownership),
+    current_user: User = Depends(verify_parent_token)
+):
+    """
+    Get tasks that child has given up on (Parent endpoint).
+    Returns all tasks with status 'giveup' for the child.
+    """
+    all_child_tasks = await get_child_tasks_by_child(child)
+    child_tasks = [ct for ct in all_child_tasks if ct.status == ChildTaskStatus.GIVEUP]
+    child_tasks = sorted(child_tasks, key=lambda x: x.assigned_at, reverse=True)
+    
+    results = []
+    for ct in child_tasks:
+        task = await fetch_link_or_get_object(ct.task, Task) if ct.task else None
+        if not task:
+            continue
+        
+        results.append(
+            ChildTaskWithDetails(
+                id=str(ct.id),
+                status=ct.status,
+                assigned_at=ct.assigned_at,
+                completed_at=ct.completed_at,
+                priority=ct.priority.value if ct.priority else None,
+                due_date=ct.due_date,
+                progress=ct.progress,
+                notes=ct.notes,
+                unity_type=ct.unity_type.value if ct.unity_type else None,
+                task=TaskPublic(
+                    id=str(task.id),
+                    title=task.title,
+                    description=task.description,
+                    category=task.category,
+                    type=task.type,
+                    difficulty=task.difficulty,
+                    suggested_age_range=task.suggested_age_range,
+                    reward_coins=task.reward_coins,
+                    reward_badge_name=task.reward_badge_name,
+                    unity_type=task.unity_type.value if task.unity_type else None,
+                )
+            )
+        )
+    
+    return results
+
+@router.get("/{child_id}/tasks/completed", response_model=List[ChildTaskWithDetails])
+async def get_completed_tasks(
+    child_id: str,
+    child: Child = Depends(verify_child_ownership),
+    current_user: User = Depends(verify_child_token),
+    limit: Optional[int] = Query(None, description="Limit number of results"),
+    category: Optional[str] = Query(None, description="Filter by task category")
+):
+    """
+    Get completed tasks for a child (CHILD ONLY).
+    Returns tasks with status 'completed' (verified by parent).
+    """
+    all_child_tasks = await get_child_tasks_by_child(child)
+    child_tasks = [ct for ct in all_child_tasks if ct.status == ChildTaskStatus.COMPLETED]
+    child_tasks = sorted(child_tasks, key=lambda x: x.completed_at or x.assigned_at, reverse=True)
+    
+    results = []
+    for ct in child_tasks:
+        task = await fetch_link_or_get_object(ct.task, Task) if ct.task else None
+        if not task:
+            continue
+        
+        if category and task.category != category:
+            continue
+        
+        results.append(
+            ChildTaskWithDetails(
+                id=str(ct.id),
+                status=ct.status,
+                assigned_at=ct.assigned_at,
+                completed_at=ct.completed_at,
+                priority=ct.priority.value if ct.priority else None,
+                due_date=ct.due_date,
+                progress=ct.progress,
+                notes=ct.notes,
+                unity_type=ct.unity_type.value if ct.unity_type else None,
+                task=TaskPublic(
+                    id=str(task.id),
+                    title=task.title,
+                    description=task.description,
+                    category=task.category,
+                    type=task.type,
+                    difficulty=task.difficulty,
+                    suggested_age_range=task.suggested_age_range,
+                    reward_coins=task.reward_coins,
+                    reward_badge_name=task.reward_badge_name,
+                    unity_type=task.unity_type.value if task.unity_type else None,
+                )
+            )
+        )
+    
+    
+    if limit:
+        results = results[:limit]
+    
+    return results

@@ -1,6 +1,6 @@
 from datetime import datetime
-from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, status
+from typing import List, Optional, Union
+from fastapi import APIRouter, Depends, HTTPException, status, Request, Body
 from app.dependencies import verify_child_ownership
 from app.models.child_models import Child, ChildDevelopmentAssessment
 from app.schemas.schemas import (
@@ -10,6 +10,8 @@ from app.schemas.schemas import (
     DisciplineAutonomyAnswers,
     EmotionalIntelligenceAnswers,
     SocialInteractionAnswers,
+    SimpleAssessmentCreate,
+    SimpleAssessmentUpdate,
 )
 
 router = APIRouter()
@@ -39,15 +41,59 @@ def _serialize_assessment(doc: ChildDevelopmentAssessment) -> ChildAssessmentPub
 @router.post("/{child_id}/assessments", response_model=ChildAssessmentPublic)
 async def create_child_assessment(
     child_id: str,
-    assessment: ChildAssessmentCreate,
+    request: Request,
     child: Child = Depends(verify_child_ownership),
 ):
+    """Create assessment - supports both detailed format and simple score format"""
+    body = await request.json()
+    
+    
+    if any(key in body for key in ["logic_score", "independence_score", "emotional_score", "discipline_score", "social_score"]):
+        
+        try:
+            simple_assessment = SimpleAssessmentCreate(**body)
+            detailed_assessment = simple_assessment.to_detailed_assessment()
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"Invalid simple assessment format: {str(e)}"
+            )
+    else:
+        
+        try:
+            detailed_assessment = ChildAssessmentCreate(**body)
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"Invalid assessment format: {str(e)}"
+            )
+    
     new_assessment = ChildDevelopmentAssessment(
         child=child,
         parent=child.parent,
-        discipline_autonomy=assessment.discipline_autonomy.model_dump(),
-        emotional_intelligence=assessment.emotional_intelligence.model_dump(),
-        social_interaction=assessment.social_interaction.model_dump(),
+        discipline_autonomy=detailed_assessment.discipline_autonomy.model_dump(),
+        emotional_intelligence=detailed_assessment.emotional_intelligence.model_dump(),
+        social_interaction=detailed_assessment.social_interaction.model_dump(),
+    )
+    await new_assessment.insert()
+    return _serialize_assessment(new_assessment)
+
+@router.post("/{child_id}/assessments/simple", response_model=ChildAssessmentPublic)
+async def create_simple_assessment(
+    child_id: str,
+    simple_assessment: SimpleAssessmentCreate,
+    child: Child = Depends(verify_child_ownership),
+):
+    """Create assessment using simple scores (1-10) - converts to detailed format automatically"""
+    
+    detailed_assessment = simple_assessment.to_detailed_assessment()
+    
+    new_assessment = ChildDevelopmentAssessment(
+        child=child,
+        parent=child.parent,
+        discipline_autonomy=detailed_assessment.discipline_autonomy.model_dump(),
+        emotional_intelligence=detailed_assessment.emotional_intelligence.model_dump(),
+        social_interaction=detailed_assessment.social_interaction.model_dump(),
     )
     await new_assessment.insert()
     return _serialize_assessment(new_assessment)
@@ -87,9 +133,10 @@ async def get_child_assessment(
 async def update_child_assessment(
     child_id: str,
     assessment_id: str,
-    updates: ChildAssessmentUpdate,
+    request: Request,
     child: Child = Depends(verify_child_ownership),
 ):
+    """Update assessment - supports both detailed format and simple score format"""
     assessment = await ChildDevelopmentAssessment.get(assessment_id)
     if not assessment:
         raise HTTPException(
@@ -103,6 +150,29 @@ async def update_child_assessment(
             detail="You do not own this assessment."
         )
 
+    body = await request.json()
+    
+    
+    if any(key in body for key in ["logic_score", "independence_score", "emotional_score", "discipline_score", "social_score"]):
+        
+        try:
+            simple_update = SimpleAssessmentUpdate(**body)
+            updates = simple_update.to_detailed_update(assessment)
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"Invalid simple assessment format: {str(e)}"
+            )
+    else:
+        
+        try:
+            updates = ChildAssessmentUpdate(**body)
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"Invalid assessment format: {str(e)}"
+            )
+
     if updates.discipline_autonomy is not None:
         assessment.discipline_autonomy = updates.discipline_autonomy.model_dump()
     if updates.emotional_intelligence is not None:
@@ -110,6 +180,5 @@ async def update_child_assessment(
     if updates.social_interaction is not None:
         assessment.social_interaction = updates.social_interaction.model_dump()
 
-    assessment.updated_at = datetime.utcnow()
     await assessment.save()
     return _serialize_assessment(assessment)

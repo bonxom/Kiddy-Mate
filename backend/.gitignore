@@ -9,7 +9,6 @@ env/
 
 # Environment variables
 .env
-.env.*
 
 # IDE / editor
 .vscode/
