@@ -141,8 +141,18 @@ async def get_child_tasks(
     for ct in child_tasks:
         # Get task details (either from Link or embedded)
         if ct.task:
-            task_source = await ct.task.fetch()
-            task_id = str(ct.task.ref.id) if ct.task.ref else str(ct.task.id)  # type: ignore
+            task_source = await fetch_link_or_get_object(ct.task, Task)
+            # Get task ID - handle both Link and already-fetched Task
+            if task_source:
+                task_id = str(task_source.id)
+            else:
+                # Fallback: try to get ID from link
+                if hasattr(ct.task, 'ref') and ct.task.ref:
+                    task_id = str(ct.task.ref.id)  # type: ignore
+                elif hasattr(ct.task, 'id'):
+                    task_id = str(ct.task.id)
+                else:
+                    continue
         elif ct.task_data:
             task_source = ct.task_data
             task_id = f"custom-{ct.id}"  # Custom tasks don't have separate Task ID

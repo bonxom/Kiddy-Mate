@@ -31,10 +31,27 @@ const Model = () => {
       group.current.position.y = -center.y * scale;
       group.current.position.z = -center.z * scale;
 
+      // Calculate rotation to face the camera
+      // Camera is at position [3, 2, 4], so robot should face towards that direction
+      // The direction vector from robot (origin) to camera is [3, 2, 4]
+      // In XZ plane, this is [3, 4], so angle = atan2(3, 4) ≈ 0.6435 radians
+      const cameraX = 3;
+      const cameraZ = 4;
+      let angleToCamera = Math.atan2(cameraX, cameraZ);
+      
       // Bot nhìn thẳng về phía người dùng ban đầu
-      group.current.rotation.y = Math.PI / 2.5; // Quay mặt về phía camera
-      group.current.rotation.x = Math.PI / 33;
-      group.current.rotation.z = Math.PI / 50;
+      // If the model's front faces -Z by default (common in 3D models),
+      // we need to add Math.PI (180°) to face +Z direction where camera is
+      // Try: angleToCamera + Math.PI to face camera
+      // If that's wrong, try: angleToCamera (without PI) or angleToCamera - Math.PI/2
+      angleToCamera += Math.PI / 4; // Flip 180° to face camera (adjust if needed)
+      
+      group.current.rotation.y = angleToCamera; // Face towards camera position
+      group.current.rotation.x = Math.PI / 33; // Slight tilt for better view
+      group.current.rotation.z = Math.PI / 50; // Minimal Z rotation
+      
+      // Force update to ensure rotation is applied immediately
+      group.current.updateMatrixWorld(true);
       
       // Optimize materials and meshes
       scene.traverse((child) => {
