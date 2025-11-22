@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routers import auth, children, tasks, task_library, rewards, games, interact, reports, dashboard, assessments, onboarding
+from app.routers import auth, child_auth, children, tasks, task_library, rewards, games, interact, reports, dashboard, assessments, onboarding
 from app.db.database import init_database
 from app.scheduler import scheduler
 
@@ -20,6 +20,7 @@ app.add_middleware(
 )
 
 app.include_router(auth.router, prefix="/auth", tags=["Auth"])
+app.include_router(child_auth.router, prefix="/auth", tags=["Child Auth"])
 app.include_router(onboarding.router, tags=["Onboarding"])
 app.include_router(children.router, prefix="/children", tags=["Children"])
 # Task Library (global task CRUD - no child context)

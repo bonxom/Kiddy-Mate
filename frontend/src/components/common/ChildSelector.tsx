@@ -54,7 +54,7 @@ const ChildSelector = () => {
       );
     }
     return (
-      <div className="w-full h-full flex items-center justify-center bg-linear-to-br from-primary-400 to-primary-600 text-white font-semibold text-sm">
+      <div className="w-full h-full flex items-center justify-center bg-linear-to-br from-primary-400 to-primary-600 text-gray-900 font-bold text-lg">
         {child.name.charAt(0).toUpperCase()}
       </div>
     );

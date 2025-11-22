@@ -16,7 +16,13 @@ interface ChildFormModalProps {
 const ChildFormModal = ({ isOpen, onClose, initialData, onSave }: ChildFormModalProps) => {
   const [step, setStep] = useState<'info' | 'assessment'>('info');
   const [basicInfo, setBasicInfo] = useState<ChildBasicInfo>({
-    fullName: '', nickname: '', dateOfBirth: '', gender: 'male', favoriteTopics: []
+    fullName: '', 
+    nickname: '', 
+    dateOfBirth: '', 
+    gender: 'male', 
+    username: '',  // Add username
+    password: '',  // Add password
+    favoriteTopics: []
   });
   const [assessment, setAssessment] = useState<ChildAssessment>({ answers: [] });
 
@@ -27,11 +33,21 @@ const ChildFormModal = ({ isOpen, onClose, initialData, onSave }: ChildFormModal
         nickname: initialData.nickname,
         dateOfBirth: initialData.dateOfBirth,
         gender: initialData.gender,
+        username: '',  // Empty for security (don't pre-fill existing username)
+        password: '',  // Empty for security (never show existing password)
         favoriteTopics: initialData.interests || [],
       });
       setStep('info');
     } else {
-      setBasicInfo({ fullName: '', nickname: '', dateOfBirth: '', gender: 'male', favoriteTopics: [] });
+      setBasicInfo({ 
+        fullName: '', 
+        nickname: '', 
+        dateOfBirth: '', 
+        gender: 'male', 
+        username: '', 
+        password: '', 
+        favoriteTopics: [] 
+      });
       setAssessment({ answers: [] });
       setStep('info');
     }
@@ -89,9 +105,9 @@ const ChildFormModal = ({ isOpen, onClose, initialData, onSave }: ChildFormModal
         </div>
 
         {/* Body */}
-        <div className="p-1">
+        <div className="p-6">
           {step === 'info' ? (
-            <div className="[&>div]:min-h-fit [&>div]:bg-none [&>div]:p-0 [&_div[class*='absolute']]:hidden"> 
+            <div className="[&>div]:shadow-none [&>div]:border-0"> 
               <ChildInfoStep 
                 childNumber={1} 
                 totalChildren={1} 
@@ -101,7 +117,7 @@ const ChildFormModal = ({ isOpen, onClose, initialData, onSave }: ChildFormModal
               />
             </div>
           ) : (
-            <div className="[&>div]:min-h-fit [&>div]:bg-none [&>div]:p-0 [&_div[class*='absolute']]:hidden">
+            <div className="[&>div]:shadow-none [&>div]:border-0">
               <AssessmentStep 
                 childNumber={1} 
                 totalChildren={1} 

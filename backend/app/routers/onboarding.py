@@ -1,10 +1,10 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 from datetime import datetime
 from typing import List, Dict, Optional
 from app.models.user_models import User
 from app.models.child_models import Child, ChildDevelopmentAssessment
-from app.services.auth import get_current_user
+from app.services.auth import get_current_user, hash_password
 
 router = APIRouter()
 
@@ -13,6 +13,8 @@ class ChildOnboardingData(BaseModel):
     nickname: str
     date_of_birth: str  # ISO format string
     gender: str
+    username: str  # For child login
+    password: str  # Plain password, will be hashed
     favorite_topics: List[str]
     personality: Optional[List[str]] = None
     interests: Optional[List[str]] = None
@@ -23,22 +25,30 @@ class ChildOnboardingData(BaseModel):
     social_interaction: Dict[str, Optional[str]]
 
 class OnboardingRequest(BaseModel):
+    parent_email: str  # Email to identify the parent
     parent_display_name: str
     phone_number: Optional[str] = None
     children: List[ChildOnboardingData]
 
 @router.post("/onboarding/complete")
 async def complete_onboarding(
-    request: OnboardingRequest,
-    current_user: User = Depends(get_current_user)
+    request: OnboardingRequest
 ):
     """
-    Complete onboarding process:
-    1. Update user info
-    2. Create children
-    3. Create assessments for each child
-    4. Mark onboarding as complete
+    Complete onboarding process (PUBLIC endpoint):
+    1. Find user by email
+    2. Update user info
+    3. Create children
+    4. Create assessments for each child
+    5. Mark onboarding as complete
     """
+    # Find user by email
+    current_user = await User.find_one(User.email == request.parent_email)
+    if not current_user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found. Please register first."
+        )
     # Update user info
     current_user.full_name = request.parent_display_name
     if request.phone_number:
@@ -49,6 +59,14 @@ async def complete_onboarding(
     created_children = []
     
     for child_data in request.children:
+        # Check if username already exists
+        existing_child = await Child.find_one(Child.username == child_data.username)
+        if existing_child:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Username '{child_data.username}' is already taken. Please choose another username."
+            )
+        
         # Parse date of birth
         try:
             birth_date = datetime.fromisoformat(child_data.date_of_birth.replace('Z', '+00:00'))
@@ -56,11 +74,16 @@ async def complete_onboarding(
             # Fallback: try parsing as simple date string
             birth_date = datetime.strptime(child_data.date_of_birth, '%Y-%m-%d')
         
+        # Hash password
+        hashed_password = hash_password(child_data.password)
+        
         # Create child (Beanie automatically handles Link type)
         new_child = Child(
             parent=current_user,  # type: ignore
             name=child_data.full_name,
             birth_date=birth_date,
+            username=child_data.username,
+            password_hash=hashed_password,
             nickname=child_data.nickname,
             gender=child_data.gender,
             personality=child_data.personality,

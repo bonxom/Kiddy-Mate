@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
-import { Sparkles, Mail, User, LogIn, UserPlus, ArrowRight, Lock } from 'lucide-react';
+import { Sparkles, LogIn, UserPlus, Lock } from 'lucide-react';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
 import PasswordInput from '../../components/ui/PasswordInput';
@@ -144,7 +144,7 @@ const AuthPage = () => {
       </div>
 
       {/* --- Main Card --- */}
-      <div className="relative bg-white rounded-[2rem] shadow-2xl w-full max-w-[1000px] min-h-[650px] overflow-hidden flex flex-col md:flex-row z-10">
+      <div className="relative bg-white rounded-4xl shadow-2xl w-full max-w-[1000px] min-h-[650px] overflow-hidden flex flex-col md:flex-row z-10">
         
         {/* HEADER MOBILE */}
         <div className="md:hidden p-6 pb-0 text-center">

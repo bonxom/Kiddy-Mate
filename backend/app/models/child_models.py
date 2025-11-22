@@ -9,6 +9,10 @@ class Child(Document):
     name: str
     birth_date: datetime
     
+    # Authentication fields for separate child app (optional for backward compatibility)
+    username: Optional[str] = None  # Unique username for child login
+    password_hash: Optional[str] = None  # Hashed password for child login
+    
     # Dedicated fields (instead of initial_traits dict)
     nickname: Optional[str] = None
     gender: Optional[str] = None

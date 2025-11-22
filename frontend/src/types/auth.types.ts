@@ -36,6 +36,8 @@ export interface ChildBasicInfo {
   nickname?: string;
   dateOfBirth: string;
   gender: 'male' | 'female' | 'other';
+  username: string; // For child login
+  password: string; // Plain password for child account
   favoriteTopics: string[]; // Tags they love
 }
 
