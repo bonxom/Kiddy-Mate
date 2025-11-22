@@ -2,10 +2,19 @@ from fastapi import APIRouter, Depends
 from app.models.child_models import Child
 from app.models.childtask_models import ChildTask, ChildTaskStatus
 from app.models.reward_models import ChildReward
-from app.dependencies import verify_child_ownership
-from typing import Dict
+from app.models.task_models import Task
+from app.dependencies import verify_child_ownership, get_child_tasks_by_child, fetch_link_or_get_object
+from typing import Dict, List
+from pydantic import BaseModel
+from beanie import Link
 
 router = APIRouter()
+
+class CategoryProgressItem(BaseModel):
+    name: str
+    completed: int
+    total: int
+    percentage: int
 
 @router.get("/{child_id}", response_model=Dict)
 async def get_dashboard(
@@ -51,3 +60,79 @@ async def get_dashboard(
         "badges_earned": badges_earned,
         "completion_rate": completion_rate
     }
+
+@router.get("/{child_id}/category-progress", response_model=List[CategoryProgressItem])
+async def get_category_progress(
+    child: Child = Depends(verify_child_ownership)
+):
+    """
+    Get task progress grouped by category for a child.
+    
+    Returns a list of categories with:
+    - name: Category name (Creativity, Social, Academic, etc.)
+    - completed: Number of completed tasks in this category
+    - total: Total number of tasks in this category
+    - percentage: Completion percentage (0-100)
+    
+    Categories are normalized: IQ -> Logic, EQ -> Social
+    """
+    # Get all child tasks
+    child_tasks = await get_child_tasks_by_child(child)
+    
+    # Initialize category map with all standard categories
+    categories = ['Independence', 'Logic', 'Physical', 'Creativity', 'Social', 'Academic']
+    category_map: Dict[str, Dict[str, int]] = {}
+    
+    for cat in categories:
+        category_map[cat] = {'completed': 0, 'total': 0}
+    
+    # Process tasks and normalize category names
+    for ct in child_tasks:
+        if not ct.task:
+            continue
+            
+        # Fetch task if it's a Link reference
+        task = await fetch_link_or_get_object(ct.task, Task)
+        
+        # If still a Link, try to fetch it directly
+        if isinstance(ct.task, Link) and (not task or not isinstance(task, Task)):
+            try:
+                task = await ct.task.fetch()
+            except Exception:
+                continue
+        
+        # Ensure task is actually a Task instance
+        if not task or not isinstance(task, Task):
+            continue
+            
+        if not hasattr(task, 'category') or not task.category:
+            continue
+        
+        # Normalize legacy categories (IQ -> Logic, EQ -> Social)
+        category = task.category
+        if category == 'IQ':
+            category = 'Logic'
+        elif category == 'EQ':
+            category = 'Social'
+        
+        # Only process known categories
+        if category in category_map:
+            category_map[category]['total'] += 1
+            if ct.status == ChildTaskStatus.COMPLETED:
+                category_map[category]['completed'] += 1
+    
+    # Build response with percentages
+    result = []
+    for cat_name, data in category_map.items():
+        total = data['total']
+        completed = data['completed']
+        percentage = round((completed / total * 100)) if total > 0 else 0
+        
+        result.append(CategoryProgressItem(
+            name=cat_name,
+            completed=completed,
+            total=total,
+            percentage=percentage
+        ))
+    
+    return result

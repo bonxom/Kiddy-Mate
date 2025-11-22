@@ -5,6 +5,7 @@ import { STORAGE_KEYS } from '../../api/client/apiConfig';
 import ParentInfoStep from '../../features/onboarding/ParentInfoStep.tsx';
 import ChildInfoStep from '../../features/onboarding/ChildInfoStep.tsx';
 import AssessmentStep from '../../features/onboarding/AssessmentStep.tsx';
+import { assessmentQuestionsPrimary, assessmentQuestionsSecondary } from '../../data/assessmentQuestions';
 import type { OnboardingData, OnboardingStep, ParentInfo, ChildBasicInfo, ChildAssessment } from '../../types/auth.types';
 
 const OnboardingPage = () => {
@@ -83,16 +84,29 @@ const OnboardingPage = () => {
           const emotionalAnswers: Record<string, string | null> = {};
           const socialAnswers: Record<string, string | null> = {};
 
+          // Determine which question set to use based on child's age
+          const birthYear = new Date(child.basicInfo.dateOfBirth).getFullYear();
+          const currentYear = new Date().getFullYear();
+          const age = currentYear - birthYear;
+          const relevantQuestions = age > 10 ? assessmentQuestionsSecondary : assessmentQuestionsPrimary;
+          
+          // Create a map of question ID to category
+          const questionCategoryMap = new Map<string, 'discipline' | 'emotional' | 'social'>();
+          relevantQuestions.forEach(q => {
+            questionCategoryMap.set(q.id, q.category);
+          });
+
           child.assessment.answers.forEach((answer) => {
             const key = answer.questionId;
             const value = answer.rating.toString();
-
-            // Determine category based on questionId prefix
-            if (key.startsWith('discipline_')) {
+            
+            // Determine category based on question's category field
+            const category = questionCategoryMap.get(key);
+            if (category === 'discipline') {
               disciplineAnswers[key] = value;
-            } else if (key.startsWith('emotional_')) {
+            } else if (category === 'emotional') {
               emotionalAnswers[key] = value;
-            } else if (key.startsWith('social_')) {
+            } else if (category === 'social') {
               socialAnswers[key] = value;
             }
           });

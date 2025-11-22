@@ -13,6 +13,7 @@ async def verify_child_ownership(
     Verify that the current user owns the child profile.
     Allows both parent (who owns the child) and child (who is the child) to access.
     """
+    import logging
     
     child_id = child_id.strip()
     
@@ -23,7 +24,82 @@ async def verify_child_ownership(
             detail="Child not found."
         )
     
+    # Check PARENT role first (most common case)
+    if current_user.role == UserRole.PARENT:
+        # Fetch parent if it's a Link reference
+        parent_id_from_link = None
+        
+        # Try to get parent ID from various formats
+        if child.parent is None:
+            logging.warning(f"Child {child_id} has no parent assigned")
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Forbidden: Child has no parent assigned."
+            )
+        
+        # Method 1: If parent is already a User instance
+        if isinstance(child.parent, User):
+            parent_id_from_link = str(child.parent.id)
+        # Method 2: If parent is a Link, try to fetch it
+        elif hasattr(child.parent, 'fetch'):
+            try:
+                parent = await child.parent.fetch()
+                if isinstance(parent, User):
+                    parent_id_from_link = str(parent.id)
+            except Exception as e:
+                logging.warning(f"Failed to fetch parent link via fetch(): {e}")
+        
+        # Method 3: Try to extract ID directly from Link object
+        if not parent_id_from_link:
+            try:
+                # Try accessing .id directly (might work for some Link formats)
+                if hasattr(child.parent, "id") and child.parent.id:
+                    parent_id_from_link = str(child.parent.id)
+            except Exception:
+                pass
+        
+        # Method 4: Try to extract from ref attribute
+        if not parent_id_from_link:
+            try:
+                if hasattr(child.parent, "ref"):
+                    ref_obj = child.parent.ref
+                    if hasattr(ref_obj, "id"):
+                        parent_id_from_link = str(ref_obj.id)
+                    elif isinstance(ref_obj, dict):
+                        parent_id_from_link = str(ref_obj.get("_id", ""))
+                    else:
+                        # Try to convert to string and use as ID
+                        parent_id_from_link = str(ref_obj)
+            except Exception as e:
+                logging.warning(f"Failed to extract parent ID from ref: {e}")
+        
+        # Method 5: Try dict format
+        if not parent_id_from_link:
+            try:
+                if isinstance(child.parent, dict):
+                    parent_id_from_link = str(child.parent.get("_id", ""))
+            except Exception:
+                pass
+        
+        # Method 6: Use extract_id_from_link helper
+        if not parent_id_from_link:
+            try:
+                parent_id_from_link = extract_id_from_link(child.parent)
+            except Exception as e:
+                logging.warning(f"Failed to extract parent ID via helper: {e}")
+        
+        current_user_id = str(current_user.id)
+        logging.info(f"Verifying parent ownership: child.parent={parent_id_from_link}, current_user={current_user_id}, child_id={child_id}")
+        
+        if not parent_id_from_link or parent_id_from_link != current_user_id:
+            logging.warning(f"Parent mismatch: child.parent={parent_id_from_link}, current_user={current_user_id}, child_id={child_id}")
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Forbidden: You do not own this child profile."
+            )
+        return child
     
+    # Check CHILD role
     if current_user.role == UserRole.CHILD:
         if current_user.child_profile:
             
@@ -47,22 +123,6 @@ async def verify_child_ownership(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Forbidden: You can only access your own profile."
         )
-    
-    
-    if current_user.role == UserRole.PARENT:
-        parent_id_from_link = None
-        if getattr(child.parent, "id", None) is not None:
-            parent_id_from_link = str(child.parent.id)
-        elif getattr(child.parent, "ref", None) is not None:
-            ref_obj = child.parent.ref
-            parent_id_from_link = str(getattr(ref_obj, "id", ref_obj))
-
-        if parent_id_from_link != str(current_user.id):
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Forbidden: You do not own this child profile."
-            )
-        return child
     
     
     raise HTTPException(
@@ -267,23 +327,47 @@ async def fetch_link_or_get_object(link_ref, model_class):
     if link_ref is None:
         return None
     
-    
+    # If it's already the model instance, return it
     if isinstance(link_ref, model_class):
         return link_ref
     
+    # Check if it's a Beanie Link
+    from beanie import Link
+    if isinstance(link_ref, Link):
+        try:
+            # Try to fetch the linked object
+            fetched = await link_ref.fetch()
+            if isinstance(fetched, model_class):
+                return fetched
+        except Exception:
+            pass
     
+    # If it has a fetch method, call it
     if hasattr(link_ref, 'fetch'):
-        return await link_ref.fetch()
+        try:
+            fetched = await link_ref.fetch()
+            if isinstance(fetched, model_class):
+                return fetched
+        except Exception:
+            pass
     
-    
+    # If it's a dict, try to get the object by ID
     if isinstance(link_ref, dict):
         obj_id = link_ref.get('_id')
         if obj_id:
-            return await model_class.get(obj_id)
+            try:
+                return await model_class.get(obj_id)
+            except Exception:
+                pass
     
-    
+    # If it has an id attribute, try to get the object
     if hasattr(link_ref, 'id'):
-        return await model_class.get(link_ref.id)
+        try:
+            obj_id = link_ref.id
+            if obj_id:
+                return await model_class.get(obj_id)
+        except Exception:
+            pass
     
     return None
 
