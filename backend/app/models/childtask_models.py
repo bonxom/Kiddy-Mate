@@ -1,8 +1,9 @@
 from beanie import Document, Link
 from datetime import datetime
-from typing import Optional
+from typing import Optional, Union
+from pydantic import BaseModel
 from app.models.child_models import Child
-from app.models.task_models import Task
+from app.models.task_models import Task, TaskCategory, TaskType
 import enum
 
 class ChildTaskStatus(str, enum.Enum):
@@ -17,9 +18,22 @@ class ChildTaskPriority(str, enum.Enum):
     MEDIUM = "medium"
     HIGH = "high"
 
+# Embedded task data for custom tasks (not in library)
+class TaskData(BaseModel):
+    title: str
+    description: str
+    category: TaskCategory
+    type: TaskType
+    difficulty: int
+    suggested_age_range: str
+    reward_coins: int = 50
+    reward_badge_name: Optional[str] = None
+
 class ChildTask(Document):
     child: Link[Child]
-    task: Link[Task]
+    # Support both library tasks (Link) and custom tasks (embedded)
+    task: Optional[Link[Task]] = None
+    task_data: Optional[TaskData] = None  # For custom tasks not in library
     status: ChildTaskStatus = ChildTaskStatus.ASSIGNED
     assigned_at: datetime = datetime.utcnow()
     completed_at: Optional[datetime] = None

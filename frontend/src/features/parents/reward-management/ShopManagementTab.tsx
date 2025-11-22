@@ -14,9 +14,10 @@ interface ShopManagementTabProps {
   isCreateModalOpen: boolean;
   setIsCreateModalOpen: (value: boolean) => void;
   onRewardsCountChange?: (count: number) => void;
+  refreshTrigger?: number; // Trigger to refresh rewards from parent
 }
 
-const ShopManagementTab = ({ isCreateModalOpen, setIsCreateModalOpen, onRewardsCountChange }: ShopManagementTabProps) => {
+const ShopManagementTab = ({ isCreateModalOpen, setIsCreateModalOpen, onRewardsCountChange, refreshTrigger }: ShopManagementTabProps) => {
   const [rewards, setRewards] = useState<Reward[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -31,6 +32,13 @@ const ShopManagementTab = ({ isCreateModalOpen, setIsCreateModalOpen, onRewardsC
   useEffect(() => {
     fetchRewards();
   }, []);
+
+  // Refetch when parent triggers refresh (after redemption processed)
+  useEffect(() => {
+    if (refreshTrigger !== undefined && refreshTrigger > 0) {
+      fetchRewards();
+    }
+  }, [refreshTrigger]);
 
   // Notify parent when rewards count changes
   useEffect(() => {
@@ -79,6 +87,7 @@ const ShopManagementTab = ({ isCreateModalOpen, setIsCreateModalOpen, onRewardsC
         const updated = await updateReward(selectedReward.id, {
           name: rewardData.name,
           description: rewardData.description,
+          type: rewardData.type,  // Include type in update
           image_url: rewardData.url_thumbnail,
           cost_coins: rewardData.cost,
           stock_quantity: rewardData.remain,
@@ -92,18 +101,19 @@ const ShopManagementTab = ({ isCreateModalOpen, setIsCreateModalOpen, onRewardsC
         setIsEditModalOpen(false);
         setSelectedReward(null);
       } else {
-        // Create new reward
-        const newReward = await createReward({
+        // Create new reward - use selected type from form
+        await createReward({
           name: rewardData.name,
           description: rewardData.description,
-          type: 'item',  // Default type
+          type: rewardData.type,  // Use type from form data
           image_url: rewardData.url_thumbnail,
           cost_coins: rewardData.cost,
           stock_quantity: rewardData.remain,
           is_active: true,
         });
-        setRewards([...rewards, newReward]);
         setIsCreateModalOpen(false);
+        // Fetch latest rewards list to ensure UI is in sync
+        await fetchRewards();
       }
     } catch (err: any) {
       console.error('Failed to save reward:', err);

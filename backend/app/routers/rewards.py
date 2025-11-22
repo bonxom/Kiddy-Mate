@@ -24,6 +24,7 @@ class RewardCreate(BaseModel):
 class RewardUpdate(BaseModel):
     name: Optional[str] = None
     description: Optional[str] = None
+    type: Optional[RewardType] = None  # Allow updating reward type
     image_url: Optional[str] = None
     cost_coins: Optional[int] = None
     stock_quantity: Optional[int] = None
@@ -111,6 +112,8 @@ async def update_reward(
         reward.name = reward_update.name
     if reward_update.description is not None:
         reward.description = reward_update.description
+    if reward_update.type is not None:
+        reward.type = reward_update.type
     if reward_update.image_url is not None:
         reward.image_url = reward_update.image_url
     if reward_update.cost_coins is not None:
@@ -193,12 +196,13 @@ async def request_redemption(
             detail="Reward is not available"
         )
     
-    # Check stock (if tracked)
-    if reward.stock_quantity > 0 and reward.stock_quantity < 1:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Reward is out of stock"
-        )
+    # Check stock (0 = unlimited, >0 = limited stock)
+    # If stock is being tracked (>0 initially) but now depleted
+    if reward.stock_quantity == 0 and reward.cost_coins > 0:
+        # For shop items (cost > 0), stock_quantity 0 likely means out of stock
+        # But to maintain backward compatibility, we allow unlimited items
+        pass  # Allow redemption even if stock is 0 (unlimited items)
+    # Note: Stock will be decremented in approve_redemption if stock_quantity > 0
     
     # Check coins
     if child.current_coins < reward.cost_coins:

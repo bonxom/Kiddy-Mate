@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, status, Depends, Query
 from app.models.task_models import Task, TaskCategory, TaskType
 from app.models.child_models import Child
-from app.models.childtask_models import ChildTask, ChildTaskStatus, ChildTaskPriority
+from app.models.childtask_models import ChildTask, ChildTaskStatus, ChildTaskPriority, TaskData
 from app.schemas.schemas import TaskPublic, TaskCreate, ChildTaskPublic, ChildTaskWithDetails
 from typing import List, Optional
 from datetime import datetime, time
@@ -25,21 +25,22 @@ def parse_date_string(date_str: Optional[str]) -> Optional[datetime]:
     except ValueError:
         return None
 
-def merge_task_details(child_task: ChildTask, task) -> dict:
+def merge_task_details(child_task: ChildTask, task_source) -> dict:
     """
     Merge ChildTask custom fields with Task template fields.
     Custom fields take precedence over template fields.
+    Supports both Task document and embedded TaskData.
     """
     return {
-        "title": child_task.custom_title if child_task.custom_title else task.title,
-        "reward_coins": child_task.custom_reward_coins if child_task.custom_reward_coins is not None else task.reward_coins,
-        # Other fields always from template
-        "description": task.description,
-        "category": task.category,
-        "type": task.type,
-        "difficulty": task.difficulty,
-        "suggested_age_range": task.suggested_age_range,
-        "reward_badge_name": task.reward_badge_name,
+        "title": child_task.custom_title if child_task.custom_title else task_source.title,
+        "reward_coins": child_task.custom_reward_coins if child_task.custom_reward_coins is not None else task_source.reward_coins,
+        # Other fields always from template/embedded
+        "description": task_source.description,
+        "category": task_source.category,
+        "type": task_source.type,
+        "difficulty": task_source.difficulty,
+        "suggested_age_range": task_source.suggested_age_range,
+        "reward_badge_name": task_source.reward_badge_name,
     }
 
 # Request schema for update operations
@@ -130,17 +131,25 @@ async def get_child_tasks(
     # Populate task details and apply category filter
     results = []
     for ct in child_tasks:
-        # Fetch task details
-        task = await ct.task.fetch() if ct.task else None
-        if not task:
+        # Get task details (either from Link or embedded)
+        if ct.task:
+            task_source = await ct.task.fetch()
+            task_id = str(ct.task.ref.id) if ct.task.ref else str(ct.task.id)
+        elif ct.task_data:
+            task_source = ct.task_data
+            task_id = f"custom-{ct.id}"  # Custom tasks don't have separate Task ID
+        else:
+            continue
+        
+        if not task_source:
             continue
         
         # Apply category filter if specified
-        if category and task.category != category:
+        if category and task_source.category != category:
             continue
         
-        # Merge custom fields with task template
-        merged_details = merge_task_details(ct, task)
+        # Merge custom fields with task template/embedded data
+        merged_details = merge_task_details(ct, task_source)
         
         # Build response with full task details
         results.append(
@@ -156,7 +165,7 @@ async def get_child_tasks(
                 custom_title=ct.custom_title,
                 custom_reward_coins=ct.custom_reward_coins,
                 task=TaskPublic(
-                    id=str(task.id),
+                    id=task_id,
                     title=merged_details["title"],
                     description=merged_details["description"],
                     category=merged_details["category"],
@@ -295,26 +304,38 @@ async def verify_task(
     child_task.status = ChildTaskStatus.COMPLETED
     child_task.completed_at = datetime.utcnow()
 
-    # Award coins and badges
-    task_link = child_task.task
-    task_id_or_ref = getattr(task_link, "id", None) or getattr(task_link, "ref", None)
-    task_id_str = str(getattr(task_id_or_ref, "id", task_id_or_ref)) if task_id_or_ref is not None else None
-    if not task_id_str:
+    # Award coins and badges - handle both Link and embedded task_data
+    if child_task.task:
+        # Task from library
+        task_link = child_task.task
+        task_id_or_ref = getattr(task_link, "id", None) or getattr(task_link, "ref", None)
+        task_id_str = str(getattr(task_id_or_ref, "id", task_id_or_ref)) if task_id_or_ref is not None else None
+        if not task_id_str:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Task not found."
+            )
+        task_source = await Task.get(task_id_str)
+        if not task_source:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Task not found."
+            )
+    elif child_task.task_data:
+        # Custom embedded task
+        task_source = child_task.task_data
+    else:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Task not found."
-        )
-    task_goc = await Task.get(task_id_str)
-    if not task_goc:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Task not found."
+            detail="Task data not found."
         )
 
-    child.current_coins += task_goc.reward_coins
+    # Use custom_reward_coins if set, otherwise use task's reward_coins
+    reward_coins = child_task.custom_reward_coins if child_task.custom_reward_coins is not None else task_source.reward_coins
+    child.current_coins += reward_coins
 
-    if task_goc.reward_badge_name:
-        reward = await Reward.find_one(Reward.name == task_goc.reward_badge_name)
+    if task_source.reward_badge_name:
+        reward = await Reward.find_one(Reward.name == task_source.reward_badge_name)
         if reward:
             existing_reward = await ChildReward.find_one(
                 ChildReward.child.id == child.id,
@@ -376,11 +397,21 @@ async def update_assigned_task(
     
     await child_task.save()
     
-    # Fetch task details for response
-    task = await child_task.task.fetch()
+    # Fetch task details for response (handle both Link and embedded)
+    if child_task.task:
+        task_source = await child_task.task.fetch()
+        task_id = str(child_task.task.ref.id) if child_task.task.ref else str(child_task.task.id)
+    elif child_task.task_data:
+        task_source = child_task.task_data
+        task_id = f"custom-{child_task.id}"
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Task data not found."
+        )
     
-    # Merge custom fields with task template
-    merged_details = merge_task_details(child_task, task)
+    # Merge custom fields with task template/embedded data
+    merged_details = merge_task_details(child_task, task_source)
     
     return ChildTaskWithDetails(
         id=str(child_task.id),
@@ -394,7 +425,7 @@ async def update_assigned_task(
         custom_title=child_task.custom_title,
         custom_reward_coins=child_task.custom_reward_coins,
         task=TaskPublic(
-            id=str(task.id),
+            id=task_id,
             title=merged_details["title"],
             description=merged_details["description"],
             category=merged_details["category"],
@@ -412,9 +443,9 @@ async def create_and_assign_task(
     request: CreateAndAssignTaskRequest,
     child: Child = Depends(verify_child_ownership)
 ):
-    """Create a custom task and assign it to child in one step."""
-    # Create task in library
-    new_task = Task(
+    """Create a custom task and assign it to child in one step. Does NOT add to task library."""
+    # Create embedded task data (NOT inserted into Task collection)
+    task_data = TaskData(
         title=request.title,
         description=request.description or '',
         category=request.category,
@@ -424,12 +455,12 @@ async def create_and_assign_task(
         reward_coins=request.reward_coins,
         reward_badge_name=request.reward_badge_name,
     )
-    await new_task.insert()
     
-    # Assign to child immediately
+    # Assign to child with embedded task data
     child_task = ChildTask(
         child=child,
-        task=new_task,
+        task=None,  # No link to Task collection
+        task_data=task_data,  # Embedded data
         status=ChildTaskStatus.ASSIGNED,
         assigned_at=datetime.utcnow(),
         priority=request.priority or ChildTaskPriority.MEDIUM,
@@ -451,15 +482,15 @@ async def create_and_assign_task(
         custom_title=child_task.custom_title,
         custom_reward_coins=child_task.custom_reward_coins,
         task=TaskPublic(
-            id=str(new_task.id),
-            title=new_task.title,
-            description=new_task.description,
-            category=new_task.category,
-            type=new_task.type,
-            difficulty=new_task.difficulty,
-            suggested_age_range=new_task.suggested_age_range,
-            reward_coins=new_task.reward_coins,
-            reward_badge_name=new_task.reward_badge_name,
+            id=f"custom-{child_task.id}",  # Custom tasks use ChildTask ID
+            title=task_data.title,
+            description=task_data.description,
+            category=task_data.category,
+            type=task_data.type,
+            difficulty=task_data.difficulty,
+            suggested_age_range=task_data.suggested_age_range,
+            reward_coins=task_data.reward_coins,
+            reward_badge_name=task_data.reward_badge_name,
         )
     )
 

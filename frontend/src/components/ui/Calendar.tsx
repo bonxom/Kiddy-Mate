@@ -8,7 +8,7 @@ interface CalendarProps extends Omit<DayPickerSingleProps, 'mode'> {
 const Calendar = ({ className = '', ...props }: CalendarProps) => {
   return (
     <div
-      className={`bg-white rounded-lg ${className} overflow-hidden w-full`}
+      className={`bg-white rounded-lg ${className} w-full`}
       style={{ maxWidth: '100%' }}
     >
       <DayPicker

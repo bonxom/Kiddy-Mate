@@ -13,6 +13,7 @@ const RewardCenterPage = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [rewardsCount, setRewardsCount] = useState(0);
   const [pendingRequestsCount, setPendingRequestsCount] = useState(0);
+  const [refreshShopTrigger, setRefreshShopTrigger] = useState(0);
 
   // Fetch counts on mount
   useEffect(() => {
@@ -38,6 +39,11 @@ const RewardCenterPage = () => {
 
   const handlePendingRequestsCountChange = (count: number) => {
     setPendingRequestsCount(count);
+  };
+
+  const handleRedemptionProcessed = () => {
+    // Trigger shop refresh after approve/reject
+    setRefreshShopTrigger(prev => prev + 1);
   };
 
   const tabs = [
@@ -133,10 +139,12 @@ const RewardCenterPage = () => {
                   isCreateModalOpen={isCreateModalOpen}
                   setIsCreateModalOpen={setIsCreateModalOpen}
                   onRewardsCountChange={handleRewardsCountChange}
+                  refreshTrigger={refreshShopTrigger}
                 />
               ) : (
                 <RedemptionRequestsTab 
                   onPendingCountChange={handlePendingRequestsCountChange}
+                  onRedemptionProcessed={handleRedemptionProcessed}
                 />
               )}
             </div>

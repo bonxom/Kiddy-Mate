@@ -7,9 +7,10 @@ import { getRedemptionRequests, approveRedemption, rejectRedemption } from '../.
 
 interface RedemptionRequestsTabProps {
   onPendingCountChange?: (count: number) => void;
+  onRedemptionProcessed?: () => void; // Callback after approve/reject to refresh shop
 }
 
-const RedemptionRequestsTab = ({ onPendingCountChange }: RedemptionRequestsTabProps) => {
+const RedemptionRequestsTab = ({ onPendingCountChange, onRedemptionProcessed }: RedemptionRequestsTabProps) => {
   const [requests, setRequests] = useState<RedemptionRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -55,6 +56,7 @@ const RedemptionRequestsTab = ({ onPendingCountChange }: RedemptionRequestsTabPr
     try {
       await approveRedemption(requestId);
       await fetchRequests(); // Refresh the list
+      onRedemptionProcessed?.(); // Notify parent to refresh shop (stock changed)
       showToast('Redemption request approved', 'success');
     } catch (err: any) {
       showToast(err.message || 'Failed to approve request', 'error');
@@ -65,6 +67,7 @@ const RedemptionRequestsTab = ({ onPendingCountChange }: RedemptionRequestsTabPr
     try {
       await rejectRedemption(requestId);
       await fetchRequests(); // Refresh the list
+      onRedemptionProcessed?.(); // Notify parent (though stock unchanged, keeps UI consistent)
       showToast('Redemption request rejected', 'success');
     } catch (err: any) {
       showToast(err.message || 'Failed to reject request', 'error');

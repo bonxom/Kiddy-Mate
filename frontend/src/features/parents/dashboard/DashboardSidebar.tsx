@@ -56,7 +56,6 @@ const DashboardSidebar = ({ skillData }: DashboardSidebarProps) => {
           className="w-full"
         />
       </div>
-
       {/* Skills Development Block */}
       <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-5 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 cursor-pointer">
         <div className="flex items-center justify-between mb-4">
