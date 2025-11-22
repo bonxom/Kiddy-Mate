@@ -6,6 +6,7 @@
 export const TaskEvents = {
   LIBRARY_UPDATED: 'task:library:updated',
   TASK_ASSIGNED: 'task:assigned',
+  TASK_UNASSIGNED: 'task:unassigned',
   TASK_DELETED: 'task:deleted',
   
   /**

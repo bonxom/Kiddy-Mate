@@ -8,6 +8,9 @@ import AssignTaskModal from './AssignTaskModal';
 import { useTaskLibrary } from '../../../hooks/useTasks';
 import { mapToLibraryTask } from '../../../utils/taskMappers';
 import { getCategoryConfig, TASK_CATEGORY_LABELS, ICON_SIZES } from '../../../constants/taskConfig';
+import { useChildContext } from '../../../providers/ChildProvider';
+import { getChildTasks } from '../../../api/services/taskService';
+import { TaskEvents } from '../../../utils/events';
 
 interface TaskLibraryTabProps {
   onCountChange?: (count: number) => void;
@@ -16,16 +19,94 @@ interface TaskLibraryTabProps {
 const TaskLibraryTab = ({ onCountChange }: TaskLibraryTabProps) => {
   // Use real API
   const { tasks: backendTasks, loading, error, fetchTasks } = useTaskLibrary();
+  const { children } = useChildContext();
+  const [assignedTaskIds, setAssignedTaskIds] = useState<Set<string>>(new Set());
 
   // Fetch tasks on mount
   useEffect(() => {
     fetchTasks();
   }, [fetchTasks]);
 
-  // Map backend tasks to frontend format
+  // Fetch all assigned task IDs from all children
+  useEffect(() => {
+    const fetchAssignedTaskIds = async () => {
+      if (children.length === 0) {
+        setAssignedTaskIds(new Set());
+        return;
+      }
+
+      try {
+        // Fetch assigned tasks for all children
+        const allAssignedTasks = await Promise.all(
+          children.map(child => getChildTasks(child.id))
+        );
+
+        // Extract task IDs from all assigned tasks
+        const taskIds = new Set<string>();
+        allAssignedTasks.forEach(childTasks => {
+          childTasks.forEach(childTask => {
+            if (childTask.task?.id) {
+              taskIds.add(childTask.task.id);
+            }
+          });
+        });
+
+        setAssignedTaskIds(taskIds);
+      } catch (err) {
+        console.error('Failed to fetch assigned task IDs:', err);
+        // Don't block UI if this fails
+      }
+    };
+
+    fetchAssignedTaskIds();
+  }, [children]);
+
+  // Listen for task assignment/unassignment events to update assigned task IDs
+  useEffect(() => {
+    const refreshAssignedTaskIds = async () => {
+      if (children.length === 0) {
+        setAssignedTaskIds(new Set());
+        return;
+      }
+
+      try {
+        const allAssignedTasks = await Promise.all(
+          children.map(child => getChildTasks(child.id))
+        );
+
+        const taskIds = new Set<string>();
+        allAssignedTasks.forEach(childTasks => {
+          childTasks.forEach(childTask => {
+            if (childTask.task?.id) {
+              taskIds.add(childTask.task.id);
+            }
+          });
+        });
+
+        setAssignedTaskIds(taskIds);
+        // Also refresh library to ensure consistency
+        fetchTasks();
+      } catch (err) {
+        console.error('Failed to refresh assigned task IDs:', err);
+      }
+    };
+
+    // Listen to both assignment and unassignment events
+    const cleanup1 = TaskEvents.listen(TaskEvents.TASK_ASSIGNED, refreshAssignedTaskIds);
+    const cleanup2 = TaskEvents.listen(TaskEvents.TASK_UNASSIGNED, refreshAssignedTaskIds);
+
+    return () => {
+      cleanup1();
+      cleanup2();
+    };
+  }, [children, fetchTasks]);
+
+  // Map backend tasks to frontend format and filter out assigned tasks
   const tasks = useMemo(() => {
-    return backendTasks.map(mapToLibraryTask);
-  }, [backendTasks]);
+    const allTasks = backendTasks.map(mapToLibraryTask);
+    // Filter out tasks that have been assigned to any child
+    return allTasks.filter(task => !assignedTaskIds.has(task.id));
+  }, [backendTasks, assignedTaskIds]);
 
   // Update parent count when tasks change
   useEffect(() => {

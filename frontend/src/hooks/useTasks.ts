@@ -17,6 +17,7 @@ import {
   unassignTask,
   completeTask,
   verifyTask,
+  rejectTaskVerification,
   giveupTask,
   checkTaskStatus,
   getUnassignedTasks,
@@ -128,7 +129,10 @@ export const useAssignedTasks = (childId: string) => {
 
   const fetchTasks = useCallback(
     async (params?: GetChildTasksParams) => {
-      if (!childId) return [];
+      if (!childId) {
+        setTasks([]);
+        return [];
+      }
 
       setLoading(true);
       setError(null);
@@ -150,8 +154,11 @@ export const useAssignedTasks = (childId: string) => {
   useEffect(() => {
     if (childId) {
       fetchTasks();
+    } else {
+      // Clear tasks when no childId
+      setTasks([]);
     }
-  }, [childId, fetchTasks]);
+  }, [childId]); // Remove fetchTasks from dependencies to avoid infinite loops
 
   const assignNewTask = useCallback(
     async (
@@ -261,6 +268,26 @@ export const useAssignedTasks = (childId: string) => {
     [childId, fetchTasks]
   );
 
+  const reject = useCallback(
+    async (childTaskId: string) => {
+      if (!childId) throw new Error('Child ID is required');
+
+      setLoading(true);
+      setError(null);
+      try {
+        await rejectTaskVerification(childId, childTaskId);
+        // Refresh tasks to get updated status
+        await fetchTasks();
+      } catch (err: any) {
+        setError(err.message || 'Failed to reject task verification');
+        throw err;
+      } finally {
+        setLoading(false);
+      }
+    },
+    [childId, fetchTasks]
+  );
+
   const giveup = useCallback(
     async (childTaskId: string) => {
       if (!childId) throw new Error('Child ID is required');
@@ -291,6 +318,7 @@ export const useAssignedTasks = (childId: string) => {
     unassignTask: unassign,
     completeTask: markComplete,
     verifyTask: verify,
+    rejectTaskVerification: reject,
     giveupTask: giveup,
   };
 };

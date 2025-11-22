@@ -13,7 +13,7 @@ export interface UIAssignedTask {
   task: string;
   date: string;
   status: 'assigned' | 'in-progress' | 'need-verify' | 'completed' | 'missed';
-  reward: number;
+  reward: number; // Always required, default to 0 if not provided
   category: TaskCategory;
   priority: 'high' | 'medium' | 'low';
   progress?: number;
@@ -129,9 +129,12 @@ export const mapToUIAssignedTask = (
   const taskTitle = backendTask.custom_title || backendTask.task.title;
   
   // Use custom_reward_coins if available, otherwise use task.reward_coins
-  const rewardCoins = backendTask.custom_reward_coins !== undefined 
+  // Fallback to 0 if both are undefined/null
+  const rewardCoins = backendTask.custom_reward_coins !== undefined && backendTask.custom_reward_coins !== null
     ? backendTask.custom_reward_coins 
-    : backendTask.task.reward_coins;
+    : (backendTask.task.reward_coins !== undefined && backendTask.task.reward_coins !== null
+      ? backendTask.task.reward_coins
+      : 0);
 
   return {
     id: backendTask.id,

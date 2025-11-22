@@ -242,7 +242,7 @@ const TaskDetailModal = ({ isOpen, onClose, task, onSave, onDelete, onUpdate }: 
                 <Input
                   type="number"
                   min="0"
-                  value={formData.reward}
+                  value={formData.reward ?? 0}
                   onChange={(e) => setFormData({ ...formData, reward: parseInt(e.target.value) || 0 })}
                   fullWidth
                   placeholder="Enter reward coins"
@@ -327,7 +327,7 @@ const TaskDetailModal = ({ isOpen, onClose, task, onSave, onDelete, onUpdate }: 
                   <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Reward</label>
                   <div className="flex items-center gap-1.5 w-fit px-3 py-2 rounded-lg border border-yellow-200" style={{ background: 'linear-gradient(to right, rgb(254 252 232), rgb(254 243 199))' }}>
                     <Star className="w-5 h-5 text-yellow-600 fill-yellow-500" />
-                    <span className="font-bold text-gray-900 text-lg">{formData.reward} Coins</span>
+                    <span className="font-bold text-gray-900 text-lg">{formData.reward ?? 0} Coins</span>
                   </div>
                 </div>
 

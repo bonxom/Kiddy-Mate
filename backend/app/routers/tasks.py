@@ -31,9 +31,18 @@ def merge_task_details(child_task: ChildTask, task_source) -> dict:
     Custom fields take precedence over template fields.
     Supports both Task document and embedded TaskData.
     """
+    # Get reward_coins with fallback: custom_reward_coins > task_source.reward_coins > 0
+    reward_coins = 0
+    if child_task.custom_reward_coins is not None:
+        reward_coins = child_task.custom_reward_coins
+    elif hasattr(task_source, 'reward_coins') and task_source.reward_coins is not None:
+        reward_coins = task_source.reward_coins
+    else:
+        reward_coins = 0  # Default fallback
+    
     return {
         "title": child_task.custom_title if child_task.custom_title else task_source.title,
-        "reward_coins": child_task.custom_reward_coins if child_task.custom_reward_coins is not None else task_source.reward_coins,
+        "reward_coins": reward_coins,
         "category": child_task.custom_category if child_task.custom_category else task_source.category,
         # Other fields always from template/embedded
         "description": task_source.description,
@@ -500,6 +509,52 @@ async def verify_task(
     await child.save()
     
     return {"message": "Task verified successfully! Rewards have been awarded."}
+
+@router.post("/{child_id}/tasks/{child_task_id}/reject", response_model=dict)
+async def reject_task_verification(
+    child_id: str,
+    child_task_id: str,
+    child: Child = Depends(verify_child_ownership),
+    current_user: User = Depends(verify_parent_token)
+):
+    """Reject/Decline a completed task verification - parent rejects child's completion and returns task to in-progress.
+    PARENT ONLY: Only parents can reject task verification."""
+    try:
+        child_task = await ChildTask.get(child_task_id)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid child task ID format: {child_task_id}"
+        )
+    
+    if not child_task:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Child task not found with ID: {child_task_id}"
+        )
+
+    link_child_id = extract_id_from_link(child_task.child)
+    if not link_child_id or link_child_id in ('None', 'null', '') or link_child_id != str(child.id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"You do not own this task. Child task belongs to child ID: {link_child_id}, but you requested child ID: {str(child.id)}"
+        )
+
+    if child_task.status != ChildTaskStatus.NEED_VERIFY:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Task must be waiting for verification to be rejected."
+        )
+
+    # Reject verification: return task to in-progress status
+    # Reset progress to allow child to redo the task
+    await child_task.set({
+        "status": ChildTaskStatus.IN_PROGRESS,
+        "progress": 0,  # Reset progress so child can redo
+        "completed_at": None  # Clear completed_at
+    })
+    
+    return {"message": "Task verification rejected. Task returned to in-progress status."}
 
 @router.put("/{child_id}/tasks/{child_task_id}", response_model=ChildTaskWithDetails)
 async def update_assigned_task(

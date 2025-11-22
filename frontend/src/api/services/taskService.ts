@@ -262,6 +262,19 @@ export const verifyTask = async (
 };
 
 /**
+ * Reject task verification (return task to in-progress)
+ */
+export const rejectTaskVerification = async (
+  childId: string,
+  childTaskId: string
+): Promise<{ message: string }> => {
+  const response = await axiosClient.post<{ message: string }>(
+    `/children/${childId}/tasks/${childTaskId}/reject`
+  );
+  return response.data;
+};
+
+/**
  * Check task status
  */
 export const checkTaskStatus = async (

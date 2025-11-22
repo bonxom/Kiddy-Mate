@@ -10,6 +10,7 @@ import { createAndAssignTask } from '../../../api/services/taskService';
 import type { CreateAndAssignTaskRequest } from '../../../api/services/taskService';
 import { mapToBackendCategory } from '../../../utils/taskMappers';
 import { getCategoryConfig, TASK_CATEGORY_LABELS, ICON_SIZES } from '../../../constants/taskConfig';
+import { TaskEvents } from '../../../utils/events';
 
 interface CreateTaskModalProps {
   isOpen: boolean;
@@ -64,6 +65,9 @@ const CreateTaskModal = ({ isOpen, onClose, onTaskCreated }: CreateTaskModalProp
       if (formData.childId !== selectedChildId) {
         setSelectedChildId(formData.childId);
       }
+
+      // Emit event to notify AssignedTasksTab to refresh
+      TaskEvents.emit(TaskEvents.TASK_ASSIGNED, { childId: formData.childId });
 
       // Notify parent to refresh
       onTaskCreated?.();

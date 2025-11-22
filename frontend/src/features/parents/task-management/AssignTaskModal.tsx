@@ -47,8 +47,9 @@ const AssignTaskModal = ({ isOpen, onClose, task, onSuccess }: AssignTaskModalPr
         notes: undefined
       });
 
-      // Emit event to notify library to refresh
+      // Emit events to notify both library and assigned tasks to refresh
       TaskEvents.emit(TaskEvents.LIBRARY_UPDATED);
+      TaskEvents.emit(TaskEvents.TASK_ASSIGNED, { childId: formData.childId });
       
       // Call success callback if provided
       if (onSuccess) {

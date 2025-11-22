@@ -1,18 +1,24 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import toast from 'react-hot-toast';
 import { handleApiError } from '../../../utils/errorHandler';
 import { TaskEvents } from '../../../utils/events';
-import { Search, Trash2, ArrowUpDown, CheckCircle, ListTodo, XCircle } from 'lucide-react';
+import { Search, Trash2, ArrowUpDown, CheckCircle, ListTodo, XCircle, X } from 'lucide-react';
 import Input from '../../../components/ui/Input';
 import Badge from '../../../components/ui/Badge';
 import Modal from '../../../components/ui/Modal';
 import Button from '../../../components/ui/Button';
 import Loading from '../../../components/ui/Loading';
 import TaskDetailModal from './TaskDetailModal';
-import type { AssignedTask } from '../../../types/task.types';
-import { useAssignedTasks } from '../../../hooks/useTasks';
+import type { AssignedTask, ChildTaskWithDetails } from '../../../types/task.types';
 import { mapToUIAssignedTask } from '../../../utils/taskMappers';
 import { useChildContext } from '../../../providers/ChildProvider';
+import { 
+  getChildTasks, 
+  unassignTask as unassignTaskFromAPI,
+  verifyTask as verifyTaskFromAPI,
+  rejectTaskVerification as rejectTaskVerificationFromAPI,
+  giveupTask as giveupTaskFromAPI
+} from '../../../api/services/taskService';
 import {
   getCategoryConfig,
   getPriorityConfig,
@@ -35,35 +41,121 @@ interface AssignedTasksTabProps {
 
 const AssignedTasksTab = ({ onCountChange }: AssignedTasksTabProps) => {
   const { selectedChildId, children } = useChildContext();
+  const [allTasks, setAllTasks] = useState<Array<{ task: ChildTaskWithDetails; childId: string }>>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const {
-    tasks: backendTasks,
-    loading,
-    error,
-    fetchTasks,
-    unassignTask,
-    verifyTask,
-    giveupTask,
-  } = useAssignedTasks(selectedChildId || '');
+  // Fetch tasks from all children
+  const fetchAllTasks = useCallback(async () => {
+    if (children.length === 0) {
+      setAllTasks([]);
+      return;
+    }
 
-  // Listen for library task updates and refresh assigned tasks
+    setLoading(true);
+    setError(null);
+    try {
+      // Fetch tasks for all children in parallel
+      const tasksPromises = children.map(async (child) => {
+        try {
+          const tasks = await getChildTasks(child.id);
+          return tasks.map(task => ({ task, childId: child.id }));
+        } catch (err) {
+          console.error(`Failed to fetch tasks for child ${child.id}:`, err);
+          return [];
+        }
+      });
+
+      const allTasksResults = await Promise.all(tasksPromises);
+      // Flatten the array of arrays
+      const flattenedTasks = allTasksResults.flat();
+      setAllTasks(flattenedTasks);
+    } catch (err: any) {
+      setError(err.message || 'Failed to fetch assigned tasks');
+    } finally {
+      setLoading(false);
+    }
+  }, [children]);
+
+  // Fetch tasks on mount and when children change
   useEffect(() => {
-    return TaskEvents.listen(TaskEvents.LIBRARY_UPDATED, () => {
-      if (selectedChildId) {
-        fetchTasks();
-      }
-    });
-  }, [selectedChildId, fetchTasks]);
+    fetchAllTasks();
+  }, [fetchAllTasks]);
+
+  // Listen for task assignment/creation events and refresh assigned tasks
+  useEffect(() => {
+    const handleLibraryUpdated = () => {
+      fetchAllTasks();
+    };
+
+    const handleTaskAssigned = () => {
+      fetchAllTasks();
+    };
+
+    const handleTaskUnassigned = () => {
+      fetchAllTasks();
+    };
+
+    // Listen to multiple events that should trigger refresh
+    const cleanup1 = TaskEvents.listen(TaskEvents.LIBRARY_UPDATED, handleLibraryUpdated);
+    const cleanup2 = TaskEvents.listen(TaskEvents.TASK_ASSIGNED, handleTaskAssigned);
+    const cleanup3 = TaskEvents.listen(TaskEvents.TASK_UNASSIGNED, handleTaskUnassigned);
+
+    return () => {
+      cleanup1();
+      cleanup2();
+      cleanup3();
+    };
+  }, [fetchAllTasks]);
 
   // Transform backend tasks to UI format
   const tasks = useMemo(() => {
-    return backendTasks.map(task => {
-      // Get child name directly
-      const child = children.find(c => c.id === selectedChildId);
+    return allTasks.map(({ task, childId }) => {
+      // Get child name from childId
+      const child = children.find(c => c.id === childId);
       const childName = child?.name || 'Unknown Child';
       return mapToUIAssignedTask(task, childName);
     });
-  }, [backendTasks, children, selectedChildId]);
+  }, [allTasks, children]);
+
+  // Wrapper functions for task operations that need childId
+  const unassignTask = async (childTaskId: string) => {
+    // Find the task to get its childId
+    const taskWithChild = allTasks.find(({ task }) => task.id === childTaskId);
+    if (!taskWithChild) {
+      throw new Error('Task not found');
+    }
+    await unassignTaskFromAPI(taskWithChild.childId, childTaskId);
+    // Refresh tasks after unassign
+    await fetchAllTasks();
+  };
+
+  const verifyTask = async (childTaskId: string) => {
+    const taskWithChild = allTasks.find(({ task }) => task.id === childTaskId);
+    if (!taskWithChild) {
+      throw new Error('Task not found');
+    }
+    await verifyTaskFromAPI(taskWithChild.childId, childTaskId);
+    await fetchAllTasks();
+  };
+
+  const rejectTaskVerification = async (childTaskId: string) => {
+    const taskWithChild = allTasks.find(({ task }) => task.id === childTaskId);
+    if (!taskWithChild) {
+      throw new Error('Task not found');
+    }
+    await rejectTaskVerificationFromAPI(taskWithChild.childId, childTaskId);
+    await fetchAllTasks();
+  };
+
+  const giveupTask = async (childTaskId: string) => {
+    const taskWithChild = allTasks.find(({ task }) => task.id === childTaskId);
+    if (!taskWithChild) {
+      throw new Error('Task not found');
+    }
+    await giveupTaskFromAPI(taskWithChild.childId, childTaskId);
+    await fetchAllTasks();
+  };
 
   // Update parent count when tasks change
   useEffect(() => {
@@ -121,25 +213,31 @@ const AssignedTasksTab = ({ onCountChange }: AssignedTasksTabProps) => {
     e.stopPropagation(); // Prevent row click
     try {
       await verifyTask(taskId);
-      toast.success('Task verified successfully!');
+      toast.success('Task verified successfully! Rewards have been awarded. 🎉');
       // Tasks will auto-refresh via the hook
     } catch (err) {
       handleApiError(err, 'Failed to verify task');
     }
   };
 
+  const handleRejectClick = async (taskId: string, e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent row click
+    try {
+      await rejectTaskVerification(taskId);
+      toast.success('Task verification rejected. Task returned to in-progress.');
+      // Tasks will auto-refresh via the hook
+    } catch (err) {
+      handleApiError(err, 'Failed to reject task verification');
+    }
+  };
+
   const handleGiveupClick = async (taskId: string, e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent row click
-    
-    if (!selectedChildId) {
-      toast.error('Please select a child first');
-      return;
-    }
     
     try {
       await giveupTask(taskId);
       toast.success('Task marked as given up. Try assigning an easier one! 💪');
-      // Tasks will auto-refresh via the hook
+      // Tasks will auto-refresh via fetchAllTasks
     } catch (err) {
       handleApiError(err, 'Failed to give up task');
     }
@@ -149,6 +247,8 @@ const AssignedTasksTab = ({ onCountChange }: AssignedTasksTabProps) => {
     if (taskToDelete) {
       try {
         await unassignTask(taskToDelete);
+        // Emit event to notify TaskLibraryTab to refresh
+        TaskEvents.emit(TaskEvents.TASK_UNASSIGNED);
         setTaskToDelete(null);
         setDeleteModalOpen(false);
         toast.success('Task deleted successfully!');
@@ -174,6 +274,8 @@ const AssignedTasksTab = ({ onCountChange }: AssignedTasksTabProps) => {
   const handleDeleteTask = async (taskId: string) => {
     try {
       await unassignTask(taskId);
+      // Emit event to notify TaskLibraryTab to refresh
+      TaskEvents.emit(TaskEvents.TASK_UNASSIGNED);
       setDetailModalOpen(false);
       setSelectedTask(null);
       toast.success('Task deleted successfully!');
@@ -202,15 +304,15 @@ const AssignedTasksTab = ({ onCountChange }: AssignedTasksTabProps) => {
         </div>
       )}
 
-      {/* No Child Selected */}
-      {!selectedChildId && !loading && (
+      {/* No Children */}
+      {children.length === 0 && !loading && (
         <div className="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded-lg mb-4">
-          <p className="text-sm">Please select a child to view their assigned tasks.</p>
+          <p className="text-sm">No children found. Please add a child first.</p>
         </div>
       )}
 
       {/* Search */}
-      {selectedChildId && !loading && (
+      {children.length > 0 && !loading && (
         <>
           <div className="mb-4">
             <div className="relative max-w-md">
@@ -388,7 +490,7 @@ const AssignedTasksTab = ({ onCountChange }: AssignedTasksTabProps) => {
                           ? 'text-yellow-600'
                           : 'text-yellow-500'
                           }`}>
-                          {task.reward} Coins
+                          {task.reward ?? 0} Coins
                         </span>
                       </div>
                     </td>
@@ -397,13 +499,22 @@ const AssignedTasksTab = ({ onCountChange }: AssignedTasksTabProps) => {
                     <td className="px-4 py-4 text-center">
                       <div className="flex items-center justify-center gap-2">
                         {task.status === 'need-verify' && (
-                          <button
-                            onClick={(e) => handleVerifyClick(task.id, e)}
-                            className="p-2 text-green-500 hover:bg-green-50 rounded-lg transition-all duration-200 hover:scale-110 hover:shadow-md"
-                            title="Verify task"
-                          >
-                            <CheckCircle className="w-4 h-4" />
-                          </button>
+                          <>
+                            <button
+                              onClick={(e) => handleVerifyClick(task.id, e)}
+                              className="p-2 text-green-500 hover:bg-green-50 rounded-lg transition-all duration-200 hover:scale-110 hover:shadow-md"
+                              title="Verify and approve task"
+                            >
+                              <CheckCircle className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={(e) => handleRejectClick(task.id, e)}
+                              className="p-2 text-orange-500 hover:bg-orange-50 rounded-lg transition-all duration-200 hover:scale-110 hover:shadow-md"
+                              title="Reject verification and return to in-progress"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          </>
                         )}
                         {/* {(task.status === 'in-progress' || task.status === 'assigned') && (
                           <button
@@ -483,7 +594,7 @@ const AssignedTasksTab = ({ onCountChange }: AssignedTasksTabProps) => {
           onSave={handleSaveTask}
           onDelete={handleDeleteTask}
           onUpdate={async () => {
-            await fetchTasks(); // Refresh task list
+            await fetchAllTasks(); // Refresh task list
             setSelectedTask(null); // Clear selected task to force re-render
             setDetailModalOpen(false); // Close modal after refresh
           }}
