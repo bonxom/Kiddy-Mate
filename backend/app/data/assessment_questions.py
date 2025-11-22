@@ -1,6 +1,6 @@
 """
 Assessment questions data - mirrors frontend assessmentQuestions.ts
-Used for building prompts to Gemini API
+Used for building prompts to OpenAI API
 """
 
 ASSESSMENT_QUESTIONS = {

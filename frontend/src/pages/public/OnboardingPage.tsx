@@ -200,9 +200,7 @@ const OnboardingPage = () => {
       // Log request for debugging
       console.log('Sending onboarding request:', JSON.stringify(onboardingRequest, null, 2));
 
-      const response = await completeOnboarding(onboardingRequest);
-      
-      // Cập nhật trạng thái người dùng
+      // Update user info immediately (optimistic update)
       user.hasCompletedOnboarding = true;
       user.displayName = finalData.parentInfo.displayName;
       if (finalData.parentInfo.phoneNumber) {
@@ -210,10 +208,17 @@ const OnboardingPage = () => {
       }
       localStorage.setItem(STORAGE_KEYS.AUTH_USER, JSON.stringify(user));
 
-      console.log('Onboarding completed successfully:', response);
-      navigate('/parent/dashboard');
+      // Submit onboarding request but don't wait for response
+      // This prevents race conditions and allows immediate redirect
+      completeOnboarding(onboardingRequest).catch((error: any) => {
+        console.error('Onboarding error (background):', error);
+        // Error will be handled by dashboard polling
+      });
+
+      // Redirect immediately to dashboard with loading state
+      navigate('/parent/dashboard?onboarding=processing');
     } catch (error: any) {
-      console.error('Onboarding error:', error);
+      console.error('Onboarding validation error:', error);
       
       // Extract error message from response
       let errorMessage = 'Failed to complete onboarding. Please try again.';

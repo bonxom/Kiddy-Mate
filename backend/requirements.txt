@@ -10,5 +10,4 @@ passlib[bcrypt]
 python-multipart
 apscheduler
 httpx
-google-generativeai
 openai

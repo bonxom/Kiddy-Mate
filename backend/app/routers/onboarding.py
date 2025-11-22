@@ -12,7 +12,7 @@ from app.data.assessment_questions import ASSESSMENT_QUESTIONS
 
 def _calculate_fallback_traits(assessment_answers: Dict[str, Dict[str, Optional[str]]]) -> Dict:
     """
-    Calculate trait scores from assessment answers when Gemini API is unavailable.
+    Calculate trait scores from assessment answers when OpenAI API is unavailable.
     Converts 1-5 scale to 0-100 scale.
     """
     def calculate_average_score(answers: Dict[str, Optional[str]]) -> int:
@@ -131,13 +131,48 @@ async def complete_onboarding(
     
     created_children = []
     
+    # STEP 1: Validate and check all usernames BEFORE processing any child
+    # This prevents race conditions when OpenAI API calls take time
+    usernames_in_request = []
     for child_data in request.children:
-        # Check if username already exists
-        existing_child = await Child.find_one(Child.username == child_data.username)
+        # Validate username is not empty
+        if not child_data.username or not child_data.username.strip():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Username cannot be empty."
+            )
+        
+        username = child_data.username.strip()
+        
+        # Check for duplicate username within the same request
+        if username in usernames_in_request:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Username '{username}' is used for multiple children. Each child must have a unique username."
+            )
+        
+        # Check if username already exists in database
+        existing_child = await Child.find_one(Child.username == username)
         if existing_child:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Username '{child_data.username}' is already taken. Please choose another username."
+                detail=f"Username '{username}' is already taken. Please choose another username."
+            )
+        
+        usernames_in_request.append(username)
+    
+    # STEP 2: Process each child (OpenAI calls may take time, but usernames are already validated)
+    for idx, child_data in enumerate(request.children):
+        username = child_data.username.strip()
+        
+        # Double-check username right before insert to prevent race condition
+        # (in case another request inserted the same username while we were calling OpenAI)
+        existing_child = await Child.find_one(Child.username == username)
+        if existing_child:
+            logging.warning(f"⚠️ Username '{username}' was taken by another request during processing")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Username '{username}' is already taken. Please choose another username."
             )
 
         try:
@@ -146,10 +181,10 @@ async def complete_onboarding(
             
             birth_date = datetime.strptime(child_data.date_of_birth, '%Y-%m-%d')
         
-        # Calculate age for Gemini analysis
+        # Calculate age for OpenAI analysis
         age = (datetime.now() - birth_date).days // 365
         
-        # Prepare child info for Gemini
+        # Prepare child info for OpenAI
         child_info = {
             "name": child_data.full_name,
             "nickname": child_data.nickname,
@@ -162,41 +197,41 @@ async def complete_onboarding(
             "challenges": child_data.challenges or []
         }
         
-        # Prepare assessment answers for Gemini
+        # Prepare assessment answers for OpenAI
         assessment_answers = {
             "discipline_autonomy": child_data.discipline_autonomy,
             "emotional_intelligence": child_data.emotional_intelligence,
             "social_interaction": child_data.social_interaction
         }
         
-        # Call ChatGPT API to analyze assessment and get initial traits
+        # Call OpenAI API to analyze assessment and get initial traits
         initial_traits = {"favorite_topics": child_data.favorite_topics}
         
         # Check if OpenAI API key is configured
         from app.config import settings
         if not settings.OPENAI_API_KEY:
             logging.warning(f"⚠️ OPENAI_API_KEY not configured. Using fallback calculation for {child_data.full_name}")
-            logging.warning("   Please set OPENAI_API_KEY in .env file to enable ChatGPT analysis")
+            logging.warning("   Please set OPENAI_API_KEY in .env file to enable OpenAI analysis")
             initial_traits.update(_calculate_fallback_traits(assessment_answers))
         else:
             try:
-                logging.info(f"🔍 Calling ChatGPT API to analyze assessment for {child_data.full_name}...")
-                chatgpt_result = analyze_assessment_with_chatgpt(
+                logging.info(f"🔍 Calling OpenAI API to analyze assessment for {child_data.full_name}...")
+                openai_result = analyze_assessment_with_chatgpt(
                     child_info=child_info,
                     assessment_answers=assessment_answers,
                     questions_data=ASSESSMENT_QUESTIONS
                 )
                 
-                # Store the ChatGPT analysis results in initial_traits
+                # Store the OpenAI analysis results in initial_traits
                 initial_traits.update({
-                    "overall_traits": chatgpt_result["overall_traits"],
-                    "explanations": chatgpt_result["explanations"],
-                    "recommended_focus": chatgpt_result["recommended_focus"],
+                    "overall_traits": openai_result["overall_traits"],
+                    "explanations": openai_result["explanations"],
+                    "recommended_focus": openai_result["recommended_focus"],
                     "favorite_topics": child_data.favorite_topics
                 })
                 
-                logging.info(f"✅ Successfully analyzed assessment for {child_data.full_name} using ChatGPT")
-                logging.info(f"   Traits: {chatgpt_result['overall_traits']}")
+                logging.info(f"✅ Successfully analyzed assessment for {child_data.full_name} using OpenAI")
+                logging.info(f"   Traits: {openai_result['overall_traits']}")
             except RuntimeError as e:
                 error_msg = str(e)
                 if "not configured" in error_msg.lower():
@@ -204,7 +239,7 @@ async def complete_onboarding(
                     logging.warning(f"   Using fallback calculation for {child_data.full_name}")
                     initial_traits.update(_calculate_fallback_traits(assessment_answers))
                 elif "quota" in error_msg.lower() or "rate limit" in error_msg.lower():
-                    logging.warning(f"⚠️ ChatGPT quota/rate limit exceeded for {child_data.full_name}")
+                    logging.warning(f"⚠️ OpenAI quota/rate limit exceeded for {child_data.full_name}")
                     logging.warning(f"   Error: {error_msg}")
                     logging.warning(f"   Using fallback calculation")
                     initial_traits.update(_calculate_fallback_traits(assessment_answers))
@@ -214,17 +249,17 @@ async def complete_onboarding(
                     logging.warning(f"   Using fallback calculation")
                     initial_traits.update(_calculate_fallback_traits(assessment_answers))
                 else:
-                    logging.error(f"❌ Failed to analyze assessment with ChatGPT for {child_data.full_name}: {error_msg}")
+                    logging.error(f"❌ Failed to analyze assessment with OpenAI for {child_data.full_name}: {error_msg}")
                     logging.warning(f"   Using fallback calculation")
                     initial_traits.update(_calculate_fallback_traits(assessment_answers))
             except Exception as e:
-                logging.error(f"❌ Unexpected error analyzing assessment with ChatGPT for {child_data.full_name}: {type(e).__name__}: {e}")
+                logging.error(f"❌ Unexpected error analyzing assessment with OpenAI for {child_data.full_name}: {type(e).__name__}: {e}")
                 logging.warning(f"   Using fallback calculation")
                 import traceback
                 logging.debug(traceback.format_exc())
                 initial_traits.update(_calculate_fallback_traits(assessment_answers))
         
-        # Create child with initial_traits from ChatGPT
+        # Create child with initial_traits from OpenAI
         logging.info(f"📝 Saving child {child_data.full_name} with initial_traits: {list(initial_traits.get('overall_traits', {}).keys())}")
         from beanie import Link
         from app.services.auth import hash_password
@@ -232,7 +267,7 @@ async def complete_onboarding(
             parent=Link(current_user, User),  
             name=child_data.full_name,
             birth_date=birth_date,
-            username=child_data.username,
+            username=username,  # Use trimmed username
             password_hash=hash_password(child_data.password),
             nickname=child_data.nickname,
             gender=child_data.gender,
