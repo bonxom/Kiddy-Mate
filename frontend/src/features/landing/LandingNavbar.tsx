@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Sparkles, Menu, X } from 'lucide-react';
+import { Bot, Menu, X } from 'lucide-react';
 import Button from '../../components/ui/Button';
 
 const LandingNavbar = () => {
@@ -27,10 +27,10 @@ const LandingNavbar = () => {
         <div className="flex items-center justify-between h-20">
           {/* Logo */}
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-primary flex items-center justify-center shadow-glow-accent">
-              <Sparkles className="w-6 h-6 text-white" />
+            <div className="w-10 h-10 rounded-xl bg-white border-2 border-primary-200 flex items-center justify-center shadow-soft hover:shadow-medium transition-shadow">
+              <Bot className="w-6 h-6 text-primary-700" />
             </div>
-            <span className="text-2xl font-bold bg-linear-to-r from-primary-600 to-accent-600 bg-clip-text text-transparent">
+            <span className="text-2xl font-bold text-primary-700 drop-shadow-sm">
               Kiddy-Mate
             </span>
           </div>

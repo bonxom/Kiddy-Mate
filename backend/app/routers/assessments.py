@@ -115,7 +115,20 @@ async def list_child_assessments(
         a for a in all_assessments 
         if extract_id_from_link(a.child) == str(child.id)
     ]
-    child_assessments.sort(key=lambda x: x.created_at, reverse=True)
+    
+    # Sort by created_at if available, otherwise use id (MongoDB ObjectId contains timestamp)
+    def get_sort_key(assessment: ChildDevelopmentAssessment) -> datetime:
+        if hasattr(assessment, 'created_at') and assessment.created_at:
+            return assessment.created_at
+        # Fallback: use ObjectId timestamp for existing documents without created_at
+        # MongoDB ObjectId contains creation timestamp in first 4 bytes
+        from bson import ObjectId
+        if isinstance(assessment.id, ObjectId):
+            return assessment.id.generation_time
+        # Last resort: use current time
+        return datetime.utcnow()
+    
+    child_assessments.sort(key=get_sort_key, reverse=True)
     return [_serialize_assessment(a) for a in child_assessments]
 
 @router.get("/{child_id}/assessments/{assessment_id}", response_model=ChildAssessmentPublic)

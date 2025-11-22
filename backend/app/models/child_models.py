@@ -33,6 +33,7 @@ class ChildDevelopmentAssessment(Document):
     discipline_autonomy: Dict[str, Optional[str]]
     emotional_intelligence: Dict[str, Optional[str]]
     social_interaction: Dict[str, Optional[str]]
+    created_at: datetime = Field(default_factory=datetime.utcnow)
 
     class Settings:
         name = "child_development_assessments"

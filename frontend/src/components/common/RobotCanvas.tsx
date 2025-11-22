@@ -1,5 +1,5 @@
 import { Suspense, useRef, useEffect, useState } from 'react';
-import { Canvas } from '@react-three/fiber';
+import { Canvas, useFrame } from '@react-three/fiber';
 import { OrbitControls, useGLTF, useAnimations } from '@react-three/drei';
 import * as THREE from 'three';
 
@@ -9,6 +9,9 @@ const Model = () => {
   const { scene, animations } = useGLTF('/robot_playground.glb');
   const { actions } = useAnimations(animations, group);
   const [isVisible, setIsVisible] = useState(true);
+  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+  const targetRotation = useRef({ y: 0, x: 0 });
+  const currentRotation = useRef({ y: 0, x: 0 });
   
   // Auto-scale model to optimal size and center it
   useEffect(() => {
@@ -46,9 +49,19 @@ const Model = () => {
       // If that's wrong, try: angleToCamera (without PI) or angleToCamera - Math.PI/2
       angleToCamera += Math.PI / 4; // Flip 180° to face camera (adjust if needed)
       
-      group.current.rotation.y = angleToCamera; // Face towards camera position
-      group.current.rotation.x = Math.PI / 33; // Slight tilt for better view
+      // Set initial rotation (will be overridden by useFrame animation)
+      const baseRotationY = angleToCamera;
+      const baseRotationX = Math.PI / 33;
+      
+      group.current.rotation.y = baseRotationY; // Face towards camera position
+      group.current.rotation.x = baseRotationX; // Slight tilt for better view
       group.current.rotation.z = Math.PI / 50; // Minimal Z rotation
+      
+      // Initialize rotation refs for smooth mouse tracking
+      targetRotation.current.y = baseRotationY;
+      targetRotation.current.x = baseRotationX;
+      currentRotation.current.y = baseRotationY;
+      currentRotation.current.x = baseRotationX;
       
       // Force update to ensure rotation is applied immediately
       group.current.updateMatrixWorld(true);
@@ -99,6 +112,59 @@ const Model = () => {
     }
   }, [isVisible, actions]);
 
+  // Mouse tracking for interactive rotation
+  useEffect(() => {
+    const handleMouseMove = (event: MouseEvent) => {
+      // Normalize mouse position to -1 to 1 range based on viewport
+      const normalizedX = (event.clientX / window.innerWidth) * 2 - 1;
+      const normalizedY = (event.clientY / window.innerHeight) * 2 - 1;
+      
+      setMousePosition({ x: normalizedX, y: normalizedY });
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    return () => window.removeEventListener('mousemove', handleMouseMove);
+  }, []);
+
+  // Calculate base rotation values (memoized)
+  const baseAngle = useRef<number>(0);
+  const baseRotationX = useRef<number>(0);
+  
+  // Initialize base rotation values
+  useEffect(() => {
+    const cameraX = 3;
+    const cameraZ = 4;
+    let angle = Math.atan2(cameraX, cameraZ);
+    angle += Math.PI / 4; // Adjust based on model orientation
+    baseAngle.current = angle;
+    baseRotationX.current = Math.PI / 33;
+  }, []);
+
+  // Update target rotation based on mouse position
+  useEffect(() => {
+    // Calculate mouse influence (biên độ nhỏ)
+    const maxRotationY = Math.PI / 6; // ±30 degrees max rotation on Y axis
+    const maxRotationX = Math.PI / 12; // ±15 degrees max rotation on X axis
+
+    // Target rotation based on mouse position
+    targetRotation.current.y = baseAngle.current + (mousePosition.x * maxRotationY);
+    targetRotation.current.x = baseRotationX.current + (mousePosition.y * maxRotationX);
+  }, [mousePosition]);
+
+  // Smooth rotation animation using useFrame hook
+  useFrame(() => {
+    if (!group.current) return;
+
+    // Smooth interpolation (lerp) với factor 0.1 để tạo chuyển động mượt
+    const lerpFactor = 0.1;
+    currentRotation.current.y += (targetRotation.current.y - currentRotation.current.y) * lerpFactor;
+    currentRotation.current.x += (targetRotation.current.x - currentRotation.current.x) * lerpFactor;
+
+    // Apply rotation
+    group.current.rotation.y = currentRotation.current.y;
+    group.current.rotation.x = currentRotation.current.x;
+  });
+
   return <primitive ref={group} object={scene} />;
 };
 
@@ -131,7 +197,7 @@ const RobotCanvas = () => {
         performance={{ 
           min: 0.5,
         }}
-        frameloop="demand"
+        frameloop="always"
         onCreated={({ gl, camera }) => {
           // Set clear color to fully transparent
           gl.setClearColor(0x000000, 0);
