@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import { handleApiError } from '../../../utils/errorHandler';
 import { TaskEvents } from '../../../utils/events';
@@ -41,20 +42,20 @@ interface AssignedTasksTabProps {
 
 const AssignedTasksTab = ({ onCountChange }: AssignedTasksTabProps) => {
   const { selectedChildId, children } = useChildContext();
-  const [allTasks, setAllTasks] = useState<Array<{ task: ChildTaskWithDetails; childId: string }>>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
 
-  // Fetch tasks from all children
-  const fetchAllTasks = useCallback(async () => {
-    if (children.length === 0) {
-      setAllTasks([]);
-      return;
-    }
+  // Fetch tasks from all children using React Query
+  const {
+    data: allTasks = [],
+    isLoading: loading,
+    error: queryError,
+  } = useQuery({
+    queryKey: ['assigned-tasks', children.map(c => c.id).sort().join(',')],
+    queryFn: async () => {
+      if (children.length === 0) {
+        return [];
+      }
 
-    setLoading(true);
-    setError(null);
-    try {
       // Fetch tasks for all children in parallel
       const tasksPromises = children.map(async (child) => {
         try {
@@ -68,32 +69,32 @@ const AssignedTasksTab = ({ onCountChange }: AssignedTasksTabProps) => {
 
       const allTasksResults = await Promise.all(tasksPromises);
       // Flatten the array of arrays
-      const flattenedTasks = allTasksResults.flat();
-      setAllTasks(flattenedTasks);
-    } catch (err: any) {
-      setError(err.message || 'Failed to fetch assigned tasks');
-    } finally {
-      setLoading(false);
-    }
-  }, [children]);
+      return allTasksResults.flat();
+    },
+    enabled: children.length > 0,
+    staleTime: 0, // Always consider data stale to allow immediate refetch
+    gcTime: 5 * 60 * 1000, // Keep in cache for 5 minutes
+    refetchOnMount: true, // Always refetch when component mounts
+    refetchOnWindowFocus: false, // Don't refetch on window focus to avoid unnecessary calls
+  });
 
-  // Fetch tasks on mount and when children change
-  useEffect(() => {
-    fetchAllTasks();
-  }, [fetchAllTasks]);
+  const error = queryError ? (queryError as Error).message : null;
 
-  // Listen for task assignment/creation events and refresh assigned tasks
+  // Listen for task assignment/creation events and refetch queries immediately
   useEffect(() => {
-    const handleLibraryUpdated = () => {
-      fetchAllTasks();
+    const handleLibraryUpdated = async () => {
+      await queryClient.invalidateQueries({ queryKey: ['assigned-tasks'] });
+      await queryClient.refetchQueries({ queryKey: ['assigned-tasks'] });
     };
 
-    const handleTaskAssigned = () => {
-      fetchAllTasks();
+    const handleTaskAssigned = async () => {
+      await queryClient.invalidateQueries({ queryKey: ['assigned-tasks'] });
+      await queryClient.refetchQueries({ queryKey: ['assigned-tasks'] });
     };
 
-    const handleTaskUnassigned = () => {
-      fetchAllTasks();
+    const handleTaskUnassigned = async () => {
+      await queryClient.invalidateQueries({ queryKey: ['assigned-tasks'] });
+      await queryClient.refetchQueries({ queryKey: ['assigned-tasks'] });
     };
 
     // Listen to multiple events that should trigger refresh
@@ -106,28 +107,66 @@ const AssignedTasksTab = ({ onCountChange }: AssignedTasksTabProps) => {
       cleanup2();
       cleanup3();
     };
-  }, [fetchAllTasks]);
+  }, [queryClient]);
 
   // Transform backend tasks to UI format
+  // Filter out tasks with status "unassigned" - they should not appear in Assigned Tasks tab
   const tasks = useMemo(() => {
-    return allTasks.map(({ task, childId }) => {
-      // Get child name from childId
-      const child = children.find(c => c.id === childId);
-      const childName = child?.name || 'Unknown Child';
-      return mapToUIAssignedTask(task, childName);
-    });
+    return allTasks
+      .filter(({ task }) => task.status !== 'unassigned') // Exclude unassigned tasks
+      .map(({ task, childId }) => {
+        // Get child name from childId
+        const child = children.find(c => c.id === childId);
+        const childName = child?.name || 'Unknown Child';
+        return mapToUIAssignedTask(task, childName);
+      });
   }, [allTasks, children]);
+
+  // Mutations for task operations
+  const unassignMutation = useMutation({
+    mutationFn: async ({ childTaskId, childId }: { childTaskId: string; childId: string }) => {
+      await unassignTaskFromAPI(childId, childTaskId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['assigned-tasks'] });
+      TaskEvents.emit(TaskEvents.TASK_UNASSIGNED);
+    },
+  });
+
+  const verifyMutation = useMutation({
+    mutationFn: async ({ childTaskId, childId }: { childTaskId: string; childId: string }) => {
+      await verifyTaskFromAPI(childId, childTaskId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['assigned-tasks'] });
+    },
+  });
+
+  const rejectMutation = useMutation({
+    mutationFn: async ({ childTaskId, childId }: { childTaskId: string; childId: string }) => {
+      await rejectTaskVerificationFromAPI(childId, childTaskId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['assigned-tasks'] });
+    },
+  });
+
+  const giveupMutation = useMutation({
+    mutationFn: async ({ childTaskId, childId }: { childTaskId: string; childId: string }) => {
+      await giveupTaskFromAPI(childId, childTaskId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['assigned-tasks'] });
+    },
+  });
 
   // Wrapper functions for task operations that need childId
   const unassignTask = async (childTaskId: string) => {
-    // Find the task to get its childId
     const taskWithChild = allTasks.find(({ task }) => task.id === childTaskId);
     if (!taskWithChild) {
       throw new Error('Task not found');
     }
-    await unassignTaskFromAPI(taskWithChild.childId, childTaskId);
-    // Refresh tasks after unassign
-    await fetchAllTasks();
+    await unassignMutation.mutateAsync({ childTaskId, childId: taskWithChild.childId });
   };
 
   const verifyTask = async (childTaskId: string) => {
@@ -135,8 +174,7 @@ const AssignedTasksTab = ({ onCountChange }: AssignedTasksTabProps) => {
     if (!taskWithChild) {
       throw new Error('Task not found');
     }
-    await verifyTaskFromAPI(taskWithChild.childId, childTaskId);
-    await fetchAllTasks();
+    await verifyMutation.mutateAsync({ childTaskId, childId: taskWithChild.childId });
   };
 
   const rejectTaskVerification = async (childTaskId: string) => {
@@ -144,8 +182,7 @@ const AssignedTasksTab = ({ onCountChange }: AssignedTasksTabProps) => {
     if (!taskWithChild) {
       throw new Error('Task not found');
     }
-    await rejectTaskVerificationFromAPI(taskWithChild.childId, childTaskId);
-    await fetchAllTasks();
+    await rejectMutation.mutateAsync({ childTaskId, childId: taskWithChild.childId });
   };
 
   const giveupTask = async (childTaskId: string) => {
@@ -153,8 +190,7 @@ const AssignedTasksTab = ({ onCountChange }: AssignedTasksTabProps) => {
     if (!taskWithChild) {
       throw new Error('Task not found');
     }
-    await giveupTaskFromAPI(taskWithChild.childId, childTaskId);
-    await fetchAllTasks();
+    await giveupMutation.mutateAsync({ childTaskId, childId: taskWithChild.childId });
   };
 
   // Update parent count when tasks change
@@ -164,6 +200,7 @@ const AssignedTasksTab = ({ onCountChange }: AssignedTasksTabProps) => {
 
   // Local state for UI interactions
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
   const [sortColumn, setSortColumn] = useState<keyof ExtendedAssignedTask | null>(null);
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
@@ -171,12 +208,21 @@ const AssignedTasksTab = ({ onCountChange }: AssignedTasksTabProps) => {
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<ExtendedAssignedTask | null>(null);
 
+  // Debounce search query
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 300); // 300ms delay
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
   // Filter and sort
   const filteredTasks = useMemo(() => {
     let filtered = tasks.filter(
       (task) =>
-        task.task.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        task.child.toLowerCase().includes(searchQuery.toLowerCase())
+        task.task.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
+        task.child.toLowerCase().includes(debouncedSearchQuery.toLowerCase())
     );
 
     if (sortColumn) {
@@ -193,7 +239,7 @@ const AssignedTasksTab = ({ onCountChange }: AssignedTasksTabProps) => {
     }
 
     return filtered;
-  }, [tasks, searchQuery, sortColumn, sortDirection]);
+  }, [tasks, debouncedSearchQuery, sortColumn, sortDirection]);
 
   const handleSort = (column: keyof ExtendedAssignedTask) => {
     if (sortColumn === column) {
@@ -252,7 +298,7 @@ const AssignedTasksTab = ({ onCountChange }: AssignedTasksTabProps) => {
         setTaskToDelete(null);
         setDeleteModalOpen(false);
         toast.success('Task deleted successfully!');
-        // Tasks will auto-refresh via the hook
+        // Tasks will auto-refresh via React Query invalidation
       } catch (err) {
         handleApiError(err, 'Failed to delete task');
       }
@@ -266,7 +312,8 @@ const AssignedTasksTab = ({ onCountChange }: AssignedTasksTabProps) => {
 
   const handleSaveTask = async () => {
     // Task updates are handled in TaskDetailModal
-    // Just close the modal and refresh will happen automatically
+    // Invalidate queries to refresh data
+    queryClient.invalidateQueries({ queryKey: ['assigned-tasks'] });
     setDetailModalOpen(false);
     setSelectedTask(null);
   };
@@ -279,7 +326,7 @@ const AssignedTasksTab = ({ onCountChange }: AssignedTasksTabProps) => {
       setDetailModalOpen(false);
       setSelectedTask(null);
       toast.success('Task deleted successfully!');
-      // Tasks will auto-refresh via the hook
+      // Tasks will auto-refresh via React Query invalidation
     } catch (err) {
       handleApiError(err, 'Failed to delete task');
     }

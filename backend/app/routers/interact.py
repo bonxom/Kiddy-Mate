@@ -4,10 +4,48 @@ from pydantic import BaseModel
 from app.dependencies import verify_child_ownership
 from app.models.interactionlog_models import InteractionLog
 from app.models.child_models import Child
-from app.services.llm import generate_gemini_response
+from app.services.llm import generate_gemini_response, generate_openai_response
 from typing import List, Dict, Any, Optional
+import logging
+import json
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+def detect_emotion_from_text(user_input: str) -> str:
+    """
+    Detect emotion from user input using LLM.
+    Returns one of: Happy, Sad, Angry, Excited, Scared, Neutral, Curious, Frustrated, Proud, Worried
+    """
+    try:
+        system_instruction = (
+            "You are an emotion detection expert. "
+            "Analyze the text and return ONLY the primary emotion as a single word. "
+            "Choose from: Happy, Sad, Angry, Excited, Scared, Neutral, Curious, Frustrated, Proud, Worried. "
+            "Return ONLY the emotion word, no explanations, no punctuation, no extra text."
+        )
+        
+        prompt = f"""
+Analyze this child's message and detect the primary emotion:
+"{user_input}"
+
+Return ONLY one word: Happy, Sad, Angry, Excited, Scared, Neutral, Curious, Frustrated, Proud, or Worried.
+"""
+        
+        emotion = generate_openai_response(prompt, system_instruction, max_tokens=20)
+        emotion = emotion.strip().capitalize()
+        
+        # Validate emotion is in the list
+        valid_emotions = ["Happy", "Sad", "Angry", "Excited", "Scared", "Neutral", "Curious", "Frustrated", "Proud", "Worried"]
+        if emotion not in valid_emotions:
+            logger.warning(f"Invalid emotion detected: {emotion}, defaulting to Neutral")
+            return "Neutral"
+        
+        return emotion
+    except Exception as e:
+        logger.error(f"Failed to detect emotion: {e}")
+        return "Neutral"
 
 class ChatRequest(BaseModel):
     user_input: Optional[str] = None
@@ -45,13 +83,23 @@ async def interact_with_child(
     try:
         avatar_response = generate_gemini_response(prompt)
     except Exception as e:
-        print(f"Error generating avatar response: {e}")
+        logger.error(f"Error generating avatar response: {e}")
         avatar_response = "Sorry, I'm currently busy. Please ask again later!"
+
+    # Detect emotion from user input
+    detected_emotion = None
+    try:
+        detected_emotion = detect_emotion_from_text(user_input)
+        logger.info(f"Detected emotion: {detected_emotion} from input: {user_input[:50]}")
+    except Exception as e:
+        logger.error(f"Failed to detect emotion: {e}")
+        detected_emotion = "Neutral"
 
     interaction_log = InteractionLog(
         child=child,  # type: ignore
         user_input=user_input,
-        avatar_response=avatar_response
+        avatar_response=avatar_response,
+        detected_emotion=detected_emotion
     )
     await interaction_log.insert()
 

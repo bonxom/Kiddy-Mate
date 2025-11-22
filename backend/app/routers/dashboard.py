@@ -1,12 +1,22 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, status
 from beanie import Link
 from app.models.child_models import Child
-from app.models.childtask_models import ChildTask, ChildTaskStatus
+from app.models.childtask_models import ChildTask, ChildTaskStatus, ChildTaskPriority
 from app.models.reward_models import ChildReward
-from app.models.task_models import Task
-from app.dependencies import verify_child_ownership, get_child_tasks_by_child, fetch_link_or_get_object, extract_id_from_link
-from typing import Dict, List
+from app.models.task_models import Task, TaskCategory, TaskType, UnityType as TaskUnityType
+from app.models.report_models import Report
+from app.models.childtask_models import UnityType as ChildTaskUnityType
+from app.dependencies import verify_child_ownership, get_child_tasks_by_child, fetch_link_or_get_object, extract_id_from_link, verify_parent_token
+from app.services.llm import generate_openai_response
+from app.models.user_models import User
+from app.schemas.schemas import ChildTaskWithDetails, TaskPublic
+from typing import Dict, List, Optional
 from pydantic import BaseModel
+from datetime import datetime
+import json
+import logging
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -98,13 +108,6 @@ async def get_category_progress(
         # Fetch task if it's a Link reference
         task = await fetch_link_or_get_object(ct.task, Task)
         
-        # If still a Link, try to fetch it directly
-        if isinstance(ct.task, Link) and (not task or not isinstance(task, Task)):
-            try:
-                task = await ct.task.fetch()
-            except Exception:
-                continue
-        
         # Ensure task is actually a Task instance
         if not task or not isinstance(task, Task):
             continue
@@ -140,3 +143,587 @@ async def get_category_progress(
         ))
     
     return result
+
+class AnalyzeEmotionReportRequest(BaseModel):
+    report_id: Optional[str] = None
+
+@router.get("/{child_id}/reports/debug", response_model=Dict)
+async def debug_child_reports(
+    child_id: str,
+    child: Child = Depends(verify_child_ownership),
+    current_user: User = Depends(verify_parent_token)
+):
+    """
+    Debug endpoint to list all reports for a child.
+    Shows both Beanie query results and manual filter results for comparison.
+    """
+    child_id_str = str(child.id)
+    logger.info(f"Debug: Fetching reports for child_id: {child_id_str}")
+    
+    # Try Beanie query - use child ID instead of full object
+    beanie_reports = []
+    beanie_error = None
+    try:
+        child_id_obj = child.id
+        beanie_reports = await Report.find(Report.child.id == child_id_obj).to_list()
+        logger.info(f"Beanie query found {len(beanie_reports)} reports")
+    except Exception as e:
+        beanie_error = str(e)
+        logger.error(f"Beanie query failed: {e}")
+    
+    # Manual filter
+    all_reports = await Report.find_all().to_list()
+    manual_reports = []
+    for r in all_reports:
+        r_child_id = extract_id_from_link(r.child) if hasattr(r, 'child') else None
+        if r_child_id == child_id_str:
+            manual_reports.append(r)
+    
+    # Format results
+    def format_report(r: Report) -> Dict:
+        return {
+            "id": str(r.id),
+            "child_id": extract_id_from_link(r.child) if hasattr(r, 'child') else None,
+            "generated_at": r.generated_at.isoformat() if r.generated_at else None,
+            "period_start": r.period_start.isoformat() if r.period_start else None,
+            "period_end": r.period_end.isoformat() if r.period_end else None,
+        }
+    
+    result = {
+        "child_id": child_id_str,
+        "total_reports_in_db": len(all_reports),
+        "beanie_query": {
+            "count": len(beanie_reports),
+            "error": beanie_error,
+            "reports": [format_report(r) for r in beanie_reports]
+        },
+        "manual_filter": {
+            "count": len(manual_reports),
+            "reports": [format_report(r) for r in manual_reports]
+        },
+        "all_reports_sample": [
+            {
+                "id": str(r.id),
+                "child_id": extract_id_from_link(r.child) if hasattr(r, 'child') else None,
+                "generated_at": r.generated_at.isoformat() if r.generated_at else None,
+            }
+            for r in all_reports[:10]
+        ]
+    }
+    
+    return result
+
+@router.post("/{child_id}/analyze-emotion-report", response_model=List[ChildTaskWithDetails])
+async def analyze_emotion_report_and_generate_tasks(
+    child_id: str,
+    request: AnalyzeEmotionReportRequest = AnalyzeEmotionReportRequest(),
+    child: Child = Depends(verify_child_ownership),
+    current_user: User = Depends(verify_parent_token)
+):
+    """
+    Analyze emotion report and generate new tasks based on the analysis.
+    If report_id is provided, uses that specific report. Otherwise, uses the most recent report.
+    Generates up to 20 tasks based on emotional patterns and insights.
+    """
+    try:
+        # Get report (most recent if report_id not provided)
+        report = None
+        if request.report_id:
+            report = await Report.get(request.report_id)
+            if not report:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Report not found."
+                )
+            # Verify report belongs to child
+            report_child_id = extract_id_from_link(report.child)
+            if report_child_id != str(child.id):
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Report does not belong to this child."
+                )
+        else:
+            # Get most recent report for this child
+            # Use same logic as get_reports endpoint
+            child_id_str = str(child.id)
+            logger.info(f"Looking for reports for child_id: {child_id_str}")
+            
+            # Try Beanie query first - use child ID instead of full object
+            try:
+                from beanie.operators import In
+                # Use child ID for query instead of full Child object
+                child_id_obj = child.id
+                child_reports = await Report.find(Report.child.id == child_id_obj).to_list()
+                logger.info(f"Found {len(child_reports)} reports using Beanie query")
+            except Exception as e:
+                logger.warning(f"Beanie query failed, falling back to manual filter: {e}")
+                child_reports = []
+            
+            # Fallback: fetch all and filter manually
+            if not child_reports:
+                all_reports = await Report.find_all().to_list()
+                logger.info(f"Total reports in database: {len(all_reports)}")
+                child_reports = []
+                for r in all_reports:
+                    r_child_id = extract_id_from_link(r.child) if hasattr(r, 'child') else None
+                    logger.debug(f"Report {r.id}: child_id={r_child_id}, target={child_id_str}")
+                    if r_child_id == child_id_str:
+                        child_reports.append(r)
+                logger.info(f"Found {len(child_reports)} reports using manual filter")
+            
+            if not child_reports:
+                # Log all reports for debugging
+                all_reports_debug = await Report.find_all().to_list()
+                logger.error(f"No reports found for child {child_id_str}. Total reports in DB: {len(all_reports_debug)}")
+                
+                # Collect debug info
+                debug_info = {
+                    "child_id": child_id_str,
+                    "total_reports_in_db": len(all_reports_debug),
+                    "sample_report_ids": []
+                }
+                
+                if all_reports_debug:
+                    logger.error("Sample report child IDs:")
+                    for r in all_reports_debug[:10]:
+                        r_child_id = extract_id_from_link(r.child) if hasattr(r, 'child') else None
+                        logger.error(f"  Report {r.id}: child_id={r_child_id}, generated_at={r.generated_at}")
+                        debug_info["sample_report_ids"].append({
+                            "report_id": str(r.id),
+                            "child_id": r_child_id,
+                            "generated_at": r.generated_at.isoformat() if r.generated_at else None
+                        })
+                
+                error_detail = (
+                    f"No reports found for this child (ID: {child_id_str}). "
+                    f"Total reports in database: {len(all_reports_debug)}. "
+                    "Please generate a report first using the 'Generate Report' button."
+                )
+                
+                logger.error(f"Error details: {json.dumps(debug_info, indent=2)}")
+                
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=error_detail
+                )
+            
+            # Sort by generated_at descending and get most recent
+            child_reports.sort(key=lambda x: x.generated_at, reverse=True)
+            report = child_reports[0]
+            logger.info(f"Using most recent report: {report.id}, generated at: {report.generated_at}")
+        
+        # Get emotion data from report
+        emotion_trends = report.insights.get("emotion_trends", {}) if report.insights else {}
+        emotional_analysis = report.insights.get("emotional_analysis", "") if report.insights else ""
+        most_common_emotion = report.insights.get("most_common_emotion", "Neutral") if report.insights else "Neutral"
+        areas_for_improvement = report.insights.get("areas_for_improvement", []) if report.insights else []
+        strengths = report.insights.get("strengths", []) if report.insights else []
+        
+        # Calculate age
+        age = datetime.utcnow().year - child.birth_date.year
+        if datetime.utcnow().month < child.birth_date.month or (
+            datetime.utcnow().month == child.birth_date.month and 
+            datetime.utcnow().day < child.birth_date.day
+        ):
+            age -= 1
+        
+        # Get existing tasks to avoid duplicates
+        all_child_tasks = await get_child_tasks_by_child(child)
+        existing_task_titles = set()
+        for ct in all_child_tasks:
+            if ct.task:
+                task = await fetch_link_or_get_object(ct.task, Task)
+                if task:
+                    existing_task_titles.add(task.title.lower())
+            elif ct.task_data:
+                existing_task_titles.add(ct.task_data.title.lower())
+            if ct.custom_title:
+                existing_task_titles.add(ct.custom_title.lower())
+        
+        # Build prompt for LLM to generate tasks based on emotion analysis
+        system_instruction = (
+            "You are a child education expert specializing in emotional intelligence and task design. "
+            "Based on emotion analysis from a child's report, generate appropriate tasks that address emotional needs and development areas. "
+            "Return ONLY valid JSON array, no markdown, no extra text. Maximum 20 tasks."
+        )
+        
+        prompt = f"""
+CHILD INFORMATION:
+- Name: {child.name}
+- Age: {age}
+- Interests: {', '.join(child.interests or []) or 'Not specified'}
+- Strengths: {', '.join(strengths) or 'Not specified'}
+- Areas for Improvement: {', '.join(areas_for_improvement) or 'Not specified'}
+
+EMOTION ANALYSIS FROM REPORT:
+- Most Common Emotion: {most_common_emotion}
+- Emotion Trends: {json.dumps(emotion_trends, ensure_ascii=False)}
+- Emotional Analysis: {emotional_analysis}
+
+REPORT SUMMARY:
+{report.summary_text}
+
+REPORT SUGGESTIONS:
+{json.dumps(report.suggestions, ensure_ascii=False, indent=2) if report.suggestions else 'None'}
+
+EXISTING TASK TITLES (avoid duplicates):
+{', '.join(list(existing_task_titles)[:20]) or 'None'}
+
+REQUIREMENT:
+Generate tasks (maximum 20) that:
+1. Address the emotional patterns identified in the report
+2. Support areas for improvement
+3. Build on the child's strengths
+4. Are appropriate for age {age}
+5. Match the child's interests: {', '.join(child.interests or []) or 'General activities'}
+6. Have unique titles (not in existing tasks list)
+
+Return a JSON array of task objects. Each task must have:
+{{
+  "title": "Unique task title",
+  "description": "Detailed description",
+  "category": "One of: Independence, Logic, Physical, Creativity, Social, Academic",
+  "type": "logic" or "emotion",
+  "difficulty": 1-5,
+  "suggested_age_range": "e.g., 6-10",
+  "reward_coins": 0-1000,
+  "unity_type": "life" or "choice" or "talk"
+}}
+
+Generate up to 20 tasks. Focus on emotional development and addressing the insights from the report.
+"""
+        
+        # Call LLM
+        logger.info(f"Analyzing emotion report and generating tasks for child {child.name}")
+        llm_response = generate_openai_response(prompt, system_instruction, max_tokens=4000)
+        
+        # Parse JSON response
+        try:
+            # Clean response - remove markdown code blocks
+            response_text = llm_response.strip()
+            if "```json" in response_text:
+                start = response_text.find("```json") + 7
+                end = response_text.find("```", start)
+                if end == -1:
+                    response_text = response_text[start:].strip()
+                else:
+                    response_text = response_text[start:end].strip()
+            elif "```" in response_text:
+                start = response_text.find("```") + 3
+                end = response_text.find("```", start)
+                if end == -1:
+                    response_text = response_text[start:].strip()
+                else:
+                    response_text = response_text[start:end].strip()
+            
+            # Extract JSON array
+            first_bracket = response_text.find('[')
+            last_bracket = response_text.rfind(']')
+            if first_bracket != -1 and last_bracket != -1 and last_bracket > first_bracket:
+                response_text = response_text[first_bracket:last_bracket + 1]
+            else:
+                # Try to find JSON object instead
+                first_brace = response_text.find('{')
+                last_brace = response_text.rfind('}')
+                if first_brace != -1 and last_brace != -1 and last_brace > first_brace:
+                    # Single object, wrap in array
+                    response_text = '[' + response_text[first_brace:last_brace + 1] + ']'
+            
+            response_text = response_text.strip()
+            
+            # Remove trailing commas
+            import re
+            response_text = re.sub(r',\s*}', '}', response_text)
+            response_text = re.sub(r',\s*]', ']', response_text)
+            
+            tasks_data = json.loads(response_text)
+            
+            if not isinstance(tasks_data, list):
+                tasks_data = [tasks_data]
+            
+            # Limit to 20 tasks
+            tasks_data = tasks_data[:20]
+            
+            logger.info(f"Parsed {len(tasks_data)} tasks from LLM response")
+            
+        except json.JSONDecodeError as e:
+            logger.error(f"Failed to parse LLM response: {e}")
+            logger.error(f"Response (first 1000 chars): {llm_response[:1000]}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to parse LLM response: {str(e)}"
+            )
+        
+        # Create tasks
+        created_tasks = []
+        failed_count = 0
+        skipped_count = 0
+        inserted_count = 0  # Track how many tasks were actually inserted to DB
+        
+        for task_data in tasks_data:
+            try:
+                # Validate and normalize task data
+                title = task_data.get("title", "Untitled Task").strip()
+                if not title:
+                    logger.warning(f"Skipping empty task title")
+                    skipped_count += 1
+                    continue
+                
+                if title.lower() in existing_task_titles:
+                    logger.warning(f"Skipping duplicate task: {title}")
+                    skipped_count += 1
+                    continue
+                
+                # Validate category
+                category_str = task_data.get("category", "Independence")
+                try:
+                    category = TaskCategory(category_str)
+                except ValueError:
+                    # Try to map common variations
+                    category_mapping = {
+                        "IQ": "IQ",
+                        "EQ": "EQ"
+                    }
+                    if category_str in category_mapping:
+                        category = TaskCategory(category_mapping[category_str])
+                    else:
+                        category = TaskCategory.INDEPENDENCE
+                
+                # Validate type
+                type_str = task_data.get("type", "logic").lower()
+                if type_str not in ["logic", "emotion"]:
+                    type_str = "logic"
+                task_type = TaskType(type_str)
+                
+                # Validate unity_type
+                unity_type_str = task_data.get("unity_type", "life").lower()
+                if unity_type_str not in ["life", "choice", "talk"]:
+                    unity_type_str = "life"
+                unity_type = TaskUnityType(unity_type_str)
+                
+                # Validate difficulty
+                difficulty = int(task_data.get("difficulty", 3))
+                if difficulty < 1:
+                    difficulty = 1
+                elif difficulty > 5:
+                    difficulty = 5
+                
+                # Check if task already exists in library
+                existing_task = await Task.find_one(Task.title == title)
+                if not existing_task:
+                    # Create new task in library
+                    task = Task(
+                        title=title,
+                        description=task_data.get("description", ""),
+                        category=category,
+                        type=task_type,
+                        difficulty=difficulty,
+                        suggested_age_range=task_data.get("suggested_age_range", f"{age}-{age+2}"),
+                        reward_coins=int(task_data.get("reward_coins", 50)),
+                        reward_badge_name=task_data.get("reward_badge_name"),
+                        unity_type=unity_type
+                    )
+                    await task.insert()
+                else:
+                    task = existing_task
+                    # Update unity_type if not set
+                    if not task.unity_type:
+                        task.unity_type = unity_type
+                        await task.save()
+                
+                # Create ChildTask with status='unassigned'
+                child_task = ChildTask(
+                    child=child,  # type: ignore
+                    task=task,  # type: ignore
+                    status=ChildTaskStatus.UNASSIGNED,
+                    unity_type=ChildTaskUnityType(unity_type_str),
+                    assigned_at=datetime.utcnow(),
+                    priority=ChildTaskPriority.MEDIUM
+                )
+                await child_task.insert()
+                inserted_count += 1  # Track successful insertions
+                
+                # Add to existing titles to avoid duplicates in this batch
+                existing_task_titles.add(title.lower())
+                
+                # Build response - wrap in try-catch to handle serialization errors
+                try:
+                    created_tasks.append(
+                    ChildTaskWithDetails(
+                        id=str(child_task.id),
+                        status=child_task.status,
+                        assigned_at=child_task.assigned_at,
+                        completed_at=child_task.completed_at,
+                        priority=child_task.priority.value if child_task.priority else None,
+                        due_date=child_task.due_date,
+                        progress=child_task.progress,
+                        notes=child_task.notes,
+                        custom_title=child_task.custom_title,
+                        custom_reward_coins=child_task.custom_reward_coins,
+                        custom_category=child_task.custom_category,
+                        unity_type=child_task.unity_type.value if child_task.unity_type else None,
+                        task=TaskPublic(
+                            id=str(task.id),
+                            title=task.title,
+                            description=task.description,
+                            category=task.category,
+                            type=task.type,
+                            difficulty=task.difficulty,
+                            suggested_age_range=task.suggested_age_range,
+                            reward_coins=task.reward_coins,
+                            reward_badge_name=task.reward_badge_name,
+                            unity_type=task.unity_type.value if task.unity_type else None
+                        )
+                    )
+                )
+                except Exception as e:
+                    logger.warning(f"Failed to build response for task {title}, but task was inserted: {e}")
+                    # Task was inserted, just couldn't build response - continue
+                    continue
+                
+            except Exception as e:
+                logger.error(f"Failed to create task: {e}")
+                logger.error(f"Task data: {json.dumps(task_data, ensure_ascii=False)}")
+                failed_count += 1
+                continue
+        
+        # Check if any tasks were actually inserted, even if response building failed
+        if inserted_count == 0 and not created_tasks:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to create any tasks. {failed_count} tasks failed, {skipped_count} tasks skipped (duplicates)."
+            )
+        
+        # If tasks were inserted but response building failed, fetch from DB
+        if inserted_count > 0 and len(created_tasks) == 0:
+            logger.warning(f"Tasks were inserted ({inserted_count}) but response building failed. Fetching from DB...")
+            try:
+                # Fetch recently created unassigned tasks
+                all_child_tasks = await get_child_tasks_by_child(child)
+                recent_unassigned = [
+                    ct for ct in all_child_tasks 
+                    if ct.status == ChildTaskStatus.UNASSIGNED 
+                    and ct.assigned_at and (datetime.utcnow() - ct.assigned_at).total_seconds() < 120
+                ]
+                recent_unassigned.sort(key=lambda x: x.assigned_at, reverse=True)
+                
+                # Build response from recent tasks
+                for ct in recent_unassigned[:inserted_count]:
+                    task = await fetch_link_or_get_object(ct.task, Task) if ct.task else None
+                    if task:
+                        try:
+                            created_tasks.append(
+                                ChildTaskWithDetails(
+                                    id=str(ct.id),
+                                    status=ct.status,
+                                    assigned_at=ct.assigned_at,
+                                    completed_at=ct.completed_at,
+                                    priority=ct.priority.value if ct.priority else None,
+                                    due_date=ct.due_date,
+                                    progress=ct.progress or 0,
+                                    notes=ct.notes,
+                                    custom_title=ct.custom_title,
+                                    custom_reward_coins=ct.custom_reward_coins,
+                                    custom_category=ct.custom_category,
+                                    unity_type=ct.unity_type.value if ct.unity_type else None,
+                                    task=TaskPublic(
+                                        id=str(task.id),
+                                        title=task.title,
+                                        description=task.description or "",
+                                        category=task.category,
+                                        type=task.type,
+                                        difficulty=task.difficulty,
+                                        suggested_age_range=task.suggested_age_range,
+                                        reward_coins=task.reward_coins,
+                                        reward_badge_name=task.reward_badge_name,
+                                        unity_type=task.unity_type.value if task.unity_type else None,
+                                    )
+                                )
+                            )
+                        except Exception as e2:
+                            logger.warning(f"Failed to build response for task {task.title}: {e2}")
+                            continue
+                
+                if created_tasks:
+                    logger.info(f"Successfully built response for {len(created_tasks)} tasks from DB")
+            except Exception as e:
+                logger.error(f"Failed to fetch tasks from DB: {e}", exc_info=True)
+        
+        # If we still have no tasks in response but tasks were inserted, return success with message
+        if inserted_count > 0 and len(created_tasks) == 0:
+            logger.warning(f"Tasks were inserted ({inserted_count}) but couldn't build response. Returning success message.")
+            # Return empty list but with 200 status - frontend will refresh to see new tasks
+            return []
+        
+        logger.info(f"✅ Created {len(created_tasks)} tasks from emotion report analysis (failed: {failed_count})")
+        
+        # Return created tasks - wrap in try-catch to handle serialization errors
+        try:
+            return created_tasks
+        except Exception as e:
+            logger.error(f"Error serializing response, but tasks were created: {e}", exc_info=True)
+            # Tasks were already inserted, so return a simplified response
+            # Fetch the created tasks again to build response
+            try:
+                all_child_tasks = await get_child_tasks_by_child(child)
+                recent_unassigned = [
+                    ct for ct in all_child_tasks 
+                    if ct.status == ChildTaskStatus.UNASSIGNED 
+                    and ct.assigned_at and (datetime.utcnow() - ct.assigned_at).total_seconds() < 60
+                ]
+                recent_unassigned.sort(key=lambda x: x.assigned_at, reverse=True)
+                
+                # Build simplified response from recent tasks
+                simplified_tasks = []
+                for ct in recent_unassigned[:len(created_tasks)]:
+                    task = await fetch_link_or_get_object(ct.task, Task) if ct.task else None
+                    if task:
+                        simplified_tasks.append(
+                            ChildTaskWithDetails(
+                                id=str(ct.id),
+                                status=ct.status,
+                                assigned_at=ct.assigned_at,
+                                completed_at=ct.completed_at,
+                                priority=ct.priority.value if ct.priority else None,
+                                due_date=ct.due_date,
+                                progress=ct.progress or 0,
+                                notes=ct.notes,
+                                custom_title=ct.custom_title,
+                                custom_reward_coins=ct.custom_reward_coins,
+                                custom_category=ct.custom_category,
+                                unity_type=ct.unity_type.value if ct.unity_type else None,
+                                task=TaskPublic(
+                                    id=str(task.id),
+                                    title=task.title,
+                                    description=task.description or "",
+                                    category=task.category,
+                                    type=task.type,
+                                    difficulty=task.difficulty,
+                                    suggested_age_range=task.suggested_age_range,
+                                    reward_coins=task.reward_coins,
+                                    reward_badge_name=task.reward_badge_name,
+                                    unity_type=task.unity_type.value if task.unity_type else None,
+                                )
+                            )
+                        )
+                
+                if simplified_tasks:
+                    logger.info(f"Returning {len(simplified_tasks)} tasks from fallback response")
+                    return simplified_tasks
+            except Exception as e2:
+                logger.error(f"Failed to build fallback response: {e2}", exc_info=True)
+            
+            # Last resort: raise error but tasks are already in DB
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Tasks were created but failed to return response. Please refresh to see new tasks. Error: {str(e)}"
+            )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error analyzing emotion report: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to analyze emotion report and generate tasks: {str(e)}"
+        )

@@ -10,6 +10,9 @@ from app.models.reward_models import ChildReward, Reward
 from app.services.auth import get_current_user
 from app.models.user_models import User
 from pydantic import ValidationError, BaseModel
+import logging
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -271,26 +274,61 @@ async def assign_task_to_child(
     child_id: str,
     task_id: str,
     request: AssignTaskRequest = AssignTaskRequest(),
-    child: Child = Depends(verify_child_ownership)
+    child: Child = Depends(verify_child_ownership),
+    current_user: User = Depends(verify_parent_token)
 ):
     """
     Assign a library task to a child (PARENT ONLY).
     Parents can assign tasks from the task library to their children.
     """
-    try:
-        task = await Task.get(task_id)
-    except ValidationError:
+    logger.info(f"Assigning task {task_id} to child {child_id}, request: {request.model_dump()}, user: {current_user.id}")
+    
+    # Validate task_id format
+    if not task_id or task_id.strip() == "":
+        logger.error(f"Empty task_id provided")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid task id format."
+            detail="Task ID is required."
         )
+    
+    try:
+        task = await Task.get(task_id)
+    except ValidationError as e:
+        logger.error(f"Invalid task id format: {task_id}, error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid task id format: {str(e)}"
+        )
+    except Exception as e:
+        logger.error(f"Error fetching task {task_id}: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error fetching task: {str(e)}"
+        )
+    
     if not task:
+        logger.warning(f"Task {task_id} not found in library")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Task not found in library."
         )
 
-    # Check if task is already assigned
+    # Validate and normalize priority BEFORE checking existing task
+    priority = request.priority
+    if priority and not isinstance(priority, ChildTaskPriority):
+        try:
+            # Try to convert string to enum
+            if isinstance(priority, str):
+                priority = ChildTaskPriority(priority.lower())
+            else:
+                priority = ChildTaskPriority(priority)
+        except (ValueError, TypeError):
+            logger.warning(f"Invalid priority value: {priority}, using MEDIUM")
+            priority = ChildTaskPriority.MEDIUM
+    elif not priority:
+        priority = ChildTaskPriority.MEDIUM
+
+    # Check if task already has a ChildTask for this child
     all_child_tasks = await get_child_tasks_by_child(child)
     existing = None
     for ct in all_child_tasks:
@@ -298,52 +336,153 @@ async def assign_task_to_child(
         if task_ref_id == task_id:
             existing = ct
             break
+    
     if existing:
+        # If task has status 'unassigned', update it to 'assigned'
+        if existing.status == ChildTaskStatus.UNASSIGNED:
+            logger.info(f"Updating unassigned task {task_id} to assigned for child {child_id}")
+            existing.status = ChildTaskStatus.ASSIGNED
+            existing.assigned_at = datetime.utcnow()
+            existing.due_date = parse_date_string(request.due_date)
+            existing.priority = priority
+            existing.notes = request.notes
+            await existing.save()
+            
+            # Return updated task
+            merged = merge_task_details(existing, task)
+            return ChildTaskWithDetails(
+                id=str(existing.id),
+                status=existing.status,
+                assigned_at=existing.assigned_at,
+                completed_at=existing.completed_at,
+                priority=existing.priority.value if existing.priority else None,
+                due_date=existing.due_date,
+                progress=existing.progress,
+                notes=existing.notes,
+                custom_title=existing.custom_title,
+                custom_reward_coins=existing.custom_reward_coins,
+                custom_category=existing.custom_category,
+                unity_type=existing.unity_type.value if existing.unity_type else None,
+                task=TaskPublic(
+                    id=str(task.id),
+                    title=merged["title"],
+                    description=merged["description"],
+                    category=merged["category"],
+                    type=merged["type"],
+                    difficulty=merged["difficulty"],
+                    suggested_age_range=merged["suggested_age_range"],
+                    reward_coins=merged["reward_coins"],
+                    reward_badge_name=merged["reward_badge_name"],
+                    unity_type=merged["unity_type"],
+                )
+            )
+        else:
+            existing_status = existing.status.value if existing.status else "unknown"
+            logger.warning(f"Task {task_id} already assigned to child {child_id} with status: {existing_status}")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Task already assigned to this child with status: {existing_status}. Please unassign it first if you want to reassign."
+            )
+
+    # Create new child task assignment (priority already validated above)
+    try:
+        logger.info(f"Creating ChildTask with: child_id={child_id}, task_id={task_id}, priority={priority}, due_date={request.due_date}")
+        new_child_task = ChildTask(
+            child=child,  # type: ignore
+            task=task,  # type: ignore
+            status=ChildTaskStatus.ASSIGNED,
+            assigned_at=datetime.utcnow(),
+            due_date=parse_date_string(request.due_date),
+            priority=priority,
+            notes=request.notes
+        )
+        await new_child_task.insert()
+        logger.info(f"Successfully assigned task {task_id} to child {child_id}, child_task_id={new_child_task.id}")
+    except ValidationError as e:
+        logger.error(f"Validation error creating child task assignment: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Task already assigned to this child."
+            detail=f"Invalid data for task assignment: {str(e)}"
         )
-
-    # Create new child task assignment
-    new_child_task = ChildTask(
-        child=child,  # type: ignore
-        task=task,  # type: ignore
-        status=ChildTaskStatus.ASSIGNED,
-        assigned_at=datetime.utcnow(),
-        due_date=parse_date_string(request.due_date),
-        priority=request.priority or ChildTaskPriority.MEDIUM,
-        notes=request.notes
-    )
-    await new_child_task.insert()
+    except Exception as e:
+        logger.error(f"Error creating child task assignment: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to assign task: {str(e)}"
+        )
     
     # Return full details
-    merged = merge_task_details(new_child_task, task)
-    return ChildTaskWithDetails(
-        id=str(new_child_task.id),
-        status=new_child_task.status,
-        assigned_at=new_child_task.assigned_at,
-        completed_at=new_child_task.completed_at,
-        priority=new_child_task.priority.value if new_child_task.priority else None,
-        due_date=new_child_task.due_date,
-        progress=new_child_task.progress,
-        notes=new_child_task.notes,
-        custom_title=new_child_task.custom_title,
-        custom_reward_coins=new_child_task.custom_reward_coins,
-        custom_category=new_child_task.custom_category,
-        unity_type=new_child_task.unity_type.value if new_child_task.unity_type else None,
-        task=TaskPublic(
-            id=str(task.id),
-            title=merged["title"],
-            description=merged["description"],
-            category=merged["category"],
-            type=merged["type"],
-            difficulty=merged["difficulty"],
-            suggested_age_range=merged["suggested_age_range"],
-            reward_coins=merged["reward_coins"],
-            reward_badge_name=merged["reward_badge_name"],
-            unity_type=merged["unity_type"],
+    try:
+        merged = merge_task_details(new_child_task, task)
+        response_data = ChildTaskWithDetails(
+            id=str(new_child_task.id),
+            status=new_child_task.status,
+            assigned_at=new_child_task.assigned_at,
+            completed_at=new_child_task.completed_at,
+            priority=new_child_task.priority.value if new_child_task.priority else None,
+            due_date=new_child_task.due_date,
+            progress=new_child_task.progress,
+            notes=new_child_task.notes,
+            custom_title=new_child_task.custom_title,
+            custom_reward_coins=new_child_task.custom_reward_coins,
+            custom_category=new_child_task.custom_category,
+            unity_type=new_child_task.unity_type.value if new_child_task.unity_type else None,
+            task=TaskPublic(
+                id=str(task.id),
+                title=merged["title"],
+                description=merged["description"],
+                category=merged["category"],
+                type=merged["type"],
+                difficulty=merged["difficulty"],
+                suggested_age_range=merged["suggested_age_range"],
+                reward_coins=merged["reward_coins"],
+                reward_badge_name=merged["reward_badge_name"],
+                unity_type=merged["unity_type"],
+            )
         )
-    )
+        logger.info(f"Successfully created response for assigned task {task_id} to child {child_id}")
+        return response_data
+    except Exception as e:
+        logger.error(f"Error creating response for assigned task: {e}", exc_info=True)
+        # Task was already inserted, so we should still return success
+        # But we need to construct a minimal valid response
+        try:
+            # Try to get the task again to build response
+            merged = merge_task_details(new_child_task, task)
+            # Return a simplified response
+            return ChildTaskWithDetails(
+                id=str(new_child_task.id),
+                status=new_child_task.status,
+                assigned_at=new_child_task.assigned_at,
+                completed_at=new_child_task.completed_at,
+                priority=new_child_task.priority.value if new_child_task.priority else None,
+                due_date=new_child_task.due_date,
+                progress=new_child_task.progress or 0,
+                notes=new_child_task.notes,
+                custom_title=new_child_task.custom_title,
+                custom_reward_coins=new_child_task.custom_reward_coins,
+                custom_category=new_child_task.custom_category,
+                unity_type=new_child_task.unity_type.value if new_child_task.unity_type else None,
+                task=TaskPublic(
+                    id=str(task.id),
+                    title=merged.get("title", task.title if hasattr(task, 'title') else ""),
+                    description=merged.get("description", task.description if hasattr(task, 'description') else ""),
+                    category=merged.get("category", task.category if hasattr(task, 'category') else TaskCategory.SELF_DISCIPLINE),
+                    type=merged.get("type", task.type if hasattr(task, 'type') else TaskType.LOGIC),
+                    difficulty=merged.get("difficulty", task.difficulty if hasattr(task, 'difficulty') else 1),
+                    suggested_age_range=merged.get("suggested_age_range", task.suggested_age_range if hasattr(task, 'suggested_age_range') else "6-12"),
+                    reward_coins=merged.get("reward_coins", task.reward_coins if hasattr(task, 'reward_coins') else 0),
+                    reward_badge_name=merged.get("reward_badge_name", task.reward_badge_name if hasattr(task, 'reward_badge_name') else None),
+                    unity_type=merged.get("unity_type"),
+                )
+            )
+        except Exception as e2:
+            logger.error(f"Failed to create fallback response: {e2}", exc_info=True)
+            # Last resort: raise error but task is already in DB
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Task was assigned but failed to return response: {str(e)}"
+            )
 
 @router.post("/{child_id}/tasks/{child_task_id}/complete", response_model=dict)
 async def complete_task(
@@ -632,8 +771,14 @@ async def update_assigned_task(
 
     # Fetch task details for response (handle both Link and embedded)
     if child_task.task:  # type: ignore
-        task_source = await child_task.task.fetch()  # type: ignore
-        task_id = str(child_task.task.ref.id) if child_task.task.ref else str(child_task.task.id)  # type: ignore
+        task_source = await fetch_link_or_get_object(child_task.task, Task)
+        if task_source:
+            task_id = str(task_source.id)
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Task not found."
+            )
     elif child_task.task_data:  # type: ignore
         task_source = child_task.task_data  # type: ignore
         task_id = f"custom-{child_task.id}"  # type: ignore

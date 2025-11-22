@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Plus, ListTodo, Library } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
 import Button from '../../components/ui/Button';
 import Badge from '../../components/ui/Badge';
 import AssignedTasksTab from '../../features/parents/task-management/AssignedTasksTab';
@@ -14,12 +15,22 @@ const TaskCenterContent = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [assignedCount, setAssignedCount] = useState(0);
   const [libraryCount, setLibraryCount] = useState(0);
-  const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const queryClient = useQueryClient();
 
   const handleTaskCreated = () => {
-    // Switch to assigned tab and trigger refresh
+    // Switch to assigned tab and invalidate queries to refresh
     setActiveTab('assigned');
-    setRefreshTrigger(prev => prev + 1);
+    queryClient.invalidateQueries({ queryKey: ['assigned-tasks'] });
+    queryClient.invalidateQueries({ queryKey: ['task-library'] });
+  };
+
+  const handleTabHover = (tab: TabType) => {
+    // Prefetch data when hovering over tab for faster switching
+    if (tab === 'assigned') {
+      queryClient.prefetchQuery({ queryKey: ['assigned-tasks'] });
+    } else {
+      queryClient.prefetchQuery({ queryKey: ['task-library'] });
+    }
   };
 
   const tabs = [
@@ -61,6 +72,7 @@ const TaskCenterContent = () => {
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
+                    onMouseEnter={() => handleTabHover(tab.id)}
                     className={`
                     flex items-center gap-3 px-6 py-4 text-sm font-semibold transition-all duration-300 relative whitespace-nowrap
                     ${activeTab === tab.id
@@ -109,11 +121,19 @@ const TaskCenterContent = () => {
             <div className="animate-fade-in">
               {activeTab === 'assigned' ? (
                 <AssignedTasksTab 
+                  key={activeTab} // Force re-render when tab becomes active
                   onCountChange={setAssignedCount}
-                  key={refreshTrigger} 
                 />
               ) : (
-                <TaskLibraryTab onCountChange={setLibraryCount} />
+                <TaskLibraryTab 
+                  onCountChange={setLibraryCount}
+                  onTaskAssigned={async () => {
+                    // Switch to assigned tab after task is assigned
+                    setActiveTab('assigned');
+                    // Refetch assigned tasks immediately when switching to tab
+                    await queryClient.refetchQueries({ queryKey: ['assigned-tasks'] });
+                  }}
+                />
               )}
             </div>
           </div>

@@ -43,21 +43,38 @@ const AssignTaskModal = ({ isOpen, onClose, task, onSuccess }: AssignTaskModalPr
     setIsSubmitting(true);
     try {
       // Assign task to child with due_date and priority
-      await assignTask(formData.childId, task.id, {
+      const result = await assignTask(formData.childId, task.id, {
         due_date: formData.dueDate || undefined,
         priority: formData.priority,
         notes: undefined
       });
 
-      // Invalidate dashboard cache to refresh data
-      queryClient.invalidateQueries({ queryKey: ['dashboard', formData.childId] });
-      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      // Check if result is valid
+      if (!result || !result.id) {
+        console.warn('Assign task returned invalid result:', result);
+        // Still proceed as task might have been assigned
+      }
+
+      // Invalidate and refetch queries immediately
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['dashboard', formData.childId] }),
+        queryClient.invalidateQueries({ queryKey: ['dashboard'] }),
+        queryClient.invalidateQueries({ queryKey: ['assignedTasks', formData.childId] }),
+        queryClient.invalidateQueries({ queryKey: ['assigned-tasks'] }),
+        queryClient.invalidateQueries({ queryKey: ['task-library', formData.childId] }),
+      ]);
+
+      // Refetch assigned tasks and task library immediately to ensure fresh data
+      await Promise.all([
+        queryClient.refetchQueries({ queryKey: ['assigned-tasks'] }),
+        queryClient.refetchQueries({ queryKey: ['task-library', formData.childId] }),
+      ]);
 
       // Emit events to notify both library and assigned tasks to refresh
       TaskEvents.emit(TaskEvents.LIBRARY_UPDATED);
       TaskEvents.emit(TaskEvents.TASK_ASSIGNED, { childId: formData.childId });
       
-      // Call success callback if provided
+      // Call success callback if provided (this will trigger tab switch)
       if (onSuccess) {
         onSuccess();
       }
@@ -65,8 +82,38 @@ const AssignTaskModal = ({ isOpen, onClose, task, onSuccess }: AssignTaskModalPr
       onClose();
 
       toast.success('Task assigned successfully!');
-    } catch (error) {
-      handleApiError(error, 'Failed to assign task');
+    } catch (error: any) {
+      // Check if error is actually a success (task was assigned but response parsing failed)
+      const errorMessage = error?.response?.data?.detail || error?.message || 'Failed to assign task';
+      
+      // If error mentions task was assigned, show success message
+      if (errorMessage.includes('assigned') || errorMessage.includes('Task was assigned')) {
+        // Task was likely assigned successfully, just refresh
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: ['assignedTasks', formData.childId] }),
+          queryClient.invalidateQueries({ queryKey: ['assigned-tasks'] }),
+          queryClient.invalidateQueries({ queryKey: ['task-library'] }),
+          queryClient.invalidateQueries({ queryKey: ['assigned-task-ids'] }),
+        ]);
+        
+        // Refetch immediately
+        await queryClient.refetchQueries({ queryKey: ['assigned-tasks'] });
+        
+        TaskEvents.emit(TaskEvents.LIBRARY_UPDATED);
+        TaskEvents.emit(TaskEvents.TASK_ASSIGNED, { childId: formData.childId });
+        
+        // Call success callback to switch tab
+        if (onSuccess) {
+          onSuccess();
+        }
+        
+        onClose();
+        toast.success('Task assigned successfully!');
+      } else {
+        // Real error
+        console.error('Failed to assign task:', error);
+        handleApiError(error, 'Failed to assign task');
+      }
     } finally {
       setIsSubmitting(false);
     }

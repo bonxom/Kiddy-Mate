@@ -10,6 +10,7 @@ import { getLatestAssessment, calculateSkillScores } from './assessmentService';
 import { getEmotionData } from './interactionService';
 import type { EmotionData } from './interactionService';
 import type { Child } from './childService';
+import type { ChildTaskWithDetails } from './taskService';
 
 // ==================== TYPES ====================
 
@@ -366,6 +367,22 @@ const formatTime = (timestamp: string): string => {
   return `${hours}:${minutesStr} ${ampm}`;
 };
 
+/**
+ * Analyze emotion report and generate new tasks based on the analysis
+ * If reportId is provided, uses that specific report. Otherwise, uses the most recent report.
+ * Generates up to 20 tasks based on emotional patterns and insights.
+ */
+export const analyzeEmotionReportAndGenerateTasks = async (
+  childId: string,
+  reportId?: string
+): Promise<ChildTaskWithDetails[]> => {
+  const response = await axiosClient.post<ChildTaskWithDetails[]>(
+    `/dashboard/${childId}/analyze-emotion-report`,
+    { report_id: reportId || null }
+  );
+  return response.data;
+};
+
 export default {
   getDashboardStats,
   getStatsCards,
@@ -375,4 +392,5 @@ export default {
   getSkillRadar,
   getEmotions,
   getDashboardData,
+  analyzeEmotionReportAndGenerateTasks,
 };

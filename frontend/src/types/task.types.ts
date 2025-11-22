@@ -19,6 +19,7 @@ export interface LibraryTask {
   description: string;
   suggestedReward?: number;
   suggestedChild?: string;
+  childTaskId?: string; // For unassigned tasks, this is the ChildTask ID
 }
 
 export interface CreateTaskFormData {

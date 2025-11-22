@@ -30,6 +30,7 @@ export interface Task {
   suggested_age_range: string;
   reward_coins: number;
   reward_badge_name?: string;
+  unity_type?: string;
 }
 
 export interface TaskCreate {
@@ -83,6 +84,8 @@ export interface ChildTaskWithDetails extends ChildTask {
   notes?: string;
   custom_title?: string;
   custom_reward_coins?: number;
+  custom_category?: TaskCategory;
+  unity_type?: string;
   task: Task;
 }
 
