@@ -8,21 +8,16 @@ class Child(Document):
     parent: Link[User]
     name: str
     birth_date: datetime
-    
-    # Authentication fields for separate child app (optional for backward compatibility)
     username: Optional[str] = None  # Unique username for child login
     password_hash: Optional[str] = None  # Hashed password for child login
-    
-    # Dedicated fields (instead of initial_traits dict)
     nickname: Optional[str] = None
     gender: Optional[str] = None
     avatar_url: Optional[str] = None
+    
     personality: Optional[List[str]] = None
     interests: Optional[List[str]] = None
     strengths: Optional[List[str]] = None
     challenges: Optional[List[str]] = None
-    
-    # Keep for backward compatibility and other traits
     initial_traits: Optional[dict] = None
     
     current_coins: int = 0

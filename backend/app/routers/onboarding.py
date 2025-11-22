@@ -11,7 +11,7 @@ router = APIRouter()
 class ChildOnboardingData(BaseModel):
     full_name: str
     nickname: str
-    date_of_birth: str  # ISO format string
+    date_of_birth: str  
     gender: str
     username: str  # For child login
     password: str  # Plain password, will be hashed
@@ -49,7 +49,7 @@ async def complete_onboarding(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="User not found. Please register first."
         )
-    # Update user info
+    
     current_user.full_name = request.parent_display_name
     if request.phone_number:
         current_user.phone_number = request.phone_number
@@ -66,20 +66,18 @@ async def complete_onboarding(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Username '{child_data.username}' is already taken. Please choose another username."
             )
-        
-        # Parse date of birth
+
         try:
             birth_date = datetime.fromisoformat(child_data.date_of_birth.replace('Z', '+00:00'))
         except:
-            # Fallback: try parsing as simple date string
+            
             birth_date = datetime.strptime(child_data.date_of_birth, '%Y-%m-%d')
         
         # Hash password
         hashed_password = hash_password(child_data.password)
-        
-        # Create child (Beanie automatically handles Link type)
+
         new_child = Child(
-            parent=current_user,  # type: ignore
+            parent=current_user,  
             name=child_data.full_name,
             birth_date=birth_date,
             username=child_data.username,
@@ -94,10 +92,10 @@ async def complete_onboarding(
         )
         await new_child.insert()
         
-        # Create assessment (Beanie automatically handles Link type)
+        
         assessment = ChildDevelopmentAssessment(
-            child=new_child,  # type: ignore
-            parent=current_user,  # type: ignore
+            child=new_child,  
+            parent=current_user,  
             discipline_autonomy=child_data.discipline_autonomy,
             emotional_intelligence=child_data.emotional_intelligence,
             social_interaction=child_data.social_interaction

@@ -83,4 +83,4 @@ async def submit_game_session(
     session.score = score
     session.behavior_data = behavior_data
     await session.save()
-    return {"message": "Ghi nhận kết quả chơi game thành công."}
+    return {"message": "Game session recorded successfully."}

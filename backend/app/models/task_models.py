@@ -2,6 +2,11 @@ from beanie import Document
 from typing import Optional
 import enum
 
+class UnityType(str, enum.Enum):
+    LIFE = "life"           
+    CHOICE = "choice"       
+    TALK = "talk"           
+
 class TaskCategory(str, enum.Enum):
     INDEPENDENCE = "Independence"
     LOGIC = "Logic"
@@ -9,7 +14,7 @@ class TaskCategory(str, enum.Enum):
     CREATIVITY = "Creativity"
     SOCIAL = "Social"
     ACADEMIC = "Academic"
-    # Backward compatibility
+    
     IQ = "IQ"
     EQ = "EQ"
 
@@ -26,6 +31,7 @@ class Task(Document):
     suggested_age_range: str
     reward_coins: int = 50
     reward_badge_name: Optional[str] = None
+    unity_type: Optional[UnityType] = None  
 
     class Settings:
         name = "tasks"  

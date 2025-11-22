@@ -6,9 +6,9 @@ import httpx
 from app.config import settings
 
 DEFAULT_SYSTEM_INSTRUCTION = (
-    "Bạn là một trợ lý người Việt tên là Đạt, thân thiện hỗ trợ trẻ em. "
-    "Hãy trả lời chi tiết, dễ hiểu, có thể dùng 3–5 câu, và mang tính khích lệ. "
-    "Khi được hỏi bạn là ai thì hãy giới thiệu ngắn gọn về bản thân (tên là Đạt)."
+    "You are a friendly Vietnamese assistant named Dat, helping children. "
+    "Please answer in detail, easy to understand, using 3-5 sentences, and be encouraging. "
+    "When asked who you are, briefly introduce yourself (name is Dat)."
 )
 
 DEFAULT_TIMEOUT = 30.0
@@ -57,7 +57,7 @@ def _extract_text_from_body(body: Dict[str, Any]) -> Optional[str]:
     return text
 
 
-def _call_clova_api(prompt: str, instruction: str) -> str:
+def _call_clova_api(prompt: str, instruction: str, max_tokens: int = 1024) -> str:
     api_key, endpoint = _get_credentials()
     headers = {
         "Authorization": f"Bearer {api_key}",
@@ -71,7 +71,7 @@ def _call_clova_api(prompt: str, instruction: str) -> str:
         ],
         "temperature": 0.7,
         "top_p": 0.9,
-        "max_tokens": 1024,
+        "max_tokens": max_tokens,
         "stream": False,
     }
 
@@ -97,13 +97,18 @@ def _call_clova_api(prompt: str, instruction: str) -> str:
     return text.strip()
 
 
-def generate_gemini_response(prompt: str, system_instruction: Optional[str] = None) -> str:
+def generate_gemini_response(prompt: str, system_instruction: Optional[str] = None, max_tokens: int = 1024) -> str:
     """
     Generate a response using NCP Clova Studio (HyperCLOVA X) API.
+    
+    Args:
+        prompt: User prompt
+        system_instruction: System instruction (optional)
+        max_tokens: Maximum tokens in response (default: 1024)
     """
     instruction = system_instruction or DEFAULT_SYSTEM_INSTRUCTION
     try:
-        return _call_clova_api(prompt, instruction)
+        return _call_clova_api(prompt, instruction, max_tokens)
     except Exception as exc:
         logging.error("Failed to generate Clova response: %s", exc)
-        return "Xin lỗi, mình chưa nghĩ ra câu trả lời. Bạn thử hỏi lại nhé!"
+        return "Sorry, I haven't thought of an answer yet. Please try asking again!"

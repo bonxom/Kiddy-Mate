@@ -2,9 +2,12 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import BaseModel, EmailStr
 from app.services.auth import hash_password, verify_password, create_access_token, get_current_user
-from app.models.user_models import User
+from app.models.user_models import User, UserRole
+from app.models.child_models import Child
+from app.dependencies import verify_parent_token
 from datetime import timedelta, datetime
 from app.config import settings
+from typing import Optional
 
 router = APIRouter()
 
@@ -13,6 +16,12 @@ class RegisterRequest(BaseModel):
     password: str
     full_name: str
     phone_number: str | None = None
+
+class RegisterChildRequest(BaseModel):
+    email: EmailStr
+    password: str
+    full_name: str
+    child_id: str  
 
 class LoginRequest(BaseModel):
     email: EmailStr
@@ -31,11 +40,11 @@ class ChangePasswordRequest(BaseModel):
     new_password: str
 
 class DeleteAccountRequest(BaseModel):
-    confirmation: str  # Must be "DELETE"
+    confirmation: str  
     password: str
 
 class NotificationSettings(BaseModel):
-    email: dict  # { enabled: bool, coin_redemption: bool, ... }
+    email: dict  
     push: dict
 
 @router.post("/register", response_model=dict)
@@ -52,7 +61,7 @@ async def register_user(request: RegisterRequest):
         full_name=request.full_name
     )
     await new_user.insert()
-    return {"message": "Đăng ký thành công."}
+    return {"message": "Registration successful."}
 
 async def authenticate_user(email: str, password: str) -> User:
     user = await User.find_one(User.email == email)
@@ -95,28 +104,132 @@ async def logout_user(current_user: User = Depends(get_current_user)):
     Logout endpoint - invalidates the current session.
     Client should clear token from localStorage.
     """
-    # Update last activity timestamp
+    
     current_user.updated_at = datetime.utcnow()
     await current_user.save()
     
     return {"message": "Logout successful"}
 
+@router.post("/register/child", response_model=dict)
+async def register_child(
+    request: RegisterChildRequest,
+    current_user: User = Depends(verify_parent_token)
+):
+    """
+    Create a child account linked to an existing Child profile.
+    Only parents can create child accounts.
+    """
+    
+    existing_user = await User.find_one(User.email == request.email)
+    if existing_user:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Email already exists."
+        )
+    
+    
+    child = await Child.get(request.child_id)
+    if not child:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Child profile not found."
+        )
+    
+    
+    parent_id_from_link = None
+    if getattr(child.parent, "id", None) is not None:
+        parent_id_from_link = str(child.parent.id)
+    elif getattr(child.parent, "ref", None) is not None:
+        ref_obj = child.parent.ref
+        parent_id_from_link = str(getattr(ref_obj, "id", ref_obj))
+    
+    if parent_id_from_link != str(current_user.id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Forbidden: You do not own this child profile."
+        )
+    
+    
+    existing_child_user = await User.find_one(
+        User.role == UserRole.CHILD,
+        User.child_profile.id == request.child_id
+    )
+    if existing_child_user:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Child profile already has an account."
+        )
+    
+    
+    from beanie import Link
+    new_child_user = User(
+        email=request.email,
+        password_hash=hash_password(request.password),
+        full_name=request.full_name,
+        role=UserRole.CHILD,
+        child_profile=Link(child, Child)
+    )
+    await new_child_user.insert()
+    
+    return {
+        "message": "Child account created successfully.",
+        "user_id": str(new_child_user.id),
+        "child_id": request.child_id
+    }
+
 @router.get("/me", response_model=dict)
 async def get_me(current_user: User = Depends(get_current_user)):
     from app.models.child_models import Child
     
-    # Get children count
-    children = await Child.find(Child.parent.id == current_user.id).to_list()
-    
-    return {
+    response_data = {
         "id": str(current_user.id),
         "email": current_user.email,
         "full_name": current_user.full_name,
         "phone_number": current_user.phone_number,
+        "role": current_user.role.value,
         "onboarding_completed": current_user.onboarding_completed,
-        "children_count": len(children),
         "created_at": current_user.created_at.isoformat()
     }
+    
+    
+    if current_user.role == UserRole.PARENT:
+        
+        from app.dependencies import get_user_children
+        children = await get_user_children(current_user)
+        response_data["children_count"] = len(children)
+    elif current_user.role == UserRole.CHILD:
+        
+        if current_user.child_profile:
+            
+            child = None
+            if hasattr(current_user.child_profile, 'fetch'):
+                
+                child = await current_user.child_profile.fetch()
+            elif isinstance(current_user.child_profile, Child):
+                
+                child = current_user.child_profile
+            else:
+                
+                child_id = None
+                if hasattr(current_user.child_profile, 'id'):
+                    child_id = str(current_user.child_profile.id)
+                elif isinstance(current_user.child_profile, dict):
+                    child_id = str(current_user.child_profile.get('_id', ''))
+                
+                if child_id:
+                    child = await Child.get(child_id)
+            
+            if child:
+                response_data["child_profile_id"] = str(child.id)
+                response_data["child_profile"] = {
+                    "id": str(child.id),
+                    "name": child.name,
+                    "nickname": child.nickname,
+                    "level": child.level,
+                    "coins": child.current_coins
+                }
+    
+    return response_data
 
 @router.put("/me", response_model=dict)
 async def update_profile(
@@ -146,21 +259,21 @@ async def change_password(
     current_user: User = Depends(get_current_user)
 ):
     """Change user password with current password verification."""
-    # Verify current password
+    
     if not verify_password(request.current_password, current_user.password_hash):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Current password is incorrect"
         )
     
-    # Validate new password strength (at least 8 chars)
+    
     if len(request.new_password) < 8:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="New password must be at least 8 characters"
         )
     
-    # Update password
+    
     current_user.password_hash = hash_password(request.new_password)
     current_user.updated_at = datetime.utcnow()
     await current_user.save()
@@ -173,26 +286,27 @@ async def delete_account(
     current_user: User = Depends(get_current_user)
 ):
     """Delete user account and all associated data."""
-    # Verify confirmation text
+    
     if request.confirmation != "DELETE":
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid confirmation text. Type DELETE to confirm."
         )
     
-    # Verify password
+    
     if not verify_password(request.password, current_user.password_hash):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid password"
         )
     
-    # Delete all children and associated data
+    
     from app.models.child_models import Child
-    children = await Child.find(Child.parent.id == current_user.id).to_list()
+    from app.dependencies import get_user_children
+    children = await get_user_children(current_user)
     
     for child in children:
-        # Delete all child-related data (tasks, rewards, assessments, etc.)
+        
         from app.models.childtask_models import ChildTask
         from app.models.reward_models import ChildReward
         from app.models.child_models import ChildDevelopmentAssessment
@@ -207,10 +321,10 @@ async def delete_account(
         await GameSession.find(GameSession.child.id == child.id).delete()
         await InteractionLog.find(InteractionLog.child.id == child.id).delete()
         
-        # Delete child
+        
         await child.delete()
     
-    # Delete user
+    
     await current_user.delete()
     
     return {"message": "Account and all associated data deleted successfully"}
@@ -220,7 +334,7 @@ async def get_notification_settings(
     current_user: User = Depends(get_current_user)
 ):
     """Get user notification preferences."""
-    # Return default settings if not set
+    
     if not current_user.notification_settings:
         default_settings = {
             "email": {
@@ -248,7 +362,7 @@ async def update_notification_settings(
     current_user: User = Depends(get_current_user)
 ):
     """Update user notification preferences."""
-    # Convert Pydantic model to dict
+    
     settings_dict = {
         "email": settings.email,
         "push": settings.push
