@@ -65,7 +65,7 @@ export const AppRouter = () => {
         </Route>
       )}
 
-      {/* Redirect logic */}
+      {/* Redirect logic - only redirect authenticated users */}
       <Route
         path="*"
         element={
@@ -73,7 +73,7 @@ export const AppRouter = () => {
             ? <Navigate to="/parent/dashboard" replace />
             : isChildAuthenticated
               ? <Navigate to="/child/home" replace />
-              : <Navigate to="/login" replace />
+              : <Navigate to="/" replace />
         }
       />
     </Routes>

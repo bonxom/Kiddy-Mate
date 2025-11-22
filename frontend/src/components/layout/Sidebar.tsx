@@ -1,4 +1,4 @@
-import { NavLink, useNavigate } from 'react-router-dom';
+import { NavLink } from 'react-router-dom';
 import {
   Aperture,
   LayoutDashboard,
@@ -10,7 +10,6 @@ import {
 import { useAuth } from '../../providers/AuthProvider';
 
 const Sidebar = () => {
-  const navigate = useNavigate();
   const { logout } = useAuth();
   const navItems = [
     {
@@ -78,9 +77,12 @@ const Sidebar = () => {
         onClick={async () => {
           try {
             await logout();
-            navigate('/login');
+            // Force reload to ensure state is fully cleared and route is properly handled
+            window.location.href = '/';
           } catch (error) {
             console.error('Logout error:', error);
+            // Force reload even if logout fails
+            window.location.href = '/';
           }
         }}
       >
