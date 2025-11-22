@@ -116,7 +116,8 @@ export const getCompletionTrend = async (
   childId: string,
   days: number = 7
 ): Promise<CompletionTrendDataPoint[]> => {
-  const tasks = await getChildTasks(childId);
+  try {
+    const tasks = await getChildTasks(childId);
 
   // Get last N days
   const today = new Date();
@@ -152,6 +153,22 @@ export const getCompletionTrend = async (
   }
 
   return daysData;
+  } catch (error) {
+    console.error('Failed to fetch completion trend:', error);
+    // Return empty 7 days for newly registered children
+    const today = new Date();
+    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    return Array.from({ length: days }, (_, i) => {
+      const date = new Date(today);
+      date.setDate(date.getDate() - (days - 1 - i));
+      return {
+        name: dayNames[date.getDay()],
+        completed: 0,
+        total: 0,
+        rate: 0,
+      };
+    });
+  }
 };
 
 /**
@@ -161,7 +178,8 @@ export const getCompletionTrend = async (
 export const getCategoryProgress = async (
   childId: string
 ): Promise<CategoryProgressData[]> => {
-  const tasks = await getChildTasks(childId);
+  try {
+    const tasks = await getChildTasks(childId);
 
   // Initialize category map with all standard categories
   const categories = ['Independence', 'Logic', 'Physical', 'Creativity', 'Social', 'Academic'];
@@ -196,6 +214,12 @@ export const getCategoryProgress = async (
   });
 
   return Object.values(categoryMap);
+  } catch (error) {
+    console.error('Failed to fetch category progress:', error);
+    // Return empty categories for newly registered children
+    const categories = ['Independence', 'Logic', 'Physical', 'Creativity', 'Social', 'Academic'];
+    return categories.map(name => ({ name, completed: 0, total: 0, percentage: 0 }));
+  }
 };
 
 /**
@@ -239,8 +263,14 @@ export const getActivityTimeline = async (
 export const getSkillRadar = async (
   childId: string
 ): Promise<SkillRadarData[]> => {
-  const assessment = await getLatestAssessment(childId);
-  return calculateSkillScores(assessment);
+  try {
+    const assessment = await getLatestAssessment(childId);
+    return calculateSkillScores(assessment);
+  } catch (error) {
+    console.error('Failed to fetch skill radar:', error);
+    // Return baseline scores for newly registered children (no assessment yet)
+    return calculateSkillScores(null);
+  }
 };
 
 /**
@@ -267,17 +297,50 @@ export const getEmotions = async (childId: string): Promise<EmotionData[]> => {
 /**
  * Get complete dashboard data (all components)
  * Optimized with parallel API calls
+ * Uses Promise.allSettled for graceful degradation - if one API fails, others still work
  */
 export const getDashboardData = async (childId: string): Promise<DashboardData> => {
-  const [stats, completionTrend, categoryProgress, activityTimeline, skillRadar, emotions] =
-    await Promise.all([
-      getStatsCards(childId),
-      getCompletionTrend(childId, 7),
-      getCategoryProgress(childId),
-      getActivityTimeline(childId, 10),
-      getSkillRadar(childId),
-      getEmotions(childId),
-    ]);
+  const results = await Promise.allSettled([
+    getStatsCards(childId),
+    getCompletionTrend(childId, 7),
+    getCategoryProgress(childId),
+    getActivityTimeline(childId, 10),
+    getSkillRadar(childId),
+    getEmotions(childId),
+  ]);
+
+  // Extract values with fallbacks for failed promises
+  const stats = results[0].status === 'fulfilled' 
+    ? results[0].value 
+    : { level: '1', totalCoins: '0', achievements: '0', completion: '0%' };
+    
+  const completionTrend = results[1].status === 'fulfilled' 
+    ? results[1].value 
+    : [];
+    
+  const categoryProgress = results[2].status === 'fulfilled' 
+    ? results[2].value 
+    : [];
+    
+  const activityTimeline = results[3].status === 'fulfilled' 
+    ? results[3].value 
+    : [];
+    
+  const skillRadar = results[4].status === 'fulfilled' 
+    ? results[4].value 
+    : [];
+    
+  const emotions = results[5].status === 'fulfilled' 
+    ? results[5].value 
+    : [];
+
+  // Log any failures for debugging
+  results.forEach((result, index) => {
+    if (result.status === 'rejected') {
+      const names = ['stats', 'completionTrend', 'categoryProgress', 'activityTimeline', 'skillRadar', 'emotions'];
+      console.error(`Failed to fetch ${names[index]}:`, result.reason);
+    }
+  });
 
   return {
     stats,
