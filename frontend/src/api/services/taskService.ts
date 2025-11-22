@@ -181,9 +181,9 @@ export const assignTask = async (
     priority?: ChildTaskPriority;
     notes?: string;
   }
-): Promise<ChildTask> => {
-  const response = await axiosClient.post<ChildTask>(
-    `/children/${childId}/tasks/${taskId}/start`,
+): Promise<ChildTaskWithDetails> => {
+  const response = await axiosClient.post<ChildTaskWithDetails>(
+    `/children/${childId}/tasks/${taskId}/assign`,
     params || {}
   );
   return response.data;

@@ -228,6 +228,10 @@ const TaskLibraryTab = ({ onCountChange }: TaskLibraryTabProps) => {
             setSelectedTask(null);
           }}
           task={selectedTask}
+          onSuccess={() => {
+            // Refresh task library after successful assignment
+            fetchTasks();
+          }}
         />
       )}
     </div>

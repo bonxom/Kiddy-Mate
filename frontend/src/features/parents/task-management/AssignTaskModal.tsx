@@ -6,17 +6,19 @@ import Input from '../../../components/ui/Input';
 import Button from '../../../components/ui/Button';
 import { Star } from 'lucide-react';
 import type { LibraryTask } from '../../../types/task.types';
-import { useAssignedTasks } from '../../../hooks/useTasks';
+import { assignTask } from '../../../api/services/taskService';
 import { useChildContext } from '../../../providers/ChildProvider';
+import { TaskEvents } from '../../../utils/events';
 import { getCategoryConfig, TASK_CATEGORY_LABELS, ICON_SIZES } from '../../../constants/taskConfig';
 
 interface AssignTaskModalProps {
   isOpen: boolean;
   onClose: () => void;
   task: LibraryTask;
+  onSuccess?: () => void;
 }
 
-const AssignTaskModal = ({ isOpen, onClose, task }: AssignTaskModalProps) => {
+const AssignTaskModal = ({ isOpen, onClose, task, onSuccess }: AssignTaskModalProps) => {
   const { children } = useChildContext();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
@@ -27,9 +29,6 @@ const AssignTaskModal = ({ isOpen, onClose, task }: AssignTaskModalProps) => {
     reward: task.suggestedReward || 10,
     dueDate: '',
   });
-
-  // Hook will be initialized with childId after selection
-  const { assignTask } = useAssignedTasks(formData.childId);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -42,11 +41,19 @@ const AssignTaskModal = ({ isOpen, onClose, task }: AssignTaskModalProps) => {
     setIsSubmitting(true);
     try {
       // Assign task to child with due_date and priority
-      await assignTask(task.id, {
+      await assignTask(formData.childId, task.id, {
         due_date: formData.dueDate || undefined,
         priority: formData.priority,
         notes: undefined
       });
+
+      // Emit event to notify library to refresh
+      TaskEvents.emit(TaskEvents.LIBRARY_UPDATED);
+      
+      // Call success callback if provided
+      if (onSuccess) {
+        onSuccess();
+      }
 
       onClose();
 

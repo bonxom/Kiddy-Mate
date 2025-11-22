@@ -247,6 +247,85 @@ async def start_task(
         completed_at=new_child_task.completed_at,
     )
 
+@router.post("/{child_id}/tasks/{task_id}/assign", response_model=ChildTaskWithDetails)
+async def assign_task_to_child(
+    child_id: str,
+    task_id: str,
+    request: AssignTaskRequest = AssignTaskRequest(),
+    child: Child = Depends(verify_child_ownership)
+):
+    """
+    Assign a library task to a child (PARENT ONLY).
+    Parents can assign tasks from the task library to their children.
+    """
+    try:
+        task = await Task.get(task_id)
+    except ValidationError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid task id format."
+        )
+    if not task:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Task not found in library."
+        )
+
+    # Check if task is already assigned
+    all_child_tasks = await get_child_tasks_by_child(child)
+    existing = None
+    for ct in all_child_tasks:
+        task_ref_id = extract_id_from_link(ct.task)
+        if task_ref_id == task_id:
+            existing = ct
+            break
+    if existing:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Task already assigned to this child."
+        )
+
+    # Create new child task assignment
+    new_child_task = ChildTask(
+        child=child,  # type: ignore
+        task=task,  # type: ignore
+        status=ChildTaskStatus.ASSIGNED,
+        assigned_at=datetime.utcnow(),
+        due_date=parse_date_string(request.due_date),
+        priority=request.priority or ChildTaskPriority.MEDIUM,
+        notes=request.notes
+    )
+    await new_child_task.insert()
+    
+    # Return full details
+    merged = merge_task_details(new_child_task, task)
+    return ChildTaskWithDetails(
+        id=str(new_child_task.id),
+        status=new_child_task.status,
+        assigned_at=new_child_task.assigned_at,
+        completed_at=new_child_task.completed_at,
+        priority=new_child_task.priority.value if new_child_task.priority else None,
+        due_date=new_child_task.due_date,
+        progress=new_child_task.progress,
+        notes=new_child_task.notes,
+        custom_title=new_child_task.custom_title,
+        custom_reward_coins=new_child_task.custom_reward_coins,
+        custom_category=new_child_task.custom_category,
+        unity_type=new_child_task.unity_type.value if new_child_task.unity_type else None,
+        task=TaskPublic(
+            id=str(task.id),
+            title=merged["title"],
+            description=merged["description"],
+            category=merged["category"],
+            type=merged["type"],
+            difficulty=merged["difficulty"],
+            suggested_age_range=merged["suggested_age_range"],
+            reward_coins=merged["reward_coins"],
+            reward_badge_name=merged["reward_badge_name"],
+            unity_type=merged["unity_type"],
+        )
+    )
+
 @router.post("/{child_id}/tasks/{child_task_id}/complete", response_model=dict)
 async def complete_task(
     child_id: str,

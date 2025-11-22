@@ -405,7 +405,7 @@ const AssignedTasksTab = ({ onCountChange }: AssignedTasksTabProps) => {
                             <CheckCircle className="w-4 h-4" />
                           </button>
                         )}
-                        {(task.status === 'in-progress' || task.status === 'assigned') && (
+                        {/* {(task.status === 'in-progress' || task.status === 'assigned') && (
                           <button
                             onClick={(e) => handleGiveupClick(task.id, e)}
                             className="p-2 text-orange-500 hover:bg-orange-50 rounded-lg transition-all duration-200 hover:scale-110 hover:shadow-md"
@@ -413,7 +413,7 @@ const AssignedTasksTab = ({ onCountChange }: AssignedTasksTabProps) => {
                           >
                             <XCircle className="w-4 h-4" />
                           </button>
-                        )}
+                        )} */}
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
