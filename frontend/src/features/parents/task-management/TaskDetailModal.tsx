@@ -56,12 +56,6 @@ const TaskDetailModal = ({ isOpen, onClose, task, onSave, onDelete, onUpdate }: 
   useEffect(() => {
     setFormData(task);
     setIsEditing(false);
-    // console.log('📋 TaskDetailModal - Task loaded:', {
-    //   task,
-    //   childName: task.child,
-    //   resolvedChildId: getChildIdFromName(task.child),
-    //   availableChildren: children
-    // });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [task, isOpen]); // Only re-run when task or isOpen changes
 
@@ -99,19 +93,9 @@ const TaskDetailModal = ({ isOpen, onClose, task, onSave, onDelete, onUpdate }: 
         updates.custom_reward_coins = formData.reward;
       }
 
-      console.log('🔍 DEBUG - Update Task:', {
-        childId,
-        taskId: task.id,
-        updates,
-        formData
-      });
-
       // Call API to update
       if (childId && Object.keys(updates).length > 0) {
-        const result = await updateTask(task.id, updates);
-        console.log('✅ Update successful:', result);
-      } else {
-        console.warn('⚠️ No updates to send or missing childId:', { childId, updates });
+        await updateTask(task.id, updates);
       }
 
       // Call parent callback if provided

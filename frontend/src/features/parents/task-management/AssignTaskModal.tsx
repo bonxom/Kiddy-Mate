@@ -35,7 +35,7 @@ const AssignTaskModal = ({ isOpen, onClose, task }: AssignTaskModalProps) => {
     e.preventDefault();
 
     if (!formData.childId) {
-      console.error('Child ID is required');
+      toast.error('Please select a child');
       return;
     }
 

@@ -52,7 +52,6 @@ const ShopManagementTab = ({ isCreateModalOpen, setIsCreateModalOpen, onRewardsC
       const data = await getAllRewards();
       setRewards(data);
     } catch (err: any) {
-      console.error('Failed to fetch rewards:', err);
       setError(err.message || 'Failed to load rewards');
     } finally {
       setLoading(false);
@@ -75,7 +74,6 @@ const ShopManagementTab = ({ isCreateModalOpen, setIsCreateModalOpen, onRewardsC
         )
       );
     } catch (err: any) {
-      console.error('Failed to update quantity:', err);
       alert('Failed to update quantity: ' + (err.message || 'Unknown error'));
     }
   };
@@ -116,7 +114,6 @@ const ShopManagementTab = ({ isCreateModalOpen, setIsCreateModalOpen, onRewardsC
         await fetchRewards();
       }
     } catch (err: any) {
-      console.error('Failed to save reward:', err);
       alert('Failed to save reward: ' + (err.message || 'Unknown error'));
     }
   };
@@ -128,7 +125,6 @@ const ShopManagementTab = ({ isCreateModalOpen, setIsCreateModalOpen, onRewardsC
       setIsEditModalOpen(false);
       setSelectedReward(null);
     } catch (err: any) {
-      console.error('Failed to delete reward:', err);
       alert('Failed to delete reward: ' + (err.message || 'Unknown error'));
     }
   };

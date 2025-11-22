@@ -26,7 +26,7 @@ const RewardCenterPage = () => {
         setRewardsCount(rewards.length);
         setPendingRequestsCount(requests.filter(r => r.status === 'pending').length);
       } catch (error) {
-        console.error('Failed to fetch counts:', error);
+        // Silently fail - counts will remain at 0
       }
     };
     fetchCounts();

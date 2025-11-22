@@ -63,11 +63,9 @@ const ChildFormModal = ({ isOpen, onClose, initialData, onSave }: ChildFormModal
   const handleAssessmentComplete = (data: ChildAssessment) => {
     setAssessment(data);
     
-    // --- SỬA LỖI TYPE TẠI ĐÂY ---
     const finalProfile: ChildProfile = {
       id: initialData?.id || Math.random().toString(36).substr(2, 9),
       ...basicInfo,
-      // Đảm bảo nickname luôn là string (nếu undefined thì gán rỗng hoặc lấy tên thật)
       nickname: basicInfo.nickname || basicInfo.fullName || '', 
       interests: basicInfo.favoriteTopics,
       age: new Date().getFullYear() - new Date(basicInfo.dateOfBirth).getFullYear(),

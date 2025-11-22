@@ -52,7 +52,6 @@ export const ChildProvider = ({ children }: ChildProviderProps) => {
         setSelectedChildId(fetchedChildren[0].id);
       }
     } catch (err) {
-      console.error('Failed to load children:', err);
       // Don't set error for 401 - user might just not be logged in
       const is401 = err instanceof Error && err.message.includes('401');
       if (!is401) {

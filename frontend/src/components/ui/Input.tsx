@@ -7,8 +7,8 @@ interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   helperText?: string;
   fullWidth?: boolean;
   success?: boolean;
-  icon?: React.ReactNode; // Icon tùy chỉnh
-  iconPosition?: 'left' | 'right'; // Vị trí của icon
+  icon?: React.ReactNode;
+  iconPosition?: 'left' | 'right';
 }
 
 const Input = forwardRef<HTMLInputElement, InputProps>(
@@ -33,11 +33,8 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
     const hasLeftIcon = !!icon && iconPosition === 'left';
     const hasRightIcon = !!icon && iconPosition === 'right';
     
-    // Xác định có cần padding bên phải cho icon/nút toggle không
     const hasRightAccessory = isPassword || hasRightIcon || !!error || !!success;
 
-    // Xác định vị trí tuyệt đối của phụ kiện bên phải.
-    // Dùng 'inset-y-0' (top: 0, bottom: 0) và flexbox để căn giữa hoàn hảo
     const accessoryClass = "absolute right-0 inset-y-0 flex items-center pr-3";
     
     return (
@@ -66,31 +63,22 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
               focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent
               disabled:bg-gray-50 disabled:cursor-not-allowed disabled:text-gray-500
               placeholder:text-gray-400
-              
-              /* Padding Left */
+                
               ${hasLeftIcon ? 'pl-10' : ''}
-              
-              /* Padding Right: Tăng pr-10 lên pr-12 để chừa chỗ cho accessory căn giữa */
               ${hasRightAccessory ? 'pr-12' : 'pr-4'} 
               
               ${widthStyle}
               ${className}
-              
-              /* Màu sắc theo trạng thái */
               ${error ? 'border-red-300 focus:border-red-500 focus:ring-red-500/50' : success ? 'border-success-300 focus:border-success-500 focus:ring-success-500/50' : 'border-gray-200 hover:border-gray-300'}
             `}
             {...props}
           />
 
-          {/* =========================================================
-              CÁC ICON VÀ NÚT BÊN PHẢI (Right Accessories)
-              ========================================================= */}
-
           {(isPassword || hasRightIcon || error || success) && (
             // Accessory container dùng flex để căn giữa dọc (inset-y-0 + items-center)
             <div className={accessoryClass}>
             
-              {/* 1. Nút Ẩn/Hiện Mật khẩu MẶC ĐỊNH (Chỉ khi KHÔNG có icon tùy chỉnh) */}
+              {/* Default password toggle (only if no custom icon) */}
               {isPassword && !icon && ( 
                 <button
                   type="button"
@@ -107,14 +95,14 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
                 </button>
               )}
               
-              {/* 2. Icon custom ở bên phải (bao gồm cả nút toggle từ PasswordInput.tsx) */}
+              {/* Custom icon on right (including toggle from PasswordInput) */}
               {hasRightIcon && (
                 <div className="text-gray-400">
                   {icon}
                 </div>
               )}
 
-              {/* 3. Error and success icons (Chỉ hiển thị nếu KHÔNG có password toggle hoặc icon tùy chỉnh) */}
+              {/* Error and success icons */}
               {error && !isPassword && !icon && (
                 <div className="text-red-500">
                   <AlertCircle className="w-5 h-5" />
