@@ -1,24 +1,28 @@
 import { useState } from 'react';
 import Calendar from '../../../components/ui/Calendar';
 import { RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, ResponsiveContainer, Tooltip } from 'recharts';
-import { TrendingUp, FileText, CheckCircle2 } from 'lucide-react';
+import { TrendingUp, FileText, CheckCircle2, Heart } from 'lucide-react';
 import type { SkillRadarData } from '../../../api/services/dashboardService';
 import { SKILL_COLORS, SKILL_ICONS } from '../../../constants/categoryConfig';
 import { useChild } from '../../../providers/ChildProvider';
 import { generateReport } from '../../../api/services/reportService';
+import { analyzeEmotionReportAndGenerateTasks } from '../../../api/services/dashboardService';
 import Button from '../../../components/ui/Button';
 import { useQueryClient } from '@tanstack/react-query';
 import ReportsList from './ReportsList';
+import toast from 'react-hot-toast';
 
 interface DashboardSidebarProps {
   skillData: SkillRadarData[];
+  onViewReport?: (report: any) => void;
 }
 
-const DashboardSidebar = ({ skillData }: DashboardSidebarProps) => {
+const DashboardSidebar = ({ skillData, onViewReport }: DashboardSidebarProps) => {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const { selectedChildId } = useChild();
   const queryClient = useQueryClient();
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
+  const [isGeneratingEmotionReport, setIsGeneratingEmotionReport] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const handleGenerateReport = async () => {
@@ -33,18 +37,45 @@ const DashboardSidebar = ({ skillData }: DashboardSidebarProps) => {
       queryClient.invalidateQueries({ queryKey: ['reports', selectedChildId] });
       setSuccessMessage('Report generated successfully! Check the Reports section below.');
       setTimeout(() => setSuccessMessage(null), 5000);
+      toast.success('Report generated successfully!');
     } catch (error) {
       console.error('Failed to generate report:', error);
       setSuccessMessage('Failed to generate report. Please try again.');
       setTimeout(() => setSuccessMessage(null), 5000);
+      toast.error('Failed to generate report. Please try again.');
     } finally {
       setIsGeneratingReport(false);
     }
   };
 
+  const handleGenerateEmotionReport = async () => {
+    if (!selectedChildId) return;
+    
+    setIsGeneratingEmotionReport(true);
+    setSuccessMessage(null);
+    try {
+      const tasks = await analyzeEmotionReportAndGenerateTasks(selectedChildId);
+      // Refresh dashboard data and tasks
+      queryClient.invalidateQueries({ queryKey: ['dashboard', selectedChildId] });
+      queryClient.invalidateQueries({ queryKey: ['tasks', selectedChildId] });
+      setSuccessMessage(`Emotion report analyzed! Generated ${tasks.length} personalized tasks.`);
+      setTimeout(() => setSuccessMessage(null), 5000);
+      toast.success(`Generated ${tasks.length} personalized tasks based on emotion analysis!`);
+    } catch (error: any) {
+      console.error('Failed to generate emotion report:', error);
+      const errorMsg = error?.response?.data?.detail || 'Failed to generate emotion report. Please try again.';
+      setSuccessMessage(errorMsg);
+      setTimeout(() => setSuccessMessage(null), 5000);
+      toast.error(errorMsg);
+    } finally {
+      setIsGeneratingEmotionReport(false);
+    }
+  };
+
 
   const renderSkillIcon = (skill: string) => {
-    const Icon = SKILL_ICONS[skill] || SKILL_ICONS.Logic;
+    const Icon = (SKILL_ICONS as Record<string, any>)[skill] ?? SKILL_ICONS.Logic;
+    if (!Icon) return null;
     return <Icon className="w-3.5 h-3.5" />;
   };
 
@@ -93,13 +124,26 @@ const DashboardSidebar = ({ skillData }: DashboardSidebarProps) => {
             loading={isGeneratingReport}
             icon={<FileText className="w-4 h-4" />}
             onClick={handleGenerateReport}
-            disabled={!selectedChildId || isGeneratingReport}
+            disabled={!selectedChildId || isGeneratingReport || isGeneratingEmotionReport}
           >
             Generate Report
           </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            fullWidth
+            loading={isGeneratingEmotionReport}
+            icon={<Heart className="w-4 h-4" />}
+            onClick={handleGenerateEmotionReport}
+            disabled={!selectedChildId || isGeneratingReport || isGeneratingEmotionReport}
+          >
+            Generate Emotion Report
+          </Button>
         </div>
         <p className="text-xs text-gray-500 mt-3">
-          Generate comprehensive reports analyzing your child's progress, emotions, and development insights.
+          <strong>Generate Report:</strong> Comprehensive analysis of progress, emotions, and development insights.
+          <br />
+          <strong>Generate Emotion Report:</strong> Analyze emotions and generate personalized tasks based on emotional patterns.
         </p>
         {successMessage && (
           <div className={`mt-3 p-2 rounded-lg text-xs flex items-center gap-2 ${
@@ -114,7 +158,7 @@ const DashboardSidebar = ({ skillData }: DashboardSidebarProps) => {
       </div>
 
       {/* Reports List */}
-      <ReportsList />
+      <ReportsList onViewReport={onViewReport} />
 
       {/* Calendar Block */}
       <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-4 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300">

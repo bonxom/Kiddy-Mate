@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getDashboardData } from '../../api/services/dashboardService';
 import { useChild } from '../../providers/ChildProvider';
 import StatsCards from '../../features/parents/dashboard/StatsCards';
@@ -9,18 +9,23 @@ import EmotionPieChart from '../../features/parents/dashboard/EmotionPieChart';
 import TaskProgressRings from '../../features/parents/dashboard/TaskCategoryProgressRings';
 import ActivityTimeline from '../../features/parents/dashboard/ActivityTimeline';
 import DashboardSidebar from '../../features/parents/dashboard/DashboardSidebar';
+import ReportDetailModal from '../../features/parents/dashboard/ReportDetailModal';
 import ChildSelector from '../../components/common/ChildSelector';
 import { Loading } from '../../components/ui';
 import { TaskEvents } from '../../utils/events';
+import type { Report } from '../../api/services/reportService';
 
 const DashboardPage = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const isOnboardingProcessing = searchParams.get('onboarding') === 'processing';
   const { selectedChildId, children, loading: childLoading, refreshChildren } = useChild();
+  const queryClient = useQueryClient();
   const [onboardingTimeout, setOnboardingTimeout] = useState(false);
   const [pollingAttempts, setPollingAttempts] = useState(0);
   const maxPollingAttempts = 30; // 30 attempts = ~30 seconds (1 second per attempt)
+  const [selectedReport, setSelectedReport] = useState<Report | null>(null);
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
 
   // Poll children list when onboarding is processing
   useEffect(() => {
@@ -77,6 +82,43 @@ const DashboardPage = () => {
     staleTime: 30000, // Cache for 30 seconds
     retry: 2,
   });
+
+  // Prefetch dashboard data for other children in the background
+  // This runs after the main dashboard loads to optimize switching between children
+  useEffect(() => {
+    // Only prefetch if:
+    // 1. Current child's data has loaded successfully (to prioritize current child)
+    // 2. There are other children to prefetch
+    // 3. Children list is available and not loading
+    if (!dashboardData || !selectedChildId || children.length <= 1 || childLoading) {
+      return;
+    }
+
+    // Get other children (excluding currently selected one)
+    const otherChildren = children.filter(child => child.id !== selectedChildId);
+
+    // Prefetch dashboard data for each other child
+    // This runs in the background and doesn't block the UI
+    // Use a small delay to avoid overwhelming the server
+    const prefetchDelay = 500; // 500ms delay after main dashboard loads
+    const timeoutId = setTimeout(() => {
+      otherChildren.forEach((child, index) => {
+        // Stagger prefetch requests slightly to avoid overwhelming the server
+        setTimeout(() => {
+          queryClient.prefetchQuery({
+            queryKey: ['dashboard', child.id],
+            queryFn: () => getDashboardData(child.id),
+            staleTime: 30000, // Same cache time as main query
+          }).catch(error => {
+            // Silently fail prefetch - it's just for optimization
+            console.debug(`Failed to prefetch dashboard for child ${child.id}:`, error);
+          });
+        }, index * 200); // 200ms between each prefetch
+      });
+    }, prefetchDelay);
+
+    return () => clearTimeout(timeoutId);
+  }, [dashboardData, selectedChildId, children, childLoading, queryClient]);
 
   // Listen for task events to refresh dashboard
   useEffect(() => {
@@ -248,8 +290,24 @@ const DashboardPage = () => {
 
       {/* Right Sidebar - Hidden on mobile */}
       <aside className="hidden xl:block w-96 h-screen sticky top-0 bg-white/80 backdrop-blur-lg border-l border-gray-200 p-6 overflow-y-scroll scrollbar-thin shadow-soft">
-        <DashboardSidebar skillData={dashboardData.skillRadar} />
+        <DashboardSidebar 
+          skillData={dashboardData.skillRadar}
+          onViewReport={(report) => {
+            setSelectedReport(report);
+            setIsReportModalOpen(true);
+          }}
+        />
       </aside>
+
+      {/* Report Detail Modal - Rendered at page level for center positioning */}
+      <ReportDetailModal
+        isOpen={isReportModalOpen}
+        onClose={() => {
+          setIsReportModalOpen(false);
+          setSelectedReport(null);
+        }}
+        report={selectedReport}
+      />
     </div>
   );
 };

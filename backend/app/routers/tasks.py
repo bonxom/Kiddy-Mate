@@ -657,6 +657,13 @@ async def verify_task(
     })
     await child.save()
     
+    # Trigger skills update in background (non-blocking)
+    # Skills will be recalculated based on task completion history
+    import asyncio
+    from app.routers.dashboard import update_child_skills
+    asyncio.create_task(update_child_skills(child))
+    logger.info(f"🚀 Triggered background skills update for {child.name} after task verification")
+    
     return {"message": "Task verified successfully! Rewards have been awarded."}
 
 @router.post("/{child_id}/tasks/{child_task_id}/reject", response_model=dict)

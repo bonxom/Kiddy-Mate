@@ -12,7 +12,7 @@ from app.models.user_models import User
 from app.schemas.schemas import ChildTaskWithDetails, TaskPublic
 from typing import Dict, List, Optional
 from pydantic import BaseModel
-from datetime import datetime
+from datetime import datetime, timedelta
 import json
 import logging
 
@@ -727,3 +727,240 @@ Generate up to 20 tasks. Focus on emotional development and addressing the insig
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to analyze emotion report and generate tasks: {str(e)}"
         )
+
+# ============== SKILLS DEVELOPMENT UPDATE ==============
+
+async def calculate_skills_from_task_history(child: Child, child_tasks: List[ChildTask]) -> Dict[str, int]:
+    """
+    Calculate skill scores based on task completion history.
+    
+    Logic:
+    1. Get all completed tasks grouped by category
+    2. Calculate completion rate and average difficulty for each category
+    3. Map categories to skills:
+       - Independence: Independence category tasks
+       - Discipline: Independence category tasks (same as Independence)
+       - Emotional: Social category tasks
+       - Social: Social category tasks
+       - Logic: Logic category tasks
+    
+    Returns: Dict with skill scores (0-100)
+    """
+    # Initialize skill scores with base values from initial_traits
+    base_scores = {
+        "independence": 50,
+        "discipline": 50,
+        "emotional": 50,
+        "social": 50,
+        "logic": 50
+    }
+    
+    # Get base scores from initial_traits if available
+    if child.initial_traits and "overall_traits" in child.initial_traits:
+        traits = child.initial_traits["overall_traits"]
+        base_scores = {
+            "independence": traits.get("independence", 50),
+            "discipline": traits.get("discipline", 50),
+            "emotional": traits.get("emotional", 50),
+            "social": traits.get("social", 50),
+            "logic": traits.get("logic", 50)
+        }
+    
+    # Group tasks by category
+    category_stats: Dict[str, Dict[str, float]] = {}
+    
+    for ct in child_tasks:
+        if not ct.task:
+            continue
+        
+        task = await fetch_link_or_get_object(ct.task, Task)
+        if not task or not isinstance(task, Task):
+            continue
+        
+        # Normalize category
+        category = task.category.value if hasattr(task.category, 'value') else str(task.category)
+        if category == 'IQ':
+            category = 'Logic'
+        elif category == 'EQ':
+            category = 'Social'
+        
+        if category not in category_stats:
+            category_stats[category] = {
+                'total': 0,
+                'completed': 0,
+                'total_difficulty': 0,
+                'completed_difficulty': 0,
+                'recent_completed': 0  # Completed in last 7 days
+            }
+        
+        category_stats[category]['total'] += 1
+        difficulty = task.difficulty if hasattr(task, 'difficulty') else 3
+        category_stats[category]['total_difficulty'] += difficulty
+        
+        if ct.status == ChildTaskStatus.COMPLETED:
+            category_stats[category]['completed'] += 1
+            category_stats[category]['completed_difficulty'] += difficulty
+            
+            # Check if completed recently (last 7 days)
+            if ct.completed_at:
+                days_ago = (datetime.utcnow() - ct.completed_at).days
+                if days_ago <= 7:
+                    category_stats[category]['recent_completed'] += 1
+    
+    # Calculate skill improvements based on task completion
+    # Independence and Discipline: from Independence category
+    if 'Independence' in category_stats:
+        stats = category_stats['Independence']
+        if stats['total'] > 0:
+            completion_rate = (stats['completed'] / stats['total']) * 100
+            avg_difficulty = stats['completed_difficulty'] / stats['completed'] if stats['completed'] > 0 else 0
+            recent_bonus = min(stats['recent_completed'] * 2, 10)  # Up to 10 points bonus for recent completions
+            
+            # Improvement = completion_rate * 0.5 + difficulty_bonus + recent_bonus
+            improvement = (completion_rate * 0.5) + (avg_difficulty * 2) + recent_bonus
+            base_scores["independence"] = min(100, int(base_scores["independence"] + improvement))
+            base_scores["discipline"] = min(100, int(base_scores["discipline"] + improvement))
+    
+    # Social and Emotional: from Social category
+    if 'Social' in category_stats:
+        stats = category_stats['Social']
+        if stats['total'] > 0:
+            completion_rate = (stats['completed'] / stats['total']) * 100
+            avg_difficulty = stats['completed_difficulty'] / stats['completed'] if stats['completed'] > 0 else 0
+            recent_bonus = min(stats['recent_completed'] * 2, 10)
+            
+            improvement = (completion_rate * 0.5) + (avg_difficulty * 2) + recent_bonus
+            base_scores["social"] = min(100, int(base_scores["social"] + improvement))
+            base_scores["emotional"] = min(100, int(base_scores["emotional"] + improvement))
+    
+    # Logic: from Logic category
+    if 'Logic' in category_stats:
+        stats = category_stats['Logic']
+        if stats['total'] > 0:
+            completion_rate = (stats['completed'] / stats['total']) * 100
+            avg_difficulty = stats['completed_difficulty'] / stats['completed'] if stats['completed'] > 0 else 0
+            recent_bonus = min(stats['recent_completed'] * 2, 10)
+            
+            improvement = (completion_rate * 0.5) + (avg_difficulty * 2) + recent_bonus
+            base_scores["logic"] = min(100, int(base_scores["logic"] + improvement))
+    
+    return base_scores
+
+async def update_child_skills(child: Child) -> bool:
+    """
+    Update child's skills based on task completion history.
+    Updates initial_traits.overall_traits with new calculated scores.
+    
+    Returns: True if updated, False if no update needed
+    """
+    try:
+        # Get all child tasks
+        child_tasks = await get_child_tasks_by_child(child)
+        
+        # Calculate new skill scores
+        new_scores = await calculate_skills_from_task_history(child, child_tasks)
+        
+        # Get current scores for comparison
+        current_scores = {}
+        if child.initial_traits and "overall_traits" in child.initial_traits:
+            current_scores = child.initial_traits["overall_traits"]
+        
+        # Check if there's a significant change (at least 1 point difference)
+        has_changes = False
+        for skill, new_value in new_scores.items():
+            current_value = current_scores.get(skill, 50)
+            if abs(new_value - current_value) >= 1:
+                has_changes = True
+                break
+        
+        if not has_changes:
+            logger.debug(f"No significant skill changes for {child.name}, skipping update")
+            return False
+        
+        # Update initial_traits
+        if not child.initial_traits:
+            child.initial_traits = {}
+        
+        if "overall_traits" not in child.initial_traits:
+            child.initial_traits["overall_traits"] = {}
+        
+        # Update scores
+        child.initial_traits["overall_traits"].update(new_scores)
+        
+        # Preserve other fields in initial_traits
+        if "explanations" not in child.initial_traits:
+            child.initial_traits["explanations"] = {}
+        if "recommended_focus" not in child.initial_traits:
+            child.initial_traits["recommended_focus"] = []
+        
+        await child.save()
+        logger.info(f"✅ Updated skills for {child.name}: {new_scores}")
+        return True
+        
+    except Exception as e:
+        logger.error(f"❌ Failed to update skills for {child.name}: {e}", exc_info=True)
+        return False
+
+@router.post("/{child_id}/update-skills", response_model=Dict)
+async def manual_update_skills(
+    child_id: str,
+    child: Child = Depends(verify_child_ownership),
+    current_user: User = Depends(verify_parent_token)
+):
+    """
+    Manually trigger skills update for a child.
+    Useful for testing or immediate update.
+    """
+    try:
+        updated = await update_child_skills(child)
+        if updated:
+            return {
+                "message": "Skills updated successfully",
+                "skills": child.initial_traits.get("overall_traits", {}) if child.initial_traits else {}
+            }
+        else:
+            return {
+                "message": "No significant changes detected, skills remain the same",
+                "skills": child.initial_traits.get("overall_traits", {}) if child.initial_traits else {}
+            }
+    except Exception as e:
+        logger.error(f"Error updating skills: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to update skills: {str(e)}"
+        )
+
+async def update_skills_for_all_children():
+    """
+    Update skills for all children based on their task completion history.
+    Called by scheduler daily.
+    """
+    from app.models.child_models import Child
+    
+    logger.info("🔄 Starting skills update for all children...")
+    
+    try:
+        all_children = await Child.find_all().to_list()
+        logger.info(f"Found {len(all_children)} children to process")
+        
+        updated_count = 0
+        skipped_count = 0
+        error_count = 0
+        
+        for child in all_children:
+            try:
+                updated = await update_child_skills(child)
+                if updated:
+                    updated_count += 1
+                else:
+                    skipped_count += 1
+            except Exception as e:
+                logger.error(f"❌ Error updating skills for {child.name}: {e}")
+                error_count += 1
+                continue
+        
+        logger.info(f"✅ Skills update completed: {updated_count} updated, {skipped_count} skipped, {error_count} errors")
+        
+    except Exception as e:
+        logger.error(f"❌ Critical error in skills update: {e}", exc_info=True)
+        raise
