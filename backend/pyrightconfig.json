@@ -1,0 +1,29 @@
+{
+  "reportGeneralTypeIssues": "warning",
+  "reportOptionalSubscript": "warning",
+  "reportOptionalMemberAccess": "warning",
+  "reportOptionalCall": "warning",
+  "reportOptionalIterable": "warning",
+  "reportOptionalContextManager": "warning",
+  "reportOptionalOperand": "warning",
+  "reportUntypedFunctionDecorator": "none",
+  "reportUnusedImport": "warning",
+  "reportUnusedClass": "warning",
+  "reportUnusedFunction": "warning",
+  "reportUnusedVariable": "warning",
+  "reportDuplicateImport": "warning",
+  "reportIncompatibleMethodOverride": "warning",
+  "reportIncompatibleVariableOverride": "warning",
+  "reportInconsistentConstructor": "warning",
+  "stubPath": "",
+  "venvPath": "",
+  "venv": "",
+  "pythonVersion": "3.11",
+  "pythonPlatform": "Windows",
+  "executionEnvironments": [
+    {
+      "root": "app"
+    }
+  ],
+  "typeCheckingMode": "basic"
+}

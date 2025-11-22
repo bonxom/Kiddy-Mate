@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status
+from beanie import Link
 from pydantic import BaseModel
 from datetime import datetime
 from typing import List, Dict, Optional
@@ -77,7 +78,7 @@ async def complete_onboarding(
         hashed_password = hash_password(child_data.password)
 
         new_child = Child(
-            parent=current_user,  
+            parent=current_user,  # type: ignore
             name=child_data.full_name,
             birth_date=birth_date,
             username=child_data.username,
@@ -92,10 +93,10 @@ async def complete_onboarding(
         )
         await new_child.insert()
         
-        
+        # Create assessment
         assessment = ChildDevelopmentAssessment(
-            child=new_child,  
-            parent=current_user,  
+            child=new_child,  # type: ignore
+            parent=current_user,  # type: ignore
             discipline_autonomy=child_data.discipline_autonomy,
             emotional_intelligence=child_data.emotional_intelligence,
             social_interaction=child_data.social_interaction

@@ -1,8 +1,10 @@
 from datetime import datetime
 from typing import List, Optional, Union
 from fastapi import APIRouter, Depends, HTTPException, status, Request, Body
+from beanie import Link
 from app.dependencies import verify_child_ownership
 from app.models.child_models import Child, ChildDevelopmentAssessment
+from app.models.user_models import User
 from app.schemas.schemas import (
     ChildAssessmentCreate,
     ChildAssessmentPublic,
@@ -29,10 +31,12 @@ def _extract_link_id(link: Optional[object]) -> Optional[str]:
     return str(getattr(ref_obj, "id", ref_obj))
 
 def _serialize_assessment(doc: ChildDevelopmentAssessment) -> ChildAssessmentPublic:
+    child_id = _extract_link_id(doc.child)
+    parent_id = _extract_link_id(doc.parent)
     return ChildAssessmentPublic(
         id=str(doc.id),
-        child_id=_extract_link_id(doc.child),
-        parent_id=_extract_link_id(doc.parent),
+        child_id=child_id if child_id else "",
+        parent_id=parent_id if parent_id else "",
         discipline_autonomy=DisciplineAutonomyAnswers(**(doc.discipline_autonomy or {})),
         emotional_intelligence=EmotionalIntelligenceAnswers(**(doc.emotional_intelligence or {})),
         social_interaction=SocialInteractionAnswers(**(doc.social_interaction or {})),
@@ -69,8 +73,8 @@ async def create_child_assessment(
             )
     
     new_assessment = ChildDevelopmentAssessment(
-        child=child,
-        parent=child.parent,
+        child=child,  # type: ignore
+        parent=child.parent,  # type: ignore
         discipline_autonomy=detailed_assessment.discipline_autonomy.model_dump(),
         emotional_intelligence=detailed_assessment.emotional_intelligence.model_dump(),
         social_interaction=detailed_assessment.social_interaction.model_dump(),
@@ -89,8 +93,8 @@ async def create_simple_assessment(
     detailed_assessment = simple_assessment.to_detailed_assessment()
     
     new_assessment = ChildDevelopmentAssessment(
-        child=child,
-        parent=child.parent,
+        child=child,  # type: ignore
+        parent=child.parent,  # type: ignore
         discipline_autonomy=detailed_assessment.discipline_autonomy.model_dump(),
         emotional_intelligence=detailed_assessment.emotional_intelligence.model_dump(),
         social_interaction=detailed_assessment.social_interaction.model_dump(),
@@ -103,11 +107,16 @@ async def list_child_assessments(
     child_id: str,
     child: Child = Depends(verify_child_ownership),
 ):
-    query = ChildDevelopmentAssessment.find(
-        ChildDevelopmentAssessment.child.id == child.id
-    ).sort("-created_at")
-    assessments = await query.to_list()
-    return [_serialize_assessment(a) for a in assessments]
+    # Use Beanie's Link comparison pattern
+    from app.dependencies import extract_id_from_link
+    
+    all_assessments = await ChildDevelopmentAssessment.find_all().to_list()
+    child_assessments = [
+        a for a in all_assessments 
+        if extract_id_from_link(a.child) == str(child.id)
+    ]
+    child_assessments.sort(key=lambda x: x.created_at, reverse=True)
+    return [_serialize_assessment(a) for a in child_assessments]
 
 @router.get("/{child_id}/assessments/{assessment_id}", response_model=ChildAssessmentPublic)
 async def get_child_assessment(

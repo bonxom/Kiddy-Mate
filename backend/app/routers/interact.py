@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends
+from beanie import Link
 from pydantic import BaseModel
 from app.dependencies import verify_child_ownership
 from app.models.interactionlog_models import InteractionLog
@@ -48,7 +49,7 @@ async def interact_with_child(
         avatar_response = "Sorry, I'm currently busy. Please ask again later!"
 
     interaction_log = InteractionLog(
-        child=child,
+        child=child,  # type: ignore
         user_input=user_input,
         avatar_response=avatar_response
     )

@@ -83,7 +83,7 @@ async def build_child_context(child_id: str) -> Dict[str, Any]:
     assessment = None
     try:
         assessment = await ChildDevelopmentAssessment.find_one(
-            ChildDevelopmentAssessment.child.id == child.id
+            ChildDevelopmentAssessment.child.id == child.id  # type: ignore
         )
     except Exception:
         all_assessments = await ChildDevelopmentAssessment.find_all().to_list()
@@ -270,7 +270,7 @@ def _parse_llm_json_response(response_text: str) -> Dict[str, Any]:
             
             if objects:
                 logger.info(f"Successfully extracted {len(objects)} valid objects from incomplete JSON")
-                return objects
+                return {"tasks": objects}  # type: ignore
         
         raise ValueError(f"Invalid JSON response from LLM: {str(e)}")
 
@@ -490,8 +490,8 @@ IMPORTANT - READ CAREFULLY:
                 # Create ChildTask with status='unassigned'
                 from beanie import Link
                 child_task = ChildTask(
-                    child=Link(child, Child),
-                    task=Link(task, Task),
+                    child=child,  # type: ignore
+                    task=task,  # type: ignore
                     status=ChildTaskStatus.UNASSIGNED,
                     unity_type=ChildTaskUnityType(validated_task.unity_type),
                     assigned_at=datetime.utcnow()

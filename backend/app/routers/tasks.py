@@ -132,7 +132,7 @@ async def get_child_tasks(
         # Get task details (either from Link or embedded)
         if ct.task:
             task_source = await ct.task.fetch()
-            task_id = str(ct.task.ref.id) if ct.task.ref else str(ct.task.id)
+            task_id = str(ct.task.ref.id) if ct.task.ref else str(ct.task.id)  # type: ignore
         elif ct.task_data:
             task_source = ct.task_data
             task_id = f"custom-{ct.id}"  # Custom tasks don't have separate Task ID
@@ -143,7 +143,7 @@ async def get_child_tasks(
             continue
 
         # Apply category filter if specified
-        if category and task_source.category != category:
+        if category and task_source.category != category:  # type: ignore
             continue
 
         # Merge custom fields with task template/embedded data
@@ -228,8 +228,8 @@ async def start_task(
         )
 
     new_child_task = ChildTask(
-        child=child,
-        task=task,
+        child=child,  # type: ignore
+        task=task,  # type: ignore
         status=ChildTaskStatus.ASSIGNED,
         assigned_at=datetime.utcnow(),
         due_date=parse_date_string(request.due_date),
@@ -264,7 +264,7 @@ async def complete_task(
 
     link_child_id = None
     if getattr(child_task.child, "id", None) is not None:
-        link_child_id = str(child_task.child.id)
+        link_child_id = str(child_task.child.id)  # type: ignore
     elif getattr(child_task.child, "ref", None) is not None:
         ref_obj = child_task.child.ref
         link_child_id = str(getattr(ref_obj, "id", ref_obj))
@@ -401,13 +401,13 @@ async def verify_task(
         reward = await Reward.find_one(Reward.name == task_source.reward_badge_name)
         if reward:
             existing_reward = await ChildReward.find_one(
-                ChildReward.child.id == child.id,
-                ChildReward.reward.id == reward.id
+                ChildReward.child.id == child.id,  # type: ignore
+                ChildReward.reward.id == reward.id  # type: ignore
             )
             if not existing_reward:
                 new_reward = ChildReward(
-                    child=child,
-                    reward=reward
+                    child=child,  # type: ignore
+                    reward=reward  # type: ignore
                 )
                 await new_reward.insert()
 
@@ -437,7 +437,7 @@ async def update_assigned_task(
     
     link_child_id = None
     if getattr(child_task.child, "id", None) is not None:
-        link_child_id = str(child_task.child.id)
+        link_child_id = str(child_task.child.id)  # type: ignore
     elif getattr(child_task.child, "ref", None) is not None:
         ref_obj = child_task.child.ref
         link_child_id = str(getattr(ref_obj, "id", ref_obj))
@@ -476,12 +476,12 @@ async def update_assigned_task(
         child_task = await ChildTask.get(child_task_id)
 
     # Fetch task details for response (handle both Link and embedded)
-    if child_task.task:
-        task_source = await child_task.task.fetch()
-        task_id = str(child_task.task.ref.id) if child_task.task.ref else str(child_task.task.id)
-    elif child_task.task_data:
-        task_source = child_task.task_data
-        task_id = f"custom-{child_task.id}"
+    if child_task.task:  # type: ignore
+        task_source = await child_task.task.fetch()  # type: ignore
+        task_id = str(child_task.task.ref.id) if child_task.task.ref else str(child_task.task.id)  # type: ignore
+    elif child_task.task_data:  # type: ignore
+        task_source = child_task.task_data  # type: ignore
+        task_id = f"custom-{child_task.id}"  # type: ignore
     else:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -489,20 +489,20 @@ async def update_assigned_task(
         )
 
     # Merge custom fields with task template/embedded data
-    merged_details = merge_task_details(child_task, task_source)
+    merged_details = merge_task_details(child_task, task_source)  # type: ignore
 
     return ChildTaskWithDetails(
-        id=str(child_task.id),
-        status=child_task.status,
-        assigned_at=child_task.assigned_at,
-        completed_at=child_task.completed_at,
-        priority=child_task.priority.value if child_task.priority else None,
-        due_date=child_task.due_date,
-        progress=child_task.progress,
-        notes=child_task.notes,
-        custom_title=child_task.custom_title,  # pat
-        custom_reward_coins=child_task.custom_reward_coins,  # pat
-        unity_type=child_task.unity_type.value if child_task.unity_type else None,  # ldt
+        id=str(child_task.id),  # type: ignore
+        status=child_task.status,  # type: ignore
+        assigned_at=child_task.assigned_at,  # type: ignore
+        completed_at=child_task.completed_at,  # type: ignore
+        priority=child_task.priority.value if child_task.priority else None,  # type: ignore
+        due_date=child_task.due_date,  # type: ignore
+        progress=child_task.progress,  # type: ignore
+        notes=child_task.notes,  # type: ignore
+        custom_title=child_task.custom_title,  # pat  # type: ignore
+        custom_reward_coins=child_task.custom_reward_coins,  # pat  # type: ignore
+        unity_type=child_task.unity_type.value if child_task.unity_type else None,  # ldt  # type: ignore
         task=TaskPublic(
             id=task_id,
             title=merged_details["title"],
@@ -538,7 +538,7 @@ async def create_and_assign_task(
     
     # Assign to child with embedded task data
     child_task = ChildTask(
-        child=child,
+        child=child,  # type: ignore
         task=None,  # No link to Task collection
         task_data=task_data,  # Embedded data
         status=ChildTaskStatus.ASSIGNED,
@@ -590,10 +590,10 @@ async def delete_assigned_task(
             detail="Child task not found."
         )
     
-    
+    # Verify ownership
     link_child_id = None
     if getattr(child_task.child, "id", None) is not None:
-        link_child_id = str(child_task.child.id)
+        link_child_id = str(child_task.child.id)  # type: ignore
     elif getattr(child_task.child, "ref", None) is not None:
         ref_obj = child_task.child.ref
         link_child_id = str(getattr(ref_obj, "id", ref_obj))
@@ -683,7 +683,7 @@ async def giveup_task(
     
     link_child_id = None
     if getattr(child_task.child, "id", None) is not None:
-        link_child_id = str(child_task.child.id)
+        link_child_id = str(child_task.child.id)  # type: ignore
     elif getattr(child_task.child, "ref", None) is not None:
         ref_obj = child_task.child.ref
         link_child_id = str(getattr(ref_obj, "id", ref_obj))

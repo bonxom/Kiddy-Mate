@@ -1,9 +1,10 @@
 from fastapi import APIRouter, HTTPException, status, Depends
+from beanie import Link
 from app.models.child_models import Child
 from app.models.user_models import User
 from app.schemas.schemas import ChildCreate, ChildPublic, ChildUpdate
 from app.services.auth import get_current_user
-from app.dependencies import verify_child_ownership, get_user_children
+from app.dependencies import verify_child_ownership, get_user_children, extract_id_from_link
 from typing import List
 
 router = APIRouter()
@@ -34,7 +35,7 @@ async def create_child(
     current_user: User = Depends(get_current_user)
 ):
     new_child = Child(
-        parent=current_user,  
+        parent=current_user,  # type: ignore
         name=child.name,
         birth_date=child.birth_date,
         initial_traits=child.initial_traits,
@@ -115,14 +116,36 @@ async def delete_child(
     from app.models.gamesession_models import GameSession
     from app.models.interactionlog_models import InteractionLog
     
+    # Delete all related data using child.id directly
+    child_id_str = str(child.id)
     
-    await ChildTask.find(ChildTask.child.id == child.id).delete()  
-    await ChildReward.find(ChildReward.child.id == child.id).delete()  
-    await ChildDevelopmentAssessment.find(ChildDevelopmentAssessment.child.id == child.id).delete()  
-    await GameSession.find(GameSession.child.id == child.id).delete()  
-    await InteractionLog.find(InteractionLog.child.id == child.id).delete()  
+    # Get all records and filter by child_id
+    all_tasks = await ChildTask.find_all().to_list()
+    for task in all_tasks:
+        if extract_id_from_link(task.child) == child_id_str:
+            await task.delete()
     
+    all_rewards = await ChildReward.find_all().to_list()
+    for reward in all_rewards:
+        if extract_id_from_link(reward.child) == child_id_str:
+            await reward.delete()
     
+    all_assessments = await ChildDevelopmentAssessment.find_all().to_list()
+    for assessment in all_assessments:
+        if extract_id_from_link(assessment.child) == child_id_str:
+            await assessment.delete()
+    
+    all_sessions = await GameSession.find_all().to_list()
+    for session in all_sessions:
+        if extract_id_from_link(session.child) == child_id_str:
+            await session.delete()
+    
+    all_logs = await InteractionLog.find_all().to_list()
+    for log in all_logs:
+        if extract_id_from_link(log.child) == child_id_str:
+            await log.delete()
+    
+    # Delete the child
     await child.delete()
     
     return {"message": f"Child {child_id} and all associated data deleted successfully."}

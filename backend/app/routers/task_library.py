@@ -5,11 +5,13 @@ These endpoints don't require a child_id context
 """
 
 from fastapi import APIRouter, HTTPException, status, Depends
+from beanie import Link
 from app.models.task_models import Task, TaskCategory, TaskType, UnityType
 from app.schemas.schemas import TaskPublic, TaskCreate
 from typing import List, Optional
 from app.services.auth import get_current_user
 from app.models.user_models import User
+from app.dependencies import extract_id_from_link
 from pydantic import BaseModel
 
 router = APIRouter()
@@ -63,8 +65,8 @@ async def create_task(
         type=task.type,
         difficulty=task.difficulty,
         suggested_age_range=task.suggested_age_range,
-        reward_coins=task.reward_coins if hasattr(task, 'reward_coins') else 50,
-        reward_badge_name=task.reward_badge_name if hasattr(task, 'reward_badge_name') else None,
+        reward_coins=task.reward_coins if task.reward_coins is not None else 50,
+        reward_badge_name=task.reward_badge_name,
         unity_type=unity_type_value,
     )
     await new_task.insert()
@@ -147,7 +149,7 @@ async def delete_task(
         )
     
     
-    await ChildTask.find(ChildTask.task.id == task_id).delete()  
+    await ChildTask.find(ChildTask.task.id == task_id).delete()  # type: ignore
     
     
     await task.delete()

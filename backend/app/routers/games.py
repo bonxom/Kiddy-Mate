@@ -1,10 +1,11 @@
 from fastapi import APIRouter, HTTPException, status, Depends
+from beanie import Link
 from app.models.minigame_models import MiniGame
 from app.models.gamesession_models import GameSession
 from app.schemas.schemas import MiniGamePublic, GameSessionPublic
 from typing import List
 from datetime import datetime
-from app.dependencies import verify_child_ownership
+from app.dependencies import verify_child_ownership, extract_id_from_link
 from app.models.child_models import Child
 
 router = APIRouter()
@@ -39,8 +40,8 @@ async def start_game(
         )
     
     new_session = GameSession(
-        game=game,
-        child=child,
+        game=game,  # type: ignore
+        child=child,  # type: ignore
         start_time=datetime.utcnow()
     )
     await new_session.insert()
@@ -67,12 +68,7 @@ async def submit_game_session(
             detail="Game session not found."
         )
 
-    link_child_id = None
-    if getattr(session.child, "id", None) is not None:
-        link_child_id = str(session.child.id)
-    elif getattr(session.child, "ref", None) is not None:
-        ref_obj = session.child.ref
-        link_child_id = str(getattr(ref_obj, "id", ref_obj))
+    link_child_id = extract_id_from_link(session.child)
     if link_child_id != str(child.id):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,

@@ -239,7 +239,7 @@ const OnboardingPage = () => {
             </motion.div>
 
             <div className="mt-10 text-center max-w-xs">
-                <h2 className="text-2xl font-bold mb-2 text-transparent bg-clip-text bg-gradient-to-r from-white to-blue-200">
+                <h2 className="text-2xl font-bold mb-2 text-transparent bg-clip-text bg-linear-to-r from-white to-blue-200">
                     Your AI Companion
                 </h2>
                 <p className="text-blue-200 text-sm leading-relaxed">

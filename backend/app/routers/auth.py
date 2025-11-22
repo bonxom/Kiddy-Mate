@@ -1,10 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
+from beanie import Link
 from pydantic import BaseModel, EmailStr
 from app.services.auth import hash_password, verify_password, create_access_token, get_current_user
 from app.models.user_models import User, UserRole
 from app.models.child_models import Child
-from app.dependencies import verify_parent_token
+from app.dependencies import verify_parent_token, extract_id_from_link
 from datetime import timedelta, datetime
 from app.config import settings
 from typing import Optional
@@ -138,7 +139,7 @@ async def register_child(
     
     parent_id_from_link = None
     if getattr(child.parent, "id", None) is not None:
-        parent_id_from_link = str(child.parent.id)
+        parent_id_from_link = str(child.parent.id)  # type: ignore
     elif getattr(child.parent, "ref", None) is not None:
         ref_obj = child.parent.ref
         parent_id_from_link = str(getattr(ref_obj, "id", ref_obj))
@@ -152,7 +153,7 @@ async def register_child(
     
     existing_child_user = await User.find_one(
         User.role == UserRole.CHILD,
-        User.child_profile.id == request.child_id
+        User.child_profile.id == request.child_id  # type: ignore
     )
     if existing_child_user:
         raise HTTPException(
@@ -167,7 +168,7 @@ async def register_child(
         password_hash=hash_password(request.password),
         full_name=request.full_name,
         role=UserRole.CHILD,
-        child_profile=Link(child, Child)
+        child_profile=Link(child, Child)  # type: ignore
     )
     await new_child_user.insert()
     
@@ -212,7 +213,7 @@ async def get_me(current_user: User = Depends(get_current_user)):
                 
                 child_id = None
                 if hasattr(current_user.child_profile, 'id'):
-                    child_id = str(current_user.child_profile.id)
+                    child_id = str(current_user.child_profile.id)  # type: ignore
                 elif isinstance(current_user.child_profile, dict):
                     child_id = str(current_user.child_profile.get('_id', ''))
                 
@@ -220,13 +221,13 @@ async def get_me(current_user: User = Depends(get_current_user)):
                     child = await Child.get(child_id)
             
             if child:
-                response_data["child_profile_id"] = str(child.id)
+                response_data["child_profile_id"] = str(child.id)  # type: ignore
                 response_data["child_profile"] = {
-                    "id": str(child.id),
-                    "name": child.name,
-                    "nickname": child.nickname,
-                    "level": child.level,
-                    "coins": child.current_coins
+                    "id": str(child.id),  # type: ignore
+                    "name": child.name,  # type: ignore
+                    "nickname": child.nickname,  # type: ignore
+                    "level": child.level,  # type: ignore
+                    "coins": child.current_coins  # type: ignore
                 }
     
     return response_data
@@ -313,13 +314,13 @@ async def delete_account(
         from app.models.gamesession_models import GameSession
         from app.models.interactionlog_models import InteractionLog
         
-        await ChildTask.find(ChildTask.child.id == child.id).delete()
-        await ChildReward.find(ChildReward.child.id == child.id).delete()
+        await ChildTask.find(ChildTask.child.id == child.id).delete()  # type: ignore
+        await ChildReward.find(ChildReward.child.id == child.id).delete()  # type: ignore
         await ChildDevelopmentAssessment.find(
-            ChildDevelopmentAssessment.child.id == child.id
+            ChildDevelopmentAssessment.child.id == child.id  # type: ignore
         ).delete()
-        await GameSession.find(GameSession.child.id == child.id).delete()
-        await InteractionLog.find(InteractionLog.child.id == child.id).delete()
+        await GameSession.find(GameSession.child.id == child.id).delete()  # type: ignore
+        await InteractionLog.find(InteractionLog.child.id == child.id).delete()  # type: ignore
         
         
         await child.delete()
