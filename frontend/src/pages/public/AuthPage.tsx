@@ -139,8 +139,8 @@ const AuthPage = () => {
     <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4 py-10 relative overflow-hidden">
       {/* --- Background Decoration (Dùng màu cứng thay vì custom class để đảm bảo hiện) --- */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-[10%] -left-[10%] w-[40%] h-[40%] bg-blue-100 rounded-full blur-3xl opacity-50" />
-        <div className="absolute bottom-0 right-0 w-[30%] h-[30%] bg-blue-200 rounded-full blur-3xl opacity-50" />
+        <div className="absolute -top-1/4 -left-1/4 w-[50%] h-[50%] bg-blue-500 rounded-full blur-[100px] opacity-30" />
+        <div className="absolute bottom-0 right-0 w-[40%] h-[40%] bg-purple-500 rounded-full blur-[100px] opacity-20" />
       </div>
 
       {/* --- Main Card --- */}
@@ -327,22 +327,22 @@ const AuthPage = () => {
         {/* =========================================
             THE SLIDING OVERLAY (Quan trọng nhất)
            ========================================= */}
-        <div 
+          <div 
             className={`hidden md:block absolute top-0 h-full w-[55%] transition-all duration-700 ease-in-out z-20 shadow-2xl text-white overflow-hidden
             ${mode === 'login' 
-                ? 'left-1/2' // Login Mode: Overlay nằm bên phải
-                : '-left-[5%]' // Register Mode: Overlay nằm bên trái
+              ? 'left-1/2' // Login Mode: Overlay nằm bên phải
+              : '-left-[5%]' // Register Mode: Overlay nằm bên trái
             }`}
             style={{
-                // FIX 1: Dùng màu gradient cứng (Hardcoded) để chắc chắn hiện màu
+                // FIX 2: Màu gradient đẹp hơn, kết hợp màu thương hiệu (xanh đậm -> xanh sáng)
                 background: 'linear-gradient(135deg, #06325a 0%, #3498db 100%)',
                 
-                // FIX 2: Clip-path
+                // Giữ nguyên clip-path tạo vát chéo
                 clipPath: mode === 'login' 
                     ? 'polygon(15% 0, 100% 0, 100% 100%, 0% 100%)' // Cạnh trái vát chéo
                     : 'polygon(0 0, 100% 0, 85% 100%, 0% 100%)'    // Cạnh phải vát chéo
             }}
-        >
+         >
             {/* Overlay Background Decor */}
             <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-2xl" />
             <div className="absolute bottom-0 left-0 w-64 h-64 bg-white/10 rounded-full translate-y-1/2 -translate-x-1/2 blur-2xl" />
