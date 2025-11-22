@@ -6,14 +6,10 @@ import { Sparkles, Quote, ArrowLeft, Bot } from 'lucide-react';
 // Dịch vụ và dữ liệu API (giả định các paths này là chính xác)
 import { completeOnboarding } from '../../api/services/onboardingService';
 import { STORAGE_KEYS } from '../../api/client/apiConfig';
+import ParentInfoStep from '../../features/onboarding/ParentInfoStep.tsx';
+import ChildInfoStep from '../../features/onboarding/ChildInfoStep.tsx';
+import AssessmentStep from '../../features/onboarding/AssessmentStep.tsx';
 import { assessmentQuestionsPrimary, assessmentQuestionsSecondary } from '../../data/assessmentQuestions';
-
-// Các bước Onboarding (giả định các paths này là chính xác)
-import ParentInfoStep from '../../features/onboarding/ParentInfoStep';
-import ChildInfoStep from '../../features/onboarding/ChildInfoStep';
-import AssessmentStep from '../../features/onboarding/AssessmentStep';
-
-// Types (giả định types.auth.types đã định nghĩa các type này)
 import type { OnboardingData, OnboardingStep, ParentInfo, ChildBasicInfo, ChildAssessment } from '../../types/auth.types';
 
 interface QuoteData {
@@ -64,20 +60,32 @@ const OnboardingPage = () => {
 
     const currentQuote = QUOTES[currentQuoteIndex];
 
-  // --- LOGIC HANDLERS (Giữ nguyên logic của bạn) ---
+          // Determine which question set to use based on child's age
+          const birthYear = new Date(child.basicInfo.dateOfBirth).getFullYear();
+          const currentYear = new Date().getFullYear();
+          const age = currentYear - birthYear;
+          const relevantQuestions = age > 10 ? assessmentQuestionsSecondary : assessmentQuestionsPrimary;
+          
+          // Create a map of question ID to category
+          const questionCategoryMap = new Map<string, 'discipline' | 'emotional' | 'social'>();
+          relevantQuestions.forEach(q => {
+            questionCategoryMap.set(q.id, q.category);
+          });
 
-  const handleParentInfoComplete = (parentInfo: ParentInfo) => {
-    setOnboardingData({
-      ...onboardingData,
-      parentInfo,
-      children: Array(parentInfo.numberOfChildren).fill(null).map(() => ({
-        basicInfo: { fullName: '', nickname: '', dateOfBirth: '', gender: 'male', username: '', password: '', favoriteTopics: [] },
-        assessment: { answers: [] },
-      })),
-    });
-    setCurrentChildIndex(0);
-    setCurrentStep('child-info');
-  };
+          child.assessment.answers.forEach((answer) => {
+            const key = answer.questionId;
+            const value = answer.rating.toString();
+            
+            // Determine category based on question's category field
+            const category = questionCategoryMap.get(key);
+            if (category === 'discipline') {
+              disciplineAnswers[key] = value;
+            } else if (category === 'emotional') {
+              emotionalAnswers[key] = value;
+            } else if (category === 'social') {
+              socialAnswers[key] = value;
+            }
+          });
 
   const handleChildInfoComplete = (childInfo: ChildBasicInfo) => {
     const updatedChildren = [...onboardingData.children];

@@ -8,6 +8,7 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     GEMINI_API_KEY: Optional[str] = None  
+    OPENAI_API_KEY: Optional[str] = None
     NCP_API_KEY: Optional[str] = None
     NCP_CLOVASTUDIO_ENDPOINT: Optional[str] = None
 

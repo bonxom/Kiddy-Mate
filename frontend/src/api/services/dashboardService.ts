@@ -9,6 +9,7 @@ import { getChildTasks } from './taskService';
 import { getLatestAssessment, calculateSkillScores } from './assessmentService';
 import { getEmotionData } from './interactionService';
 import type { EmotionData } from './interactionService';
+import type { Child } from './childService';
 
 // ==================== TYPES ====================
 
@@ -172,53 +173,27 @@ export const getCompletionTrend = async (
 };
 
 /**
- * Get category progress data
- * Groups tasks by category and calculates completion
+ * Get category progress data from backend API
+ * Returns task completion statistics grouped by category
  */
 export const getCategoryProgress = async (
   childId: string
 ): Promise<CategoryProgressData[]> => {
   try {
-    const tasks = await getChildTasks(childId);
-
-  // Initialize category map with all standard categories
-  const categories = ['Independence', 'Logic', 'Physical', 'Creativity', 'Social', 'Academic'];
-  const categoryMap: Record<string, CategoryProgressData> = {};
-  
-  categories.forEach(cat => {
-    categoryMap[cat] = { name: cat, completed: 0, total: 0, percentage: 0 };
-  });
-
-  // Process tasks and normalize category names (IQ→Logic, EQ→Social)
-  tasks.forEach((ct) => {
-    const rawCategory = ct.task?.category;
-    if (!rawCategory) return;
-    
-    // Normalize legacy categories (IQ→Logic, EQ→Social)
-    let category = rawCategory;
-    if (category === 'IQ') category = 'Logic';
-    if (category === 'EQ') category = 'Social';
-    
-    if (categoryMap[category]) {
-      categoryMap[category].total++;
-      if (ct.status === 'completed') {
-        categoryMap[category].completed++;
-      }
-    }
-  });
-
-  // Calculate percentages
-  Object.keys(categoryMap).forEach((category) => {
-    const data = categoryMap[category];
-    data.percentage = data.total > 0 ? Math.round((data.completed / data.total) * 100) : 0;
-  });
-
-  return Object.values(categoryMap);
+    const response = await axiosClient.get<CategoryProgressData[]>(
+      `/dashboard/${childId}/category-progress`
+    );
+    return response.data;
   } catch (error) {
     console.error('Failed to fetch category progress:', error);
-    // Return empty categories for newly registered children
+    // Return empty data for all categories as fallback
     const categories = ['Independence', 'Logic', 'Physical', 'Creativity', 'Social', 'Academic'];
-    return categories.map(name => ({ name, completed: 0, total: 0, percentage: 0 }));
+    return categories.map(cat => ({
+      name: cat,
+      completed: 0,
+      total: 0,
+      percentage: 0,
+    }));
   }
 };
 
@@ -258,18 +233,39 @@ export const getActivityTimeline = async (
 };
 
 /**
- * Get skill radar data from assessments
+ * Get skill radar data from initial_traits (Gemini analysis) or fallback to assessment calculation
  */
 export const getSkillRadar = async (
   childId: string
 ): Promise<SkillRadarData[]> => {
   try {
+    // First, try to get from initial_traits (Gemini analysis results)
+    const child = await getChild(childId);
+    
+    if (child.initial_traits?.overall_traits) {
+      const traits = child.initial_traits.overall_traits;
+      return [
+        { skill: 'Independence', value: traits.independence || 50, fullMark: 100 },
+        { skill: 'Emotional', value: traits.emotional || 50, fullMark: 100 },
+        { skill: 'Discipline', value: traits.discipline || 50, fullMark: 100 },
+        { skill: 'Social', value: traits.social || 50, fullMark: 100 },
+        { skill: 'Logic', value: traits.logic || 50, fullMark: 100 },
+      ];
+    }
+    
+    // Fallback: Calculate from assessment if initial_traits not available
     const assessment = await getLatestAssessment(childId);
     return calculateSkillScores(assessment);
   } catch (error) {
-    console.error('Failed to fetch skill radar:', error);
-    // Return baseline scores for newly registered children (no assessment yet)
-    return calculateSkillScores(null);
+    console.error('Failed to fetch skill radar data:', error);
+    // Return default scores if both methods fail
+    return [
+      { skill: 'Independence', value: 50, fullMark: 100 },
+      { skill: 'Emotional', value: 50, fullMark: 100 },
+      { skill: 'Discipline', value: 50, fullMark: 100 },
+      { skill: 'Social', value: 50, fullMark: 100 },
+      { skill: 'Logic', value: 50, fullMark: 100 },
+    ];
   }
 };
 
