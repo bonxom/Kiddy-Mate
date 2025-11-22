@@ -291,6 +291,13 @@ async def complete_onboarding(
         )
         await assessment.insert()
         
+        # Trigger initial task generation in background (non-blocking)
+        # This runs asynchronously and won't block the response
+        import asyncio
+        from app.routers.generate import generate_initial_tasks_for_child
+        asyncio.create_task(generate_initial_tasks_for_child(str(new_child.id)))
+        logging.info(f"🚀 Triggered background task generation for {child_data.full_name}")
+        
         created_children.append({
             "id": str(new_child.id),
             "name": new_child.name,

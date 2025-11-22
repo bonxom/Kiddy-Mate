@@ -48,6 +48,15 @@ async def create_child(
         challenges=child.challenges,
     )
     await new_child.insert()
+    
+    # Trigger initial task generation in background (non-blocking)
+    # This runs asynchronously and won't block the response
+    import asyncio
+    from app.routers.generate import generate_initial_tasks_for_child
+    asyncio.create_task(generate_initial_tasks_for_child(str(new_child.id)))
+    import logging
+    logging.info(f"🚀 Triggered background task generation for new child: {child.name}")
+    
     return _to_child_public(new_child)
 
 @router.get("/", response_model=List[ChildPublic])

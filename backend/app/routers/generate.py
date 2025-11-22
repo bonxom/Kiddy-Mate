@@ -5,7 +5,7 @@ Handles task generation and scoring using LLM with context from child data.
 
 from fastapi import APIRouter, HTTPException, status, Depends
 from pydantic import BaseModel, Field
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Union
 from app.models.child_models import Child, ChildDevelopmentAssessment
 from app.models.childtask_models import ChildTask, ChildTaskStatus, UnityType as ChildTaskUnityType
 from app.models.task_models import Task, TaskCategory, TaskType, UnityType as TaskUnityType
@@ -138,11 +138,352 @@ def _calculate_age(birth_date: datetime) -> int:
         age -= 1
     return age
 
-def _parse_llm_json_response(response_text: str) -> Dict[str, Any]:
+# ============== AUTO-GENERATION HELPER FUNCTIONS ==============
+
+# Mapping traits to categories
+TRAIT_TO_CATEGORY_MAP = {
+    "independence": "Independence",
+    "discipline": "Independence",
+    "emotional": "Social",
+    "social": "Social",
+    "logic": "Logic"
+}
+
+# All task categories
+ALL_CATEGORIES = ["Independence", "Logic", "Physical", "Creativity", "Social", "Academic"]
+
+# Config values
+MIN_TASKS_PER_GENERATION = 2
+MAX_TASKS_PER_GENERATION = 8
+TASKS_PER_CATEGORY = 2
+PRIORITY_THRESHOLD = 50
+
+def calculate_category_priority(child: Child) -> Dict[str, float]:
+    """
+    Tính priority cho mỗi category dựa trên initial_traits.
+    Priority score: 0-100, càng thấp càng cần cải thiện.
+    """
+    priorities = {}
+    
+    # Initialize all categories with default priority
+    for category in ALL_CATEGORIES:
+        priorities[category] = 50.0  # Default neutral score
+    
+    # Calculate from initial_traits
+    if child.initial_traits and "overall_traits" in child.initial_traits:
+        traits = child.initial_traits["overall_traits"]
+        
+        # Independence category (average of independence + discipline)
+        independence_score = float(traits.get("independence", 50))
+        discipline_score = float(traits.get("discipline", 50))
+        priorities["Independence"] = (independence_score + discipline_score) / 2.0
+        
+        # Social category (average of emotional + social)
+        emotional_score = float(traits.get("emotional", 50))
+        social_score = float(traits.get("social", 50))
+        priorities["Social"] = (emotional_score + social_score) / 2.0
+        
+        # Logic category
+        priorities["Logic"] = float(traits.get("logic", 50))
+        
+        # Physical, Creativity, Academic: keep default 50
+        # (can be adjusted based on task history later)
+    
+    return priorities
+
+async def get_active_tasks_by_category(child: Child) -> Dict[str, int]:
+    """
+    Đếm số active tasks theo category.
+    Active tasks = ASSIGNED, IN_PROGRESS, NEED_VERIFY, UNASSIGNED
+    """
+    active_statuses = [
+        ChildTaskStatus.ASSIGNED,
+        ChildTaskStatus.IN_PROGRESS,
+        ChildTaskStatus.NEED_VERIFY,
+        ChildTaskStatus.UNASSIGNED
+    ]
+    
+    all_child_tasks = await get_child_tasks_by_child(child)
+    active_tasks = [ct for ct in all_child_tasks if ct.status in active_statuses]
+    
+    # Count by category
+    category_count = {category: 0 for category in ALL_CATEGORIES}
+    
+    for ct in active_tasks:
+        category = None
+        
+        # Get category from task
+        if ct.task:
+            task = await fetch_link_or_get_object(ct.task, Task)
+            if task and hasattr(task, 'category'):
+                category = task.category.value if hasattr(task.category, 'value') else str(task.category)
+        elif ct.task_data:
+            category = ct.task_data.category.value if hasattr(ct.task_data.category, 'value') else str(ct.task_data.category)
+        elif ct.custom_category:
+            category = ct.custom_category.value if hasattr(ct.custom_category, 'value') else str(ct.custom_category)
+        
+        # Map IQ/EQ to Logic/Social
+        if category == "IQ":
+            category = "Logic"
+        elif category == "EQ":
+            category = "Social"
+        
+        if category and category in category_count:
+            category_count[category] += 1
+    
+    return category_count
+
+async def determine_categories_to_generate(child: Child) -> Dict[str, int]:
+    """
+    Xác định categories cần gen và số lượng tasks cho mỗi category.
+    Returns: Dict[category, number_of_tasks]
+    """
+    # 1. Tính priority cho mỗi category
+    priorities = calculate_category_priority(child)
+    
+    # 2. Phân tích active tasks hiện tại
+    active_tasks = await get_active_tasks_by_category(child)
+    
+    # 3. Xác định categories cần gen
+    categories_to_generate = {}
+    
+    # Strategy A: Fill gaps (categories chưa có task)
+    for category in ALL_CATEGORIES:
+        if active_tasks.get(category, 0) == 0:
+            categories_to_generate[category] = TASKS_PER_CATEGORY
+    
+    # Strategy B: Focus on weak areas (nếu chưa đủ)
+    if sum(categories_to_generate.values()) < 4:
+        # Sắp xếp categories theo priority (thấp nhất = cần cải thiện nhất)
+        sorted_categories = sorted(
+            priorities.items(),
+            key=lambda x: x[1]  # Sort by priority score (lower = worse)
+        )
+        
+        # Lấy top 3 categories có điểm thấp nhất
+        for category, priority_score in sorted_categories[:3]:
+            if category not in categories_to_generate:
+                categories_to_generate[category] = TASKS_PER_CATEGORY
+            elif categories_to_generate[category] < TASKS_PER_CATEGORY:
+                categories_to_generate[category] = TASKS_PER_CATEGORY
+    
+    # Strategy C: Ensure minimum coverage
+    # Đảm bảo có ít nhất 1 task cho mỗi category (nếu chưa có)
+    for category in ALL_CATEGORIES:
+        if category not in categories_to_generate:
+            if active_tasks.get(category, 0) == 0:
+                categories_to_generate[category] = 1
+    
+    # Limit: Tối đa MAX_TASKS_PER_GENERATION tasks mỗi lần gen
+    total_tasks = sum(categories_to_generate.values())
+    if total_tasks > MAX_TASKS_PER_GENERATION:
+        # Giảm số lượng tasks, ưu tiên categories có priority thấp nhất
+        sorted_by_priority = sorted(
+            categories_to_generate.items(),
+            key=lambda x: priorities.get(x[0], 50)
+        )
+        categories_to_generate = {}
+        remaining = MAX_TASKS_PER_GENERATION
+        for category, count in sorted_by_priority:
+            if remaining >= count:
+                categories_to_generate[category] = count
+                remaining -= count
+            elif remaining > 0:
+                categories_to_generate[category] = remaining
+                remaining = 0
+            else:
+                break
+    
+    # Ensure minimum
+    if sum(categories_to_generate.values()) < MIN_TASKS_PER_GENERATION:
+        # Add at least 2 tasks for lowest priority category
+        sorted_by_priority = sorted(
+            priorities.items(),
+            key=lambda x: x[1]
+        )
+        for category, _ in sorted_by_priority:
+            if category not in categories_to_generate:
+                categories_to_generate[category] = MIN_TASKS_PER_GENERATION
+                break
+    
+    return categories_to_generate
+
+def build_category_specific_prompt(
+    child_context: Dict[str, Any],
+    category: str,
+    priority_score: float
+) -> str:
+    """
+    Build prompt tối ưu cho từng category.
+    """
+    # Determine focus based on priority
+    if priority_score < 40:
+        focus = "This is a weak area that needs significant improvement. Create tasks that are engaging and build foundational skills. Make them easier and more encouraging."
+    elif priority_score < 60:
+        focus = "This area needs moderate improvement. Create tasks that challenge but are achievable. Balance difficulty appropriately."
+    else:
+        focus = "This is a strength area. Create tasks that maintain and further develop these skills. Can be slightly more challenging."
+    
+    child_info = child_context.get('child_info', {})
+    interests = child_info.get('interests', [])
+    interests_text = ', '.join(interests) if interests else 'Not specified'
+    
+    completed_tasks_text = "No completed tasks yet."
+    if child_context.get('completed_tasks'):
+        completed_tasks_text = "\n".join([
+            f"- {task.get('title', 'N/A')} (Category: {task.get('category', 'N/A')}, Difficulty: {task.get('difficulty', 'N/A')})"
+            for task in child_context['completed_tasks'][:5]  # Last 5 completed
+        ])
+    
+    giveup_tasks_text = "No tasks given up yet."
+    if child_context.get('giveup_tasks'):
+        giveup_tasks_text = "\n".join([
+            f"- {task.get('title', 'N/A')} (Category: {task.get('category', 'N/A')}, Difficulty: {task.get('difficulty', 'N/A')})"
+            for task in child_context['giveup_tasks'][:5]  # Last 5 given up
+        ])
+    
+    prompt = f"""
+CHILD INFORMATION:
+Name: {child_info.get('name', 'N/A')}
+Nickname: {child_info.get('nickname', 'N/A')}
+Age: {child_info.get('age', 'N/A')}
+Interests: {interests_text}
+Personality: {', '.join(child_info.get('personality', [])) or 'Not specified'}
+Strengths: {', '.join(child_info.get('strengths', [])) or 'Not specified'}
+Challenges: {', '.join(child_info.get('challenges', [])) or 'Not specified'}
+
+TARGET CATEGORY: {category}
+CATEGORY PRIORITY SCORE: {priority_score:.1f}/100
+FOCUS: {focus}
+
+COMPLETED TASKS (to build upon):
+{completed_tasks_text}
+
+GIVEN UP TASKS (to avoid similar difficulty/style):
+{giveup_tasks_text}
+
+REQUIREMENT: 
+Create EXACTLY 1 task in the "{category}" category that:
+1. Is appropriate for this child's age ({child_info.get('age', 'N/A')}) and current skill level
+2. Addresses the focus area: {focus}
+3. Is engaging and matches the child's interests: {interests_text}
+4. Avoids repeating tasks the child has given up on (check the list above)
+5. Builds on tasks the child has successfully completed (check the list above)
+6. Has appropriate difficulty based on priority score ({priority_score:.1f}/100)
+
+Return ONLY a JSON object (not array) with these exact fields:
+{{
+  "title": "Task title",
+  "description": "Detailed description",
+  "category": "{category}",
+  "type": "logic" or "emotion",
+  "difficulty": 1-5,
+  "suggested_age_range": "e.g., 6-10",
+  "reward_coins": 0-1000,
+  "unity_type": "life" or "choice" or "talk"
+}}
+"""
+    
+    return prompt
+
+async def generate_single_task_for_category(
+    child: Child,
+    category: str,
+    context: Dict[str, Any],
+    priority_score: float
+) -> ChildTask:
+    """
+    Generate 1 task cho 1 category cụ thể.
+    Returns created ChildTask object.
+    """
+    # Build category-specific prompt
+    user_prompt = build_category_specific_prompt(context, category, priority_score)
+    
+    system_instruction = (
+        "You are a child education expert. "
+        "Your task is to create appropriate tasks for children based on assessment information and task completion history. "
+        "\n\nIMPORTANT: You MUST return ONLY a valid JSON object (not array), no explanations, no markdown code blocks, no additional text. "
+        "Return only a pure JSON object with the exact fields specified in the prompt.\n\n"
+    )
+    
+    # Call LLM
+    max_tokens = 1024  # Enough for 1 task
+    logger.info(f"Generating task for category '{category}' (priority: {priority_score:.1f})")
+    llm_response = generate_gemini_response(user_prompt, system_instruction, max_tokens=max_tokens)
+    
+    # Parse JSON (expecting single object, not array)
+    try:
+        parsed_response = _parse_llm_json_response(llm_response)
+        
+        # Handle both object and array responses
+        if isinstance(parsed_response, list):
+            if len(parsed_response) > 0:
+                task_data = parsed_response[0]
+            else:
+                raise ValueError("Empty array response from LLM")
+        elif isinstance(parsed_response, dict):
+            task_data = parsed_response
+        else:
+            raise ValueError(f"Unexpected response type: {type(parsed_response)}")
+        
+        # Validate and normalize
+        validated_task = _validate_task_schema(task_data)
+        
+        # Ensure category matches
+        if validated_task.category != category:
+            logger.warning(f"LLM returned category '{validated_task.category}' but requested '{category}'. Using requested category.")
+            # Create a new validated task with correct category
+            task_dict = task_data.copy()
+            task_dict['category'] = category
+            validated_task = _validate_task_schema(task_dict)
+        
+        # Find or create Task in library
+        task = await Task.find_one(Task.title == validated_task.title)
+        if not task:
+            # Create new task
+            task = Task(
+                title=validated_task.title,
+                description=validated_task.description,
+                category=TaskCategory(validated_task.category),
+                type=TaskType(validated_task.type),
+                difficulty=validated_task.difficulty,
+                suggested_age_range=validated_task.suggested_age_range,
+                reward_coins=validated_task.reward_coins,
+                reward_badge_name=validated_task.reward_badge_name,
+                unity_type=TaskUnityType(validated_task.unity_type)
+            )
+            await task.insert()
+        else:
+            # Update unity_type if not set
+            if not task.unity_type:
+                task.unity_type = TaskUnityType(validated_task.unity_type)
+                await task.save()
+        
+        # Create ChildTask with status='unassigned'
+        from beanie import Link
+        child_task = ChildTask(
+            child=child,  # type: ignore
+            task=task,  # type: ignore
+            status=ChildTaskStatus.UNASSIGNED,
+            unity_type=ChildTaskUnityType(validated_task.unity_type),
+            assigned_at=datetime.utcnow()
+        )
+        await child_task.insert()
+        
+        logger.info(f"✅ Generated task '{validated_task.title}' for category '{category}'")
+        return child_task
+        
+    except Exception as e:
+        logger.error(f"Failed to generate task for category {category}: {e}")
+        raise
+
+def _parse_llm_json_response(response_text: str) -> Any:
     """
     Parse LLM JSON response, handling various formats.
     Tries to extract JSON from markdown code blocks or plain JSON.
     More robust error handling and JSON cleaning.
+    
+    Returns: Dict, List, or Any (depending on JSON structure)
     """
     if not response_text or not response_text.strip():
         raise ValueError("Empty response from LLM")
@@ -638,5 +979,274 @@ Return JSON object with these fields.
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to generate score: {str(e)}"
+        )
+
+# ============== INITIAL TASK GENERATION (for new children) ==============
+
+async def generate_initial_tasks_for_child(child_id: str):
+    """
+    Generate initial tasks for a newly created child.
+    This function runs in background and does NOT block the main flow.
+    
+    Logic:
+    - Gen 2 tasks cho mỗi category (tổng 12 tasks)
+    - Không check threshold (child mới chưa có task)
+    - Không check last_auto_generated_at
+    - Status = UNASSIGNED (parent review trước)
+    
+    This should be called asynchronously using asyncio.create_task()
+    to avoid blocking the main request.
+    """
+    try:
+        child = await Child.get(child_id)
+        if not child:
+            logger.warning(f"Child {child_id} not found for initial task generation")
+            return
+        
+        logger.info(f"🎯 Starting initial task generation for new child: {child.name} (ID: {child_id})")
+        
+        # Build context
+        context = await build_child_context(child_id)
+        priorities = calculate_category_priority(child)
+        
+        # For new children, generate 2 tasks for each category
+        # This gives parent a good selection to start with
+        categories_to_generate = {category: 2 for category in ALL_CATEGORIES}
+        
+        # Limit to MAX_TASKS_PER_GENERATION to avoid overwhelming
+        total_tasks = sum(categories_to_generate.values())
+        if total_tasks > MAX_TASKS_PER_GENERATION:
+            # Prioritize categories with lower priority scores (need improvement)
+            sorted_by_priority = sorted(
+                priorities.items(),
+                key=lambda x: x[1]
+            )
+            categories_to_generate = {}
+            remaining = MAX_TASKS_PER_GENERATION
+            for category, _ in sorted_by_priority:
+                if remaining >= 2:
+                    categories_to_generate[category] = 2
+                    remaining -= 2
+                elif remaining > 0:
+                    categories_to_generate[category] = remaining
+                    remaining = 0
+                else:
+                    break
+        
+        # Generate tasks for each category
+        generated_count = 0
+        for category, count in categories_to_generate.items():
+            priority_score = priorities.get(category, 50)
+            
+            for _ in range(count):
+                try:
+                    await generate_single_task_for_category(
+                        child=child,
+                        category=category,
+                        context=context,
+                        priority_score=priority_score
+                    )
+                    generated_count += 1
+                    
+                    # Small delay to avoid rate limiting
+                    import asyncio
+                    await asyncio.sleep(0.3)
+                    
+                except Exception as e:
+                    logger.error(f"❌ Failed to generate initial task for {child.name}, category {category}: {e}")
+                    continue
+        
+        # Update last_auto_generated_at
+        child.last_auto_generated_at = datetime.utcnow()
+        await child.save()
+        
+        logger.info(f"✅ Generated {generated_count} initial tasks for {child.name}")
+        
+    except Exception as e:
+        logger.error(f"❌ Error in initial task generation for child {child_id}: {e}", exc_info=True)
+        # Don't raise - this is background task, errors should be logged only
+
+# ============== AUTO-GENERATION SCHEDULER FUNCTION ==============
+
+async def generate_auto_tasks_for_all_children():
+    """
+    Auto-generate tasks for all children that meet criteria.
+    Called by scheduler at 8:00 AM daily.
+    
+    Logic:
+    1. Check if child already generated today
+    2. Count active tasks
+    3. Determine categories to generate
+    4. Generate tasks for each category
+    """
+    from app.models.child_models import Child
+    
+    logger.info("🔄 Starting auto-task generation for all children...")
+    
+    try:
+        # Get all children
+        all_children = await Child.find_all().to_list()
+        logger.info(f"Found {len(all_children)} children to process")
+        
+        today = datetime.utcnow().date()
+        total_generated = 0
+        total_skipped = 0
+        total_errors = 0
+        
+        # Process children in batches to avoid overwhelming the system
+        batch_size = 5
+        for i in range(0, len(all_children), batch_size):
+            batch = all_children[i:i + batch_size]
+            
+            # Process batch concurrently but with limit
+            for child in batch:
+                try:
+                    # Check if already generated today
+                    if child.last_auto_generated_at:
+                        last_gen_date = child.last_auto_generated_at.date()
+                        if last_gen_date >= today:
+                            logger.debug(f"⏭️  Skipping {child.name}: already generated today")
+                            total_skipped += 1
+                            continue
+                    
+                    # Count active tasks
+                    active_tasks = await get_active_tasks_by_category(child)
+                    total_active = sum(active_tasks.values())
+                    
+                    # Check threshold (only generate if active tasks < threshold)
+                    MIN_ACTIVE_TASKS = 3
+                    if total_active >= MIN_ACTIVE_TASKS:
+                        logger.debug(f"⏭️  Skipping {child.name}: has {total_active} active tasks (threshold: {MIN_ACTIVE_TASKS})")
+                        total_skipped += 1
+                        continue
+                    
+                    # Determine categories to generate
+                    categories_to_generate = await determine_categories_to_generate(child)
+                    
+                    if not categories_to_generate:
+                        logger.debug(f"⏭️  Skipping {child.name}: no categories to generate")
+                        total_skipped += 1
+                        continue
+                    
+                    logger.info(f"📝 Generating tasks for {child.name}: {categories_to_generate}")
+                    
+                    # Build context once (reuse for all categories)
+                    context = await build_child_context(str(child.id))
+                    priorities = calculate_category_priority(child)
+                    
+                    # Generate tasks for each category
+                    generated_count = 0
+                    for category, count in categories_to_generate.items():
+                        priority_score = priorities.get(category, 50)
+                        
+                        for _ in range(count):
+                            try:
+                                await generate_single_task_for_category(
+                                    child=child,
+                                    category=category,
+                                    context=context,
+                                    priority_score=priority_score
+                                )
+                                generated_count += 1
+                                
+                                # Small delay between generations to avoid rate limiting
+                                import asyncio
+                                await asyncio.sleep(0.5)
+                                
+                            except Exception as e:
+                                logger.error(f"❌ Failed to generate task for {child.name}, category {category}: {e}")
+                                continue
+                    
+                    if generated_count > 0:
+                        # Update last_auto_generated_at
+                        child.last_auto_generated_at = datetime.utcnow()
+                        await child.save()
+                        total_generated += generated_count
+                        logger.info(f"✅ Generated {generated_count} tasks for {child.name}")
+                    else:
+                        total_errors += 1
+                        
+                except Exception as e:
+                    logger.error(f"❌ Error processing child {child.name}: {e}", exc_info=True)
+                    total_errors += 1
+                    continue
+            
+            # Delay between batches to avoid overwhelming the system
+            if i + batch_size < len(all_children):
+                import asyncio
+                await asyncio.sleep(1)
+        
+        logger.info(f"✅ Auto-generation completed: {total_generated} tasks generated, {total_skipped} skipped, {total_errors} errors")
+        
+    except Exception as e:
+        logger.error(f"❌ Critical error in auto-generation: {e}", exc_info=True)
+        raise
+
+@router.post("/children/{child_id}/generate/auto", response_model=dict)
+async def manual_trigger_auto_generate(
+    child_id: str,
+    child: Child = Depends(verify_child_ownership),
+    current_user: User = Depends(verify_parent_token)
+):
+    """
+    Manually trigger auto-generation for a specific child.
+    Useful for testing or immediate generation.
+    Bypasses daily limit check.
+    """
+    try:
+        # Count active tasks
+        active_tasks = await get_active_tasks_by_category(child)
+        total_active = sum(active_tasks.values())
+        
+        # Determine categories to generate
+        categories_to_generate = await determine_categories_to_generate(child)
+        
+        if not categories_to_generate:
+            return {
+                "message": "No categories need task generation",
+                "active_tasks": total_active,
+                "categories_to_generate": {}
+            }
+        
+        # Build context
+        context = await build_child_context(child_id)
+        priorities = calculate_category_priority(child)
+        
+        # Generate tasks
+        generated_tasks = []
+        for category, count in categories_to_generate.items():
+            priority_score = priorities.get(category, 50)
+            
+            for _ in range(count):
+                try:
+                    task = await generate_single_task_for_category(
+                        child=child,
+                        category=category,
+                        context=context,
+                        priority_score=priority_score
+                    )
+                    generated_tasks.append({
+                        "id": str(task.id),
+                        "category": category
+                    })
+                except Exception as e:
+                    logger.error(f"Failed to generate task for category {category}: {e}")
+                    continue
+        
+        # Update last_auto_generated_at
+        child.last_auto_generated_at = datetime.utcnow()
+        await child.save()
+        
+        return {
+            "message": f"Successfully generated {len(generated_tasks)} tasks",
+            "generated_tasks": generated_tasks,
+            "categories": categories_to_generate
+        }
+        
+    except Exception as e:
+        logger.error(f"Error in manual auto-generation: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to generate tasks: {str(e)}"
         )
 

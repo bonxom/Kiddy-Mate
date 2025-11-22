@@ -22,6 +22,7 @@ class Child(Document):
     
     current_coins: int = 0
     level: int = 1
+    last_auto_generated_at: Optional[datetime] = None  # Track last auto-generation time
 
     class Settings:
         name = "children"
