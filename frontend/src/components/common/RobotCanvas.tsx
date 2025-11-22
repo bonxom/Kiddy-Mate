@@ -230,17 +230,7 @@ const RobotCanvas = () => {
         />
 
         {/* Orbit Controls - chỉ cho phép xoay, không zoom */}
-        {/* Orbit Controls - chỉ cho phép xoay, không zoom */}
         <OrbitControls
-          enableZoom={false} // Tắt zoom
-          enablePan={false}
-          enableRotate={true} // Cho phép xoay bằng chuột
-          enableDamping={true}
-          dampingFactor={0.08}
-          autoRotate={false}
-          target={[0, 0, 0]}
-          minPolarAngle={Math.PI / 3} // Giới hạn góc xoay dọc
-          maxPolarAngle={Math.PI / 1.5}
           enableZoom={false} // Tắt zoom
           enablePan={false}
           enableRotate={true} // Cho phép xoay bằng chuột
