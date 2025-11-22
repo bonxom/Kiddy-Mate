@@ -17,6 +17,11 @@ import {
   unassignTask,
   completeTask,
   verifyTask,
+  giveupTask,
+  checkTaskStatus,
+  getUnassignedTasks,
+  getGiveupTasks,
+  getCompletedTasks,
 } from '../api/services/taskService';
 import type {
   Task,
@@ -249,6 +254,26 @@ export const useAssignedTasks = (childId: string) => {
     [childId, fetchTasks]
   );
 
+  const giveup = useCallback(
+    async (childTaskId: string) => {
+      if (!childId) throw new Error('Child ID is required');
+
+      setLoading(true);
+      setError(null);
+      try {
+        await giveupTask(childId, childTaskId);
+        // Refresh tasks to get updated status
+        await fetchTasks();
+      } catch (err: any) {
+        setError(err.message || 'Failed to give up task');
+        throw err;
+      } finally {
+        setLoading(false);
+      }
+    },
+    [childId, fetchTasks]
+  );
+
   return {
     tasks,
     loading,
@@ -259,6 +284,7 @@ export const useAssignedTasks = (childId: string) => {
     unassignTask: unassign,
     completeTask: markComplete,
     verifyTask: verify,
+    giveupTask: giveup,
   };
 };
 

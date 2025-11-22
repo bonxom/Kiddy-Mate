@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import { handleApiError } from '../../../utils/errorHandler';
 import { TaskEvents } from '../../../utils/events';
-import { Search, Trash2, ArrowUpDown, CheckCircle, ListTodo } from 'lucide-react';
+import { Search, Trash2, ArrowUpDown, CheckCircle, ListTodo, XCircle } from 'lucide-react';
 import Input from '../../../components/ui/Input';
 import Badge from '../../../components/ui/Badge';
 import Modal from '../../../components/ui/Modal';
@@ -43,6 +43,7 @@ const AssignedTasksTab = ({ onCountChange }: AssignedTasksTabProps) => {
     fetchTasks,
     unassignTask,
     verifyTask,
+    giveupTask,
   } = useAssignedTasks(selectedChildId || '');
 
   // Fetch tasks on mount and when selected child changes
@@ -132,6 +133,23 @@ const AssignedTasksTab = ({ onCountChange }: AssignedTasksTabProps) => {
       // Tasks will auto-refresh via the hook
     } catch (err) {
       handleApiError(err, 'Failed to verify task');
+    }
+  };
+
+  const handleGiveupClick = async (taskId: string, e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent row click
+    
+    if (!selectedChildId) {
+      toast.error('Please select a child first');
+      return;
+    }
+    
+    try {
+      await giveupTask(taskId);
+      toast.success('Task marked as given up. Try assigning an easier one! 💪');
+      // Tasks will auto-refresh via the hook
+    } catch (err) {
+      handleApiError(err, 'Failed to give up task');
     }
   };
 
@@ -391,9 +409,18 @@ const AssignedTasksTab = ({ onCountChange }: AssignedTasksTabProps) => {
                           <button
                             onClick={(e) => handleVerifyClick(task.id, e)}
                             className="p-2 text-green-500 hover:bg-green-50 rounded-lg transition-all duration-200 hover:scale-110 hover:shadow-md"
-                            title="Duyệt nhiệm vụ"
+                            title="Verify task"
                           >
                             <CheckCircle className="w-4 h-4" />
+                          </button>
+                        )}
+                        {(task.status === 'in-progress' || task.status === 'assigned') && (
+                          <button
+                            onClick={(e) => handleGiveupClick(task.id, e)}
+                            className="p-2 text-orange-500 hover:bg-orange-50 rounded-lg transition-all duration-200 hover:scale-110 hover:shadow-md"
+                            title="Give up this task"
+                          >
+                            <XCircle className="w-4 h-4" />
                           </button>
                         )}
                         <button
@@ -402,7 +429,7 @@ const AssignedTasksTab = ({ onCountChange }: AssignedTasksTabProps) => {
                             handleDeleteClick(task.id);
                           }}
                           className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-all duration-200 hover:scale-110 hover:shadow-md"
-                          title="Xóa nhiệm vụ"
+                          title="Delete task"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>

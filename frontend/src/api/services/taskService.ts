@@ -260,6 +260,76 @@ export const verifyTask = async (
   return response.data;
 };
 
+/**
+ * Check task status
+ */
+export const checkTaskStatus = async (
+  childId: string,
+  taskId: string
+): Promise<{ status: ChildTaskStatus }> => {
+  const response = await axiosClient.get<{ status: ChildTaskStatus }>(
+    `/children/${childId}/tasks/${taskId}/status`
+  );
+  return response.data;
+};
+
+/**
+ * Give up on a task (change status to 'giveup')
+ */
+export const giveupTask = async (
+  childId: string,
+  taskId: string
+): Promise<{ message: string; status: string }> => {
+  const response = await axiosClient.post<{ message: string; status: string }>(
+    `/children/${childId}/tasks/${taskId}/giveup`
+  );
+  return response.data;
+};
+
+/**
+ * Get unassigned tasks (tasks generated but not yet assigned)
+ */
+export const getUnassignedTasks = async (
+  childId: string,
+  category?: TaskCategory
+): Promise<ChildTaskWithDetails[]> => {
+  const response = await axiosClient.post<ChildTaskWithDetails[]>(
+    `/children/${childId}/tasks/unassigned`,
+    {},
+    { params: category ? { category } : undefined }
+  );
+  return response.data;
+};
+
+/**
+ * Get tasks that were given up
+ */
+export const getGiveupTasks = async (
+  childId: string,
+  category?: TaskCategory
+): Promise<ChildTaskWithDetails[]> => {
+  const response = await axiosClient.post<ChildTaskWithDetails[]>(
+    `/children/${childId}/tasks/giveup`,
+    {},
+    { params: category ? { category } : undefined }
+  );
+  return response.data;
+};
+
+/**
+ * Get completed tasks
+ */
+export const getCompletedTasks = async (
+  childId: string,
+  limit?: number
+): Promise<ChildTaskWithDetails[]> => {
+  const response = await axiosClient.get<ChildTaskWithDetails[]>(
+    `/children/${childId}/tasks/completed`,
+    { params: limit ? { limit } : undefined }
+  );
+  return response.data;
+};
+
 export default {
   // Library Management
   getAllTasks,
@@ -280,4 +350,11 @@ export default {
   // Lifecycle
   completeTask,
   verifyTask,
+  checkTaskStatus,
+  giveupTask,
+  
+  // Task Lists
+  getUnassignedTasks,
+  getGiveupTasks,
+  getCompletedTasks,
 };
