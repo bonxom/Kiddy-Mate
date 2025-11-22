@@ -5,16 +5,18 @@ These endpoints don't require a child_id context
 """
 
 from fastapi import APIRouter, HTTPException, status, Depends
-from app.models.task_models import Task, TaskCategory, TaskType
+from beanie import Link
+from app.models.task_models import Task, TaskCategory, TaskType, UnityType
 from app.schemas.schemas import TaskPublic, TaskCreate
 from typing import List, Optional
 from app.services.auth import get_current_user
 from app.models.user_models import User
+from app.dependencies import extract_id_from_link
 from pydantic import BaseModel
 
 router = APIRouter()
 
-# Request schema for update operations
+
 class TaskUpdateRequest(BaseModel):
     title: Optional[str] = None
     description: Optional[str] = None
@@ -24,6 +26,7 @@ class TaskUpdateRequest(BaseModel):
     suggested_age_range: Optional[str] = None
     reward_coins: Optional[int] = None
     reward_badge_name: Optional[str] = None
+    unity_type: Optional[UnityType] = None
 
 @router.get("/tasks", response_model=List[TaskPublic])
 async def list_all_tasks() -> List[TaskPublic]:
@@ -40,6 +43,7 @@ async def list_all_tasks() -> List[TaskPublic]:
             suggested_age_range=t.suggested_age_range,
             reward_coins=t.reward_coins,
             reward_badge_name=t.reward_badge_name,
+            unity_type=t.unity_type.value if t.unity_type else None,
         )
         for t in tasks
     ]
@@ -50,6 +54,10 @@ async def create_task(
     current_user: User = Depends(get_current_user)
 ):
     """Create a custom task (parent can create tasks for their children)."""
+    unity_type_value = None
+    if task.unity_type:
+        unity_type_value = UnityType(task.unity_type)
+    
     new_task = Task(
         title=task.title,
         description=task.description,
@@ -57,8 +65,9 @@ async def create_task(
         type=task.type,
         difficulty=task.difficulty,
         suggested_age_range=task.suggested_age_range,
-        reward_coins=task.reward_coins if hasattr(task, 'reward_coins') else 50,
-        reward_badge_name=task.reward_badge_name if hasattr(task, 'reward_badge_name') else None,
+        reward_coins=task.reward_coins if task.reward_coins is not None else 50,
+        reward_badge_name=task.reward_badge_name,
+        unity_type=unity_type_value,
     )
     await new_task.insert()
     
@@ -72,6 +81,7 @@ async def create_task(
         suggested_age_range=new_task.suggested_age_range,
         reward_coins=new_task.reward_coins,
         reward_badge_name=new_task.reward_badge_name,
+        unity_type=new_task.unity_type.value if new_task.unity_type else None,
     )
 
 @router.put("/tasks/{task_id}", response_model=TaskPublic)
@@ -88,7 +98,7 @@ async def update_task(
             detail="Task not found."
         )
     
-    # Update fields if provided
+    
     if task_update.title is not None:
         task.title = task_update.title
     if task_update.description is not None:
@@ -105,6 +115,8 @@ async def update_task(
         task.reward_coins = task_update.reward_coins
     if task_update.reward_badge_name is not None:
         task.reward_badge_name = task_update.reward_badge_name
+    if task_update.unity_type is not None:
+        task.unity_type = task_update.unity_type
     
     await task.save()
     
@@ -118,6 +130,7 @@ async def update_task(
         suggested_age_range=task.suggested_age_range,
         reward_coins=task.reward_coins,
         reward_badge_name=task.reward_badge_name,
+        unity_type=task.unity_type.value if task.unity_type else None,
     )
 
 @router.delete("/tasks/{task_id}", response_model=dict)
@@ -135,10 +148,10 @@ async def delete_task(
             detail="Task not found."
         )
     
-    # Delete associated ChildTasks
+    
     await ChildTask.find(ChildTask.task.id == task_id).delete()  # type: ignore
     
-    # Delete task
+    
     await task.delete()
     
     return {"message": f"Task {task_id} deleted successfully."}

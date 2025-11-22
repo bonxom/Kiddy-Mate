@@ -98,6 +98,8 @@ export const TASK_STATUS_CONFIG: Record<TaskStatus, StatusConfig> = {
   'need-verify': { variant: 'default', label: 'Need Verify' },
   completed: { variant: 'success', label: 'Completed' },
   missed: { variant: 'danger', label: 'Missed' },
+  giveup: { variant: 'danger', label: 'Given Up' },
+  unassigned: { variant: 'default', label: 'Unassigned' },
 };
 
 // ============================================================================

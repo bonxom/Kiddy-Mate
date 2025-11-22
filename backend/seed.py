@@ -10,22 +10,30 @@ from beanie import init_beanie
 from beanie import Link
 from app.models.beanie_models import (
     User, Child, Task, Reward, ChildReward, MiniGame, 
-    GameSession, InteractionLog, Report, ChildTask
+    GameSession, InteractionLog, Report, ChildTask, ChildDevelopmentAssessment
 )
-from app.models.task_models import TaskCategory, TaskType
-from app.models.childtask_models import ChildTaskStatus, ChildTaskPriority
+from app.models.user_models import UserRole
+from app.models.task_models import TaskCategory, TaskType, UnityType as TaskUnityType
+from app.models.childtask_models import ChildTaskStatus, ChildTaskPriority, UnityType as ChildTaskUnityType
 from app.models.reward_models import RewardType
 from app.config import settings
 from app.services.auth import hash_password
 
 async def init_db():
     """Initialize database connection and Beanie models"""
+    
+    from app.models.child_models import Child
+    from app.models.user_models import User
+    
+    
+    User.model_rebuild()
+    
     client = AsyncIOMotorClient(settings.DATABASE_URL)
     await init_beanie(
         database=client[settings.DATABASE_NAME],
         document_models=[
             User, Child, Task, Reward, ChildReward, MiniGame, 
-            GameSession, InteractionLog, Report, ChildTask
+            GameSession, InteractionLog, Report, ChildTask, ChildDevelopmentAssessment
         ]
     )
 
@@ -37,7 +45,7 @@ async def seed_database():
     
     await init_db()
 
-    # Clear existing data
+    
     print("🗑️  Clearing existing data...")
     await User.delete_all()
     await Child.delete_all()
@@ -49,11 +57,12 @@ async def seed_database():
     await InteractionLog.delete_all()
     await Report.delete_all()
     await ChildTask.delete_all()
+    await ChildDevelopmentAssessment.delete_all()
     print("   ✓ All collections cleared\n")
 
-    # =================================================================
-    # 1. CREATE USERS
-    # =================================================================
+    
+    
+    
     print("👥 Creating parent users...")
     demo_user = User(
         email="demo@kiddymate.com",
@@ -84,6 +93,7 @@ async def seed_database():
         password_hash=hash_password("password123"),
         full_name="Michael Chen",
         phone_number="+1 555 0124",
+        role=UserRole.PARENT,
         onboarding_completed=True
     )
     
@@ -91,20 +101,21 @@ async def seed_database():
         email="parent2@example.com",
         password_hash=hash_password("password123"),
         full_name="Emma Williams",
+        role=UserRole.PARENT,
         onboarding_completed=False
     )
     
     await demo_user.create()
     await parent1.create()
     await parent2.create()
-    print(f"   ✓ Created 3 users (demo, parent1, parent2)\n")
+    print(f"   ✓ Created 3 parent users (demo, parent1, parent2)\n")
 
-    # =================================================================
-    # 2. CREATE CHILDREN
-    # =================================================================
+    
+    
+    
     print("👶 Creating children profiles...")
     
-    # Demo user's children (main test accounts)
+    
     emma = Child(
         name="Emma Johnson",
         parent=Link(demo_user, User),
@@ -153,7 +164,7 @@ async def seed_database():
         level=1
     )
     
-    # Parent1's child
+    
     alex = Child(
         name="Alex Chen",
         parent=Link(parent1, User),
@@ -176,13 +187,99 @@ async def seed_database():
     await alex.create()
     print(f"   ✓ Created 4 children (Emma, Lucas, Sophia, Alex)\n")
 
-    # =================================================================
-    # 3. CREATE TASK LIBRARY (Comprehensive)
-    # =================================================================
-    print("📚 Creating task library...")
+    
+    
+    
+    print("👤 Creating child user accounts...")
+    
+    emma_account = User(
+        email="emma@kiddymate.com",
+        password_hash=hash_password("emma123"),
+        full_name="Emma Johnson",
+        role=UserRole.CHILD,
+        child_profile=Link(emma, Child)
+    )
+    
+    lucas_account = User(
+        email="lucas@kiddymate.com",
+        password_hash=hash_password("lucas123"),
+        full_name="Lucas Johnson",
+        role=UserRole.CHILD,
+        child_profile=Link(lucas, Child)
+    )
+    
+    await emma_account.create()
+    await lucas_account.create()
+    print(f"   ✓ Created 2 child accounts (Emma, Lucas)\n")
+
+    
+    
+    
+    print("📊 Creating child development assessments...")
+    
+    assessments = [
+        ChildDevelopmentAssessment(
+            child=Link(emma, Child),
+            parent=Link(demo_user, User),
+            discipline_autonomy={
+                "completes_personal_tasks": "often",
+                "keeps_personal_space_tidy": "sometimes",
+                "finishes_simple_chores": "often",
+                "follows_screen_time_rules": "sometimes",
+                "struggles_with_activity_transitions": "rarely"
+            },
+            emotional_intelligence={
+                "expresses_big_emotions_with_aggression": "rarely",
+                "verbalizes_emotions": "often",
+                "shows_empathy": "often",
+                "displays_excessive_worry": "sometimes",
+                "owns_mistakes": "often"
+            },
+            social_interaction={
+                "joins_peer_groups_confidently": "often",
+                "shares_and_waits_turns": "often",
+                "resolves_conflict_with_words": "often",
+                "prefers_solo_play": "rarely",
+                "asks_for_help_politely": "often"
+            }
+        ),
+        ChildDevelopmentAssessment(
+            child=Link(lucas, Child),
+            parent=Link(demo_user, User),
+            discipline_autonomy={
+                "completes_personal_tasks": "often",
+                "keeps_personal_space_tidy": "often",
+                "finishes_simple_chores": "often",
+                "follows_screen_time_rules": "often",
+                "struggles_with_activity_transitions": "sometimes"
+            },
+            emotional_intelligence={
+                "expresses_big_emotions_with_aggression": "sometimes",
+                "verbalizes_emotions": "sometimes",
+                "shows_empathy": "sometimes",
+                "displays_excessive_worry": "rarely",
+                "owns_mistakes": "often"
+            },
+            social_interaction={
+                "joins_peer_groups_confidently": "sometimes",
+                "shares_and_waits_turns": "sometimes",
+                "resolves_conflict_with_words": "sometimes",
+                "prefers_solo_play": "often",
+                "asks_for_help_politely": "often"
+            }
+        ),
+    ]
+    
+    await ChildDevelopmentAssessment.insert_many(assessments)
+    print(f"   ✓ Created {len(assessments)} assessments\n")
+
+    
+    
+    
+    print("📚 Creating task library with unity types...")
     
     tasks_data = [
-        # INDEPENDENCE TASKS
+        
         {
             "title": "Make Your Bed",
             "description": "Make your bed neatly every morning",
@@ -191,7 +288,8 @@ async def seed_database():
             "difficulty": 1,
             "suggested_age_range": "5-8",
             "reward_coins": 10,
-            "reward_badge_name": "Morning Star"
+            "reward_badge_name": "Morning Star",
+            "unity_type": TaskUnityType.LIFE
         },
         {
             "title": "Pack Your School Bag",
@@ -201,7 +299,8 @@ async def seed_database():
             "difficulty": 2,
             "suggested_age_range": "6-10",
             "reward_coins": 15,
-            "reward_badge_name": "Super Organized"
+            "reward_badge_name": "Super Organized",
+            "unity_type": TaskUnityType.LIFE
         },
         {
             "title": "Set the Dinner Table",
@@ -224,7 +323,7 @@ async def seed_database():
             "reward_badge_name": "Tidy Champion"
         },
         
-        # LOGIC TASKS
+        
         {
             "title": "Pattern Puzzle",
             "description": "Find the missing number: 2, 4, 6, ?",
@@ -233,7 +332,8 @@ async def seed_database():
             "difficulty": 1,
             "suggested_age_range": "6-8",
             "reward_coins": 20,
-            "reward_badge_name": "Pattern Master"
+            "reward_badge_name": "Pattern Master",
+            "unity_type": TaskUnityType.CHOICE
         },
         {
             "title": "Math Challenge",
@@ -243,7 +343,8 @@ async def seed_database():
             "difficulty": 2,
             "suggested_age_range": "8-10",
             "reward_coins": 25,
-            "reward_badge_name": "Math Wizard"
+            "reward_badge_name": "Math Wizard",
+            "unity_type": TaskUnityType.CHOICE
         },
         {
             "title": "Logic Riddle",
@@ -266,7 +367,7 @@ async def seed_database():
             "reward_badge_name": "Sudoku Star"
         },
         
-        # PHYSICAL TASKS
+        
         {
             "title": "20 Jumping Jacks",
             "description": "Do 20 jumping jacks with good form",
@@ -308,7 +409,7 @@ async def seed_database():
             "reward_badge_name": "Balance Master"
         },
         
-        # CREATIVITY TASKS
+        
         {
             "title": "Draw Your Dream",
             "description": "Draw a picture of your biggest dream",
@@ -317,7 +418,8 @@ async def seed_database():
             "difficulty": 1,
             "suggested_age_range": "5-10",
             "reward_coins": 20,
-            "reward_badge_name": "Dream Artist"
+            "reward_badge_name": "Dream Artist",
+            "unity_type": TaskUnityType.LIFE
         },
         {
             "title": "Write a Short Story",
@@ -327,7 +429,8 @@ async def seed_database():
             "difficulty": 2,
             "suggested_age_range": "7-12",
             "reward_coins": 30,
-            "reward_badge_name": "Storyteller"
+            "reward_badge_name": "Storyteller",
+            "unity_type": TaskUnityType.LIFE
         },
         {
             "title": "Build with Blocks",
@@ -350,7 +453,7 @@ async def seed_database():
             "reward_badge_name": "Game Inventor"
         },
         
-        # SOCIAL TASKS
+        
         {
             "title": "Say Thank You",
             "description": "Thank someone who helped you today",
@@ -359,7 +462,8 @@ async def seed_database():
             "difficulty": 1,
             "suggested_age_range": "5-10",
             "reward_coins": 10,
-            "reward_badge_name": "Grateful Heart"
+            "reward_badge_name": "Grateful Heart",
+            "unity_type": TaskUnityType.TALK
         },
         {
             "title": "Help a Friend",
@@ -369,7 +473,8 @@ async def seed_database():
             "difficulty": 2,
             "suggested_age_range": "6-12",
             "reward_coins": 25,
-            "reward_badge_name": "Helping Hand"
+            "reward_badge_name": "Helping Hand",
+            "unity_type": TaskUnityType.TALK
         },
         {
             "title": "Share Your Toys",
@@ -392,7 +497,7 @@ async def seed_database():
             "reward_badge_name": "Friendship Builder"
         },
         
-        # ACADEMIC TASKS
+        
         {
             "title": "Read for 20 Minutes",
             "description": "Read a book for 20 minutes",
@@ -434,7 +539,7 @@ async def seed_database():
             "reward_badge_name": "Young Scientist"
         },
         
-        # EMOTION/EQ TASKS (backward compatibility)
+        
         {
             "title": "Name Your Feelings",
             "description": "Identify and name 3 emotions you felt today",
@@ -466,7 +571,7 @@ async def seed_database():
             "reward_badge_name": "Calm Master"
         },
         
-        # IQ TASKS (backward compatibility)
+        
         {
             "title": "Memory Game",
             "description": "Play a memory matching game and win",
@@ -483,13 +588,13 @@ async def seed_database():
     await Task.insert_many(tasks)
     print(f"   ✓ Created {len(tasks)} tasks across all categories\n")
 
-    # =================================================================
-    # 4. CREATE REWARD SHOP ITEMS
-    # =================================================================
+    
+    
+    
     print("🏪 Creating reward shop...")
     
     rewards_data = [
-        # BADGES (earned from tasks)
+        
         {"name": "Morning Star", "description": "For making bed every day", "type": RewardType.BADGE, "image_url": "/badges/morning-star.png", "cost_coins": 0},
         {"name": "Super Organized", "description": "Master of organization", "type": RewardType.BADGE, "image_url": "/badges/organized.png", "cost_coins": 0},
         {"name": "Helper Star", "description": "Always helping others", "type": RewardType.BADGE, "image_url": "/badges/helper.png", "cost_coins": 0},
@@ -500,7 +605,7 @@ async def seed_database():
         {"name": "Grateful Heart", "description": "Always thankful", "type": RewardType.BADGE, "image_url": "/badges/grateful.png", "cost_coins": 0},
         {"name": "Bookworm", "description": "Loves reading", "type": RewardType.BADGE, "image_url": "/badges/book.png", "cost_coins": 0},
         
-        # SKINS (shop items - redeemable)
+        
         {"name": "Superhero Skin", "description": "Transform into a superhero!", "type": RewardType.SKIN, "image_url": "/skins/superhero.png", "cost_coins": 100, "stock_quantity": 0, "is_active": True},
         {"name": "Princess Skin", "description": "Become a beautiful princess", "type": RewardType.SKIN, "image_url": "/skins/princess.png", "cost_coins": 100, "stock_quantity": 0, "is_active": True},
         {"name": "Astronaut Skin", "description": "Explore space!", "type": RewardType.SKIN, "image_url": "/skins/astronaut.png", "cost_coins": 120, "stock_quantity": 0, "is_active": True},
@@ -508,7 +613,7 @@ async def seed_database():
         {"name": "Ninja Skin", "description": "Stealth and speed", "type": RewardType.SKIN, "image_url": "/skins/ninja.png", "cost_coins": 150, "stock_quantity": 0, "is_active": True},
         {"name": "Unicorn Skin", "description": "Magical unicorn transformation", "type": RewardType.SKIN, "image_url": "/skins/unicorn.png", "cost_coins": 200, "stock_quantity": 0, "is_active": True},
         
-        # PHYSICAL ITEMS (shop items - limited stock)
+        
         {"name": "Favorite Snack", "description": "Your favorite snack as a treat", "type": RewardType.ITEM, "image_url": "/items/snack.png", "cost_coins": 30, "stock_quantity": 10, "is_active": True},
         {"name": "30 Min Extra Screen Time", "description": "30 minutes extra screen time", "type": RewardType.ITEM, "image_url": "/items/screen.png", "cost_coins": 50, "stock_quantity": 5, "is_active": True},
         {"name": "Movie Night Choice", "description": "Choose the family movie", "type": RewardType.ITEM, "image_url": "/items/movie.png", "cost_coins": 80, "stock_quantity": 3, "is_active": True},
@@ -521,73 +626,85 @@ async def seed_database():
     await Reward.insert_many(rewards)
     print(f"   ✓ Created {len(rewards)} rewards (badges, skins, items)\n")
 
-    # =================================================================
-    # 5. ASSIGN TASKS TO CHILDREN (Various States)
-    # =================================================================
+    
+    
+    
     print("📋 Assigning tasks to children...")
     
     now = datetime.utcnow()
     child_tasks = []
     
-    # EMMA (demo user's eldest) - Active user with diverse task history
+    
     emma_tasks = [
-        # Completed tasks (recent)
+        
         ChildTask(child=Link(emma, Child), task=Link(tasks[0], Task), status=ChildTaskStatus.COMPLETED, priority=ChildTaskPriority.HIGH, assigned_at=now - timedelta(days=7), completed_at=now - timedelta(days=6), progress=100),
         ChildTask(child=Link(emma, Child), task=Link(tasks[12], Task), status=ChildTaskStatus.COMPLETED, priority=ChildTaskPriority.MEDIUM, assigned_at=now - timedelta(days=6), completed_at=now - timedelta(days=5), progress=100),
         ChildTask(child=Link(emma, Child), task=Link(tasks[16], Task), status=ChildTaskStatus.COMPLETED, priority=ChildTaskPriority.LOW, assigned_at=now - timedelta(days=5), completed_at=now - timedelta(days=4), progress=100),
         ChildTask(child=Link(emma, Child), task=Link(tasks[20], Task), status=ChildTaskStatus.COMPLETED, priority=ChildTaskPriority.MEDIUM, assigned_at=now - timedelta(days=4), completed_at=now - timedelta(days=3), progress=100),
         ChildTask(child=Link(emma, Child), task=Link(tasks[24], Task), status=ChildTaskStatus.COMPLETED, priority=ChildTaskPriority.HIGH, assigned_at=now - timedelta(days=3), completed_at=now - timedelta(days=2), progress=100),
         
-        # Need verification (parent needs to check)
+        
         ChildTask(child=Link(emma, Child), task=Link(tasks[1], Task), status=ChildTaskStatus.NEED_VERIFY, priority=ChildTaskPriority.HIGH, assigned_at=now - timedelta(days=1), progress=100, notes="Completed morning routine"),
         ChildTask(child=Link(emma, Child), task=Link(tasks[13], Task), status=ChildTaskStatus.NEED_VERIFY, priority=ChildTaskPriority.MEDIUM, assigned_at=now - timedelta(days=1), progress=100, notes="Story about a magic garden"),
         
-        # In progress (currently working)
-        ChildTask(child=Link(emma, Child), task=Link(tasks[5], Task), status=ChildTaskStatus.IN_PROGRESS, priority=ChildTaskPriority.HIGH, assigned_at=now - timedelta(hours=5), due_date=now + timedelta(days=1), progress=60, notes="Working on problem 3/5"),
-        ChildTask(child=Link(emma, Child), task=Link(tasks[21], Task), status=ChildTaskStatus.IN_PROGRESS, priority=ChildTaskPriority.MEDIUM, assigned_at=now - timedelta(hours=3), due_date=now + timedelta(days=1), progress=40, notes="Read 8/20 minutes"),
         
-        # Assigned (not started)
-        ChildTask(child=Link(emma, Child), task=Link(tasks[9], Task), status=ChildTaskStatus.ASSIGNED, priority=ChildTaskPriority.MEDIUM, assigned_at=now - timedelta(hours=1), due_date=now + timedelta(days=2)),
-        ChildTask(child=Link(emma, Child), task=Link(tasks[17], Task), status=ChildTaskStatus.ASSIGNED, priority=ChildTaskPriority.LOW, assigned_at=now - timedelta(hours=1), due_date=now + timedelta(days=3)),
+        ChildTask(child=Link(emma, Child), task=Link(tasks[5], Task), status=ChildTaskStatus.IN_PROGRESS, priority=ChildTaskPriority.HIGH, assigned_at=now - timedelta(hours=5), due_date=now + timedelta(days=1), progress=60, notes="Working on problem 3/5", unity_type=ChildTaskUnityType.CHOICE),
+        ChildTask(child=Link(emma, Child), task=Link(tasks[21], Task), status=ChildTaskStatus.IN_PROGRESS, priority=ChildTaskPriority.MEDIUM, assigned_at=now - timedelta(hours=3), due_date=now + timedelta(days=1), progress=40, notes="Read 8/20 minutes", unity_type=ChildTaskUnityType.CHOICE),
+        
+        
+        ChildTask(child=Link(emma, Child), task=Link(tasks[4], Task), status=ChildTaskStatus.GIVEUP, priority=ChildTaskPriority.MEDIUM, assigned_at=now - timedelta(days=3), progress=30, notes="Too difficult", unity_type=ChildTaskUnityType.TALK),
+        
+        
+        ChildTask(child=Link(emma, Child), task=Link(tasks[5], Task), status=ChildTaskStatus.UNASSIGNED, priority=ChildTaskPriority.MEDIUM, assigned_at=now - timedelta(hours=2), unity_type=ChildTaskUnityType.TALK),
+        ChildTask(child=Link(emma, Child), task=Link(tasks[6], Task), status=ChildTaskStatus.UNASSIGNED, priority=ChildTaskPriority.LOW, assigned_at=now - timedelta(hours=1), unity_type=ChildTaskUnityType.LIFE),
+        
+        
+        ChildTask(child=Link(emma, Child), task=Link(tasks[9], Task), status=ChildTaskStatus.ASSIGNED, priority=ChildTaskPriority.MEDIUM, assigned_at=now - timedelta(hours=1), due_date=now + timedelta(days=2), unity_type=ChildTaskUnityType.LIFE),
+        ChildTask(child=Link(emma, Child), task=Link(tasks[17], Task), status=ChildTaskStatus.ASSIGNED, priority=ChildTaskPriority.LOW, assigned_at=now - timedelta(hours=1), due_date=now + timedelta(days=3), unity_type=ChildTaskUnityType.LIFE),
     ]
     child_tasks.extend(emma_tasks)
     
-    # LUCAS (demo user's middle child) - Moderate user
+    
     lucas_tasks = [
-        # Completed
+        
         ChildTask(child=Link(lucas, Child), task=Link(tasks[4], Task), status=ChildTaskStatus.COMPLETED, priority=ChildTaskPriority.HIGH, assigned_at=now - timedelta(days=5), completed_at=now - timedelta(days=4), progress=100),
         ChildTask(child=Link(lucas, Child), task=Link(tasks[7], Task), status=ChildTaskStatus.COMPLETED, priority=ChildTaskPriority.MEDIUM, assigned_at=now - timedelta(days=4), completed_at=now - timedelta(days=3), progress=100),
         ChildTask(child=Link(lucas, Child), task=Link(tasks[27], Task), status=ChildTaskStatus.COMPLETED, priority=ChildTaskPriority.HIGH, assigned_at=now - timedelta(days=3), completed_at=now - timedelta(days=2), progress=100),
         
-        # Need verification
+        
         ChildTask(child=Link(lucas, Child), task=Link(tasks[14], Task), status=ChildTaskStatus.NEED_VERIFY, priority=ChildTaskPriority.MEDIUM, assigned_at=now - timedelta(days=1), progress=100, notes="Built a robot castle"),
         
-        # In progress
-        ChildTask(child=Link(lucas, Child), task=Link(tasks[22], Task), status=ChildTaskStatus.IN_PROGRESS, priority=ChildTaskPriority.HIGH, assigned_at=now - timedelta(hours=4), due_date=now + timedelta(days=1), progress=70, notes="Almost done with homework"),
-        ChildTask(child=Link(lucas, Child), task=Link(tasks[6], Task), status=ChildTaskStatus.IN_PROGRESS, priority=ChildTaskPriority.MEDIUM, assigned_at=now - timedelta(hours=2), due_date=now + timedelta(days=2), progress=30),
         
-        # Assigned
-        ChildTask(child=Link(lucas, Child), task=Link(tasks[2], Task), status=ChildTaskStatus.ASSIGNED, priority=ChildTaskPriority.LOW, assigned_at=now, due_date=now + timedelta(days=2)),
-        ChildTask(child=Link(lucas, Child), task=Link(tasks[8], Task), status=ChildTaskStatus.ASSIGNED, priority=ChildTaskPriority.MEDIUM, assigned_at=now, due_date=now + timedelta(days=3)),
+        ChildTask(child=Link(lucas, Child), task=Link(tasks[22], Task), status=ChildTaskStatus.IN_PROGRESS, priority=ChildTaskPriority.HIGH, assigned_at=now - timedelta(hours=4), due_date=now + timedelta(days=1), progress=70, notes="Almost done with homework", unity_type=ChildTaskUnityType.CHOICE),
+        ChildTask(child=Link(lucas, Child), task=Link(tasks[6], Task), status=ChildTaskStatus.IN_PROGRESS, priority=ChildTaskPriority.MEDIUM, assigned_at=now - timedelta(hours=2), due_date=now + timedelta(days=2), progress=30, unity_type=ChildTaskUnityType.CHOICE),
+        
+        
+        ChildTask(child=Link(lucas, Child), task=Link(tasks[4], Task), status=ChildTaskStatus.GIVEUP, priority=ChildTaskPriority.MEDIUM, assigned_at=now - timedelta(days=2), progress=20, notes="Not interested", unity_type=ChildTaskUnityType.TALK),
+        
+        
+        ChildTask(child=Link(lucas, Child), task=Link(tasks[8], Task), status=ChildTaskStatus.UNASSIGNED, priority=ChildTaskPriority.MEDIUM, assigned_at=now, unity_type=ChildTaskUnityType.CHOICE),
+        
+        
+        ChildTask(child=Link(lucas, Child), task=Link(tasks[2], Task), status=ChildTaskStatus.ASSIGNED, priority=ChildTaskPriority.LOW, assigned_at=now, due_date=now + timedelta(days=2), unity_type=ChildTaskUnityType.LIFE),
     ]
     child_tasks.extend(lucas_tasks)
     
-    # SOPHIA (demo user's youngest) - New user, fewer tasks
+    
     sophia_tasks = [
-        # Completed
+        
         ChildTask(child=Link(sophia, Child), task=Link(tasks[0], Task), status=ChildTaskStatus.COMPLETED, priority=ChildTaskPriority.HIGH, assigned_at=now - timedelta(days=3), completed_at=now - timedelta(days=2), progress=100),
         ChildTask(child=Link(sophia, Child), task=Link(tasks[8], Task), status=ChildTaskStatus.COMPLETED, priority=ChildTaskPriority.MEDIUM, assigned_at=now - timedelta(days=2), completed_at=now - timedelta(days=1), progress=100),
         
-        # In progress
+        
         ChildTask(child=Link(sophia, Child), task=Link(tasks[16], Task), status=ChildTaskStatus.IN_PROGRESS, priority=ChildTaskPriority.HIGH, assigned_at=now - timedelta(hours=6), due_date=now + timedelta(days=1), progress=50, notes="Said thank you to teacher"),
         
-        # Assigned
+        
         ChildTask(child=Link(sophia, Child), task=Link(tasks[10], Task), status=ChildTaskStatus.ASSIGNED, priority=ChildTaskPriority.MEDIUM, assigned_at=now - timedelta(hours=2), due_date=now + timedelta(days=2)),
         ChildTask(child=Link(sophia, Child), task=Link(tasks[24], Task), status=ChildTaskStatus.ASSIGNED, priority=ChildTaskPriority.LOW, assigned_at=now - timedelta(hours=1), due_date=now + timedelta(days=3)),
     ]
     child_tasks.extend(sophia_tasks)
     
-    # ALEX (parent1's child) - Some task history
+    
     alex_tasks = [
         ChildTask(child=Link(alex, Child), task=Link(tasks[21], Task), status=ChildTaskStatus.COMPLETED, assigned_at=now - timedelta(days=4), completed_at=now - timedelta(days=3), progress=100),
         ChildTask(child=Link(alex, Child), task=Link(tasks[22], Task), status=ChildTaskStatus.COMPLETED, assigned_at=now - timedelta(days=3), completed_at=now - timedelta(days=2), progress=100),
@@ -599,17 +716,17 @@ async def seed_database():
     await ChildTask.insert_many(child_tasks)
     print(f"   ✓ Created {len(child_tasks)} assigned tasks across all children\n")
 
-    # =================================================================
-    # 6. CREATE CHILD REWARDS (Owned items)
-    # =================================================================
+    
+    
+    
     print("🏆 Giving earned rewards to children...")
     
-    # Get badge rewards (cost_coins = 0)
+    
     badge_rewards = [r for r in rewards if r.type == RewardType.BADGE]
     skin_rewards = [r for r in rewards if r.type == RewardType.SKIN]
     
     child_rewards_list = [
-        # Emma - active user, many badges
+        
         ChildReward(child=Link(emma, Child), reward=Link(badge_rewards[0], Reward), earned_at=now - timedelta(days=6)),
         ChildReward(child=Link(emma, Child), reward=Link(badge_rewards[2], Reward), earned_at=now - timedelta(days=5)),
         ChildReward(child=Link(emma, Child), reward=Link(badge_rewards[6], Reward), earned_at=now - timedelta(days=4)),
@@ -617,17 +734,17 @@ async def seed_database():
         ChildReward(child=Link(emma, Child), reward=Link(badge_rewards[7], Reward), earned_at=now - timedelta(days=2)),
         ChildReward(child=Link(emma, Child), reward=Link(skin_rewards[1], Reward), earned_at=now - timedelta(days=5), is_equipped=True),
         
-        # Lucas - some badges
+        
         ChildReward(child=Link(lucas, Child), reward=Link(badge_rewards[3], Reward), earned_at=now - timedelta(days=4)),
         ChildReward(child=Link(lucas, Child), reward=Link(badge_rewards[4], Reward), earned_at=now - timedelta(days=3)),
         ChildReward(child=Link(lucas, Child), reward=Link(badge_rewards[8], Reward), earned_at=now - timedelta(days=2)),
         ChildReward(child=Link(lucas, Child), reward=Link(skin_rewards[2], Reward), earned_at=now - timedelta(days=3), is_equipped=True),
         
-        # Sophia - few badges (new user)
+        
         ChildReward(child=Link(sophia, Child), reward=Link(badge_rewards[0], Reward), earned_at=now - timedelta(days=2)),
         ChildReward(child=Link(sophia, Child), reward=Link(badge_rewards[5], Reward), earned_at=now - timedelta(days=1)),
         
-        # Alex
+        
         ChildReward(child=Link(alex, Child), reward=Link(badge_rewards[8], Reward), earned_at=now - timedelta(days=3)),
         ChildReward(child=Link(alex, Child), reward=Link(badge_rewards[4], Reward), earned_at=now - timedelta(days=2)),
     ]
@@ -635,9 +752,9 @@ async def seed_database():
     await ChildReward.insert_many(child_rewards_list)
     print(f"   ✓ Created {len(child_rewards_list)} owned rewards\n")
 
-    # =================================================================
-    # 7. CREATE MINI GAMES
-    # =================================================================
+    
+    
+    
     print("🎮 Creating mini games...")
     
     games = [
@@ -652,13 +769,13 @@ async def seed_database():
     await MiniGame.insert_many(games)
     print(f"   ✓ Created {len(games)} mini games\n")
 
-    # =================================================================
-    # 8. CREATE GAME SESSIONS (Play history)
-    # =================================================================
+    
+    
+    
     print("🕹️  Creating game session history...")
     
     game_sessions = [
-        # Emma's game sessions
+        
         GameSession(
             child=Link(emma, Child), game=Link(games[0], MiniGame), 
             start_time=now - timedelta(days=3, hours=2), 
@@ -681,7 +798,7 @@ async def seed_database():
             behavior_data={"time_spent": 1200, "attempts": 1, "accuracy": 0.88, "focus_level": "high"}
         ),
         
-        # Lucas's game sessions
+        
         GameSession(
             child=Link(lucas, Child), game=Link(games[0], MiniGame), 
             start_time=now - timedelta(days=4), 
@@ -704,7 +821,7 @@ async def seed_database():
             behavior_data=None
         ),
         
-        # Sophia's game sessions
+        
         GameSession(
             child=Link(sophia, Child), game=Link(games[2], MiniGame), 
             start_time=now - timedelta(days=2), 
@@ -724,13 +841,13 @@ async def seed_database():
     await GameSession.insert_many(game_sessions)
     print(f"   ✓ Created {len(game_sessions)} game sessions\n")
 
-    # =================================================================
-    # 9. CREATE INTERACTION LOGS (Chat history)
-    # =================================================================
+    
+    
+    
     print("💬 Creating interaction logs...")
     
     interactions = [
-        # Emma's interactions
+        
         InteractionLog(
             child=Link(emma, Child),
             user_input="Hi! How are you today?",
@@ -753,7 +870,7 @@ async def seed_database():
             timestamp=now - timedelta(days=1, hours=6)
         ),
         
-        # Lucas's interactions
+        
         InteractionLog(
             child=Link(lucas, Child),
             user_input="I built a robot today!",
@@ -776,7 +893,7 @@ async def seed_database():
             timestamp=now - timedelta(hours=5)
         ),
         
-        # Sophia's interactions
+        
         InteractionLog(
             child=Link(sophia, Child),
             user_input="I want to play!",
@@ -792,7 +909,7 @@ async def seed_database():
             timestamp=now - timedelta(days=1, hours=10)
         ),
         
-        # Alex's interactions
+        
         InteractionLog(
             child=Link(alex, Child),
             user_input="What tasks should I do today?",
@@ -805,13 +922,13 @@ async def seed_database():
     await InteractionLog.insert_many(interactions)
     print(f"   ✓ Created {len(interactions)} interaction logs\n")
 
-    # =================================================================
-    # 10. CREATE WEEKLY REPORTS
-    # =================================================================
+    
+    
+    
     print("📊 Creating progress reports...")
     
     reports_list = [
-        # Emma's report (detailed, active user)
+        
         Report(
             child=Link(emma, Child),
             period_start=datetime(2025, 11, 1),
@@ -836,7 +953,7 @@ async def seed_database():
             }
         ),
         
-        # Lucas's report (moderate activity)
+        
         Report(
             child=Link(lucas, Child),
             period_start=datetime(2025, 11, 1),
@@ -861,7 +978,7 @@ async def seed_database():
             }
         ),
         
-        # Sophia's report (new user, limited data)
+        
         Report(
             child=Link(sophia, Child),
             period_start=datetime(2025, 11, 1),
@@ -890,31 +1007,43 @@ async def seed_database():
     await Report.insert_many(reports_list)
     print(f"   ✓ Created {len(reports_list)} progress reports\n")
 
-    # =================================================================
-    # FINAL SUMMARY
-    # =================================================================
+    
+    
+    
     print("="*60)
     print("✅ SEEDING COMPLETED SUCCESSFULLY!")
     print("="*60)
     print(f"""
 📈 Database Statistics:
-   • Users: 3 (demo@kiddymate.com, parent1/2)
-   • Children: 4 (Emma, Lucas, Sophia, Alex)
-   • Tasks in Library: {len(tasks)}
-   • Assigned Tasks: {len(child_tasks)}
+   • Parent Users: 3 (demo@kiddymate.com, parent1/2@example.com)
+   • Child Accounts: 2 (emma@kiddymate.com, lucas@kiddymate.com)
+   • Children Profiles: 4 (Emma, Lucas, Sophia, Alex)
+   • Tasks in Library: {len(tasks)} (with unity types)
+   • Assigned Tasks: {len(child_tasks)} (all status types)
    • Rewards: {len(rewards)} (badges, skins, items)
    • Owned Rewards: {len(child_rewards_list)}
    • Mini Games: {len(games)}
    • Game Sessions: {len(game_sessions)}
    • Interactions: {len(interactions)}
    • Reports: {len(reports_list)}
+   • Assessments: {len(assessments) if 'assessments' in locals() else 0}
 
 🔑 Login Credentials:
-   Email: demo@kiddymate.com
-   Password: demo123
+   Parent Accounts:
+   - Email: demo@kiddymate.com / Password: demo123
+   - Email: parent1@example.com / Password: password123
+   - Email: parent2@example.com / Password: password123
    
-   Email: parent1@example.com
-   Password: password123
+   Child Accounts:
+   - Email: emma@kiddymate.com / Password: emma123
+   - Email: lucas@kiddymate.com / Password: lucas123
+
+📝 New Features Covered:
+   ✓ User roles (parent/child)
+   ✓ Child accounts linked to profiles
+   ✓ Unity types (life, choice, talk) for tasks
+   ✓ Task statuses: unassigned, giveup
+   ✓ Assessments for LLM context
 
 📝 Features Covered:
    ✓ Dashboard with real stats & charts
@@ -928,6 +1057,6 @@ async def seed_database():
 🎯 Ready to test all workflows!
     """)
 
-# Run the seed script
+
 if __name__ == "__main__":
     asyncio.run(seed_database())

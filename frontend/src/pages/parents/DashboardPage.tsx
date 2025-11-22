@@ -1,5 +1,5 @@
-import { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { getDashboardData } from '../../api/services/dashboardService';
 import { useChild } from '../../providers/ChildProvider';
@@ -11,17 +11,58 @@ import ActivityTimeline from '../../features/parents/dashboard/ActivityTimeline'
 import DashboardSidebar from '../../features/parents/dashboard/DashboardSidebar';
 import ChildSelector from '../../components/common/ChildSelector';
 import { Loading } from '../../components/ui';
+import { TaskEvents } from '../../utils/events';
 
 const DashboardPage = () => {
   const navigate = useNavigate();
-  const { selectedChildId, children, loading: childLoading } = useChild();
+  const [searchParams] = useSearchParams();
+  const isOnboardingProcessing = searchParams.get('onboarding') === 'processing';
+  const { selectedChildId, children, loading: childLoading, refreshChildren } = useChild();
+  const [onboardingTimeout, setOnboardingTimeout] = useState(false);
+  const [pollingAttempts, setPollingAttempts] = useState(0);
+  const maxPollingAttempts = 30; // 30 attempts = ~30 seconds (1 second per attempt)
 
-  // Redirect to onboarding if no children
+  // Poll children list when onboarding is processing
   useEffect(() => {
-    if (!childLoading && children.length === 0) {
+    if (!isOnboardingProcessing || childLoading) return;
+
+    const pollInterval = setInterval(async () => {
+      setPollingAttempts(prev => {
+        const newAttempts = prev + 1;
+        
+        // Timeout after max attempts
+        if (newAttempts >= maxPollingAttempts) {
+          setOnboardingTimeout(true);
+          clearInterval(pollInterval);
+          return newAttempts;
+        }
+
+        // Refresh children list
+        refreshChildren().catch(console.error);
+        
+        return newAttempts;
+      });
+    }, 1000); // Poll every 1 second
+
+    return () => clearInterval(pollInterval);
+  }, [isOnboardingProcessing, childLoading, refreshChildren]);
+
+  // Clear onboarding processing flag when children are loaded
+  useEffect(() => {
+    if (isOnboardingProcessing && children.length > 0) {
+      // Remove query parameter
+      navigate('/parent/dashboard', { replace: true });
+      setOnboardingTimeout(false);
+      setPollingAttempts(0);
+    }
+  }, [isOnboardingProcessing, children.length, navigate]);
+
+  // Redirect to onboarding if no children (and not processing)
+  useEffect(() => {
+    if (!childLoading && children.length === 0 && !isOnboardingProcessing) {
       navigate('/onboarding');
     }
-  }, [childLoading, children.length, navigate]);
+  }, [childLoading, children.length, isOnboardingProcessing, navigate]);
 
   // Fetch dashboard data with React Query
   const {
@@ -36,6 +77,90 @@ const DashboardPage = () => {
     staleTime: 30000, // Cache for 30 seconds
     retry: 2,
   });
+
+  // Listen for task events to refresh dashboard
+  useEffect(() => {
+    const handleTaskAssigned = () => {
+      if (selectedChildId) {
+        refetch();
+      }
+    };
+
+    const cleanup = TaskEvents.listen(TaskEvents.TASK_ASSIGNED, handleTaskAssigned);
+    const cleanupUnassigned = TaskEvents.listen(TaskEvents.TASK_UNASSIGNED, handleTaskAssigned);
+    const cleanupDeleted = TaskEvents.listen(TaskEvents.TASK_DELETED, handleTaskAssigned);
+
+    return () => {
+      cleanup();
+      cleanupUnassigned();
+      cleanupDeleted();
+    };
+  }, [selectedChildId, refetch]);
+
+  // Refetch when page becomes visible (user returns from another tab)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && selectedChildId) {
+        refetch();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [selectedChildId, refetch]);
+
+  // Onboarding processing state
+  if (isOnboardingProcessing) {
+    if (onboardingTimeout) {
+      return (
+        <div className="flex items-center justify-center h-screen">
+          <div className="text-center max-w-md">
+            <div className="text-6xl mb-4">⏱️</div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">
+              Onboarding is taking longer than expected
+            </h2>
+            <p className="text-gray-600 mb-6">
+              Your onboarding request is still being processed. This may take a few more moments.
+            </p>
+            <div className="space-y-3">
+              <button
+                onClick={() => {
+                  refreshChildren();
+                  setOnboardingTimeout(false);
+                  setPollingAttempts(0);
+                }}
+                className="w-full px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+              >
+                Check Again
+              </button>
+              <button
+                onClick={() => navigate('/onboarding')}
+                className="w-full px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+              >
+                Go Back to Onboarding
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-center">
+          <Loading text="Setting up your account..." size="lg" />
+          <p className="mt-4 text-gray-600">
+            We're analyzing your child's assessment and creating their profile.
+            <br />
+            This may take a few moments...
+          </p>
+          <div className="mt-6 flex justify-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // Loading state
   if (childLoading || (isLoading && !dashboardData)) {

@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { Sparkles, User, Phone, Users, ArrowRight } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { User, Phone, ArrowRight, Plus, Minus, Sparkles } from 'lucide-react';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
-import Card from '../../components/ui/Card';
 import type { ParentInfo } from '../../types/auth.types';
 
 interface ParentInfoStepProps {
@@ -16,15 +16,12 @@ const ParentInfoStep = ({ initialData, onComplete }: ParentInfoStepProps) => {
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
-
     if (!formData.displayName || formData.displayName.trim().length < 2) {
-      newErrors.displayName = 'Please enter your display name (at least 2 characters)';
+      newErrors.displayName = 'Name must be at least 2 characters';
     }
-
     if (formData.numberOfChildren < 1 || formData.numberOfChildren > 10) {
-      newErrors.numberOfChildren = 'Please enter a valid number of children (1-10)';
+      newErrors.numberOfChildren = 'Valid range: 1-10';
     }
-
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -37,150 +34,104 @@ const ParentInfoStep = ({ initialData, onComplete }: ParentInfoStepProps) => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-linear-to-br from-blue-100 via-purple-100 to-pink-200 relative overflow-hidden">
-      {/* Animated Background Decorations */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-20 left-20 w-72 h-72 bg-blue-400 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-pulse-soft" />
-        <div className="absolute bottom-20 right-20 w-80 h-80 bg-purple-400 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-pulse-soft" style={{ animationDelay: '1s' }} />
-        <div className="absolute top-1/2 right-1/3 w-64 h-64 bg-pink-400 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse-soft" style={{ animationDelay: '2s' }} />
+    <motion.div
+      initial={{ opacity: 0, x: 20 }}
+      animate={{ opacity: 1, x: 0 }}
+      exit={{ opacity: 0, x: -20 }}
+      transition={{ duration: 0.3 }}
+      className="bg-white rounded-2xl shadow-xl p-8 border border-slate-100 w-full min-h-[580px] flex flex-col"
+    >
+      <div className="text-center mb-8">
+        <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-primary mb-4">
+          <User className="w-8 h-8 text-white" />
+        </div>
+        <h1 className="text-2xl font-bold text-slate-800 mb-2">Let's get started! 👋</h1>
+        <p className="text-sm text-slate-500">Tell us a bit about yourself to personalize your experience</p>
       </div>
 
-      <div className="w-full max-w-2xl relative z-10 animate-fade-in">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-linear-to-br from-blue-600 via-purple-600 to-pink-600 shadow-glow-accent mb-4 animate-bounce-soft">
-            <Sparkles className="w-10 h-10 text-white" />
+      <form onSubmit={handleSubmit} className="space-y-5 flex-1 flex flex-col">
+        {/* Display Name */}
+        <Input
+          label="Your Name"
+          value={formData.displayName}
+          onChange={(e) => {
+            setFormData({ ...formData, displayName: e.target.value });
+            setErrors({ ...errors, displayName: '' });
+          }}
+          placeholder="e.g. Mom Sarah"
+          icon={<User className="w-5 h-5 text-slate-400" />}
+          error={errors.displayName}
+          fullWidth
+          className="py-3 text-base bg-slate-50 border-slate-200 focus:bg-white"
+        />
+
+        {/* Phone Number */}
+        <Input
+          label="Phone (Optional)"
+          type="tel"
+          value={formData.phoneNumber}
+          onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
+          placeholder="+84 90..."
+          icon={<Phone className="w-5 h-5 text-slate-400" />}
+          fullWidth
+          className="py-3 text-base bg-slate-50 border-slate-200 focus:bg-white"
+        />
+
+        {/* Counter for Children */}
+        <div className="flex-1 flex flex-col justify-center py-6">
+          <label className="block text-sm font-medium text-slate-700 mb-3 text-center">
+            Number of children?
+          </label>
+          <div className="flex items-center justify-center gap-5">
+            <button
+              type="button"
+              onClick={() => formData.numberOfChildren > 1 && setFormData({ ...formData, numberOfChildren: formData.numberOfChildren - 1 })}
+              disabled={formData.numberOfChildren <= 1}
+              className="w-10 h-10 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center transition-colors disabled:opacity-50"
+            >
+              <Minus className="w-4 h-4 text-slate-600" />
+            </button>
+
+            <div className="w-14 h-14 rounded-2xl bg-[#06325a] flex items-center justify-center shadow-md">
+                <span className="text-2xl font-bold text-white">
+                {formData.numberOfChildren}
+                </span>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => formData.numberOfChildren < 10 && setFormData({ ...formData, numberOfChildren: formData.numberOfChildren + 1 })}
+              disabled={formData.numberOfChildren >= 10}
+              className="w-10 h-10 rounded-full bg-blue-50 hover:bg-blue-100 border border-blue-200 flex items-center justify-center transition-colors disabled:opacity-50"
+            >
+              <Plus className="w-4 h-4 text-blue-600" />
+            </button>
           </div>
-          <h1 className="text-4xl font-bold bg-linear-to-r from-blue-700 via-purple-700 to-pink-700 bg-clip-text text-transparent mb-3">
-            Welcome to Kiddy-Mate! 🎉
-          </h1>
-          <p className="text-xl text-gray-700 font-medium">
-            Let's get to know you better
-          </p>
+          {errors.numberOfChildren && <p className="text-sm text-red-500 text-center mt-3 font-medium">{errors.numberOfChildren}</p>}
+          <p className="text-xs text-slate-400 text-center mt-4">You can always add or remove children later from settings</p>
         </div>
 
-        {/* Progress Indicator */}
-        <div className="mb-8">
-          <div className="flex items-center justify-center gap-2">
-            <div className="flex items-center gap-2">
-              <div className="w-10 h-10 rounded-full bg-linear-to-br from-blue-600 to-purple-600 text-white flex items-center justify-center text-sm font-bold shadow-medium">
-                1
-              </div>
-              <span className="text-sm font-bold text-gray-900">Parent Info</span>
-            </div>
-            <div className="w-16 h-1.5 bg-linear-to-r from-gray-200 to-gray-300 rounded-full" />
-            <div className="flex items-center gap-2">
-              <div className="w-10 h-10 rounded-full bg-gray-200 text-gray-400 flex items-center justify-center text-sm font-bold">
-                2
-              </div>
-              <span className="text-sm font-medium text-gray-400">Child Info</span>
-            </div>
-            <div className="w-16 h-1.5 bg-linear-to-r from-gray-200 to-gray-300 rounded-full" />
-            <div className="flex items-center gap-2">
-              <div className="w-10 h-10 rounded-full bg-gray-200 text-gray-400 flex items-center justify-center text-sm font-bold">
-                3
-              </div>
-              <span className="text-sm font-medium text-gray-400">Assessment</span>
-            </div>
+        <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 flex items-start gap-3">
+          <Sparkles className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm font-semibold text-blue-900 mb-1">What's next?</p>
+            <p className="text-xs text-blue-700 leading-relaxed">We'll collect basic information about each child, followed by a quick assessment to personalize their experience.</p>
           </div>
         </div>
 
-        {/* Form Card */}
-        <Card padding="lg" className="bg-white/95 backdrop-blur-sm shadow-strong border border-white/50">
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div>
-              <h2 className="text-xl font-bold text-gray-900 mb-6">
-                Tell us about yourself
-              </h2>
-
-              <div className="space-y-5">
-                {/* Display Name */}
-                <Input
-                  label="How would you like to be called?"
-                  type="text"
-                  value={formData.displayName}
-                  onChange={(e) => {
-                    setFormData({ ...formData, displayName: e.target.value });
-                    setErrors({ ...errors, displayName: '' });
-                  }}
-                  placeholder="e.g., Parent of Emma, Mom Sarah, Dad John"
-                  error={errors.displayName}
-                  icon={<User className="w-5 h-5 text-gray-400" />}
-                  fullWidth
-                  helperText="This is how we'll address you in the app"
-                />
-
-                {/* Phone Number (Optional) */}
-                <Input
-                  label="Phone Number (Optional)"
-                  type="tel"
-                  value={formData.phoneNumber}
-                  onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
-                  placeholder="+84 123 456 789"
-                  icon={<Phone className="w-5 h-5 text-gray-400" />}
-                  fullWidth
-                  helperText="For important notifications and account recovery"
-                />
-
-                {/* Number of Children */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    <Users className="w-4 h-4 inline mr-2" />
-                    How many children do you want to add?
-                  </label>
-                  <div className="grid grid-cols-5 gap-2">
-                    {[1, 2, 3, 4, 5].map((num) => (
-                      <button
-                        key={num}
-                        type="button"
-                        onClick={() => {
-                          setFormData({ ...formData, numberOfChildren: num });
-                          setErrors({ ...errors, numberOfChildren: '' });
-                        }}
-                        className={`h-14 rounded-xl border-2 font-bold text-lg transition-all duration-300 shadow-soft hover:shadow-medium active:scale-95 ${
-                          formData.numberOfChildren === num
-                            ? 'border-purple-500 bg-linear-to-br from-blue-50 via-purple-50 to-pink-50 text-purple-700 shadow-strong scale-105'
-                            : 'border-gray-200 hover:border-purple-300 hover:bg-purple-50 text-gray-600 hover:scale-105'
-                        }`}
-                      >
-                        {num}
-                      </button>
-                    ))}
-                  </div>
-                  {errors.numberOfChildren && (
-                    <p className="mt-2 text-sm text-red-600">{errors.numberOfChildren}</p>
-                  )}
-                  <p className="mt-2 text-sm text-gray-500">
-                    You can always add more children later from settings
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Info Box */}
-            <div className="p-5 bg-linear-to-r from-blue-100 via-purple-100 to-pink-100 rounded-2xl border-2 border-blue-200 shadow-soft">
-              <p className="text-sm text-gray-800 leading-relaxed">
-                <span className="font-bold text-purple-700">✨ What's next?</span> After this, we'll collect basic information 
-                about each of your {formData.numberOfChildren > 1 ? 'children' : 'child'}, followed by a quick 
-                assessment to help us personalize their experience.
-              </p>
-            </div>
-
-            {/* Submit Button */}
-            <div className="flex justify-end pt-4">
-              <Button
-                type="submit"
-                size="lg"
-                icon={<ArrowRight className="w-5 h-5" />}
-                className="bg-linear-to-r from-blue-600 via-purple-600 to-pink-600 hover:from-blue-700 hover:via-purple-700 hover:to-pink-700 shadow-soft hover:shadow-strong active:scale-95 transition-all duration-300"
-              >
-                Continue to Child Info
-              </Button>
-            </div>
-          </form>
-        </Card>
-      </div>
-    </div>
+        <div className="pt-2">
+          <Button
+            type="submit"
+            fullWidth
+            size="lg"
+            icon={<ArrowRight className="w-4 h-4" />}
+            className="bg-gradient-primary text-white shadow-lg hover:shadow-xl py-3 rounded-xl"
+          >
+            Continue
+          </Button>
+        </div>
+      </form>
+    </motion.div>
   );
 };
 

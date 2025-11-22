@@ -1,9 +1,14 @@
 import { useState } from 'react';
 import Calendar from '../../../components/ui/Calendar';
 import { RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, ResponsiveContainer, Tooltip } from 'recharts';
-import { TrendingUp } from 'lucide-react';
+import { TrendingUp, FileText, CheckCircle2 } from 'lucide-react';
 import type { SkillRadarData } from '../../../api/services/dashboardService';
 import { SKILL_COLORS, SKILL_ICONS } from '../../../constants/categoryConfig';
+import { useChild } from '../../../providers/ChildProvider';
+import { generateReport } from '../../../api/services/reportService';
+import Button from '../../../components/ui/Button';
+import { useQueryClient } from '@tanstack/react-query';
+import ReportsList from './ReportsList';
 
 interface DashboardSidebarProps {
   skillData: SkillRadarData[];
@@ -11,6 +16,32 @@ interface DashboardSidebarProps {
 
 const DashboardSidebar = ({ skillData }: DashboardSidebarProps) => {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
+  const { selectedChildId } = useChild();
+  const queryClient = useQueryClient();
+  const [isGeneratingReport, setIsGeneratingReport] = useState(false);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  const handleGenerateReport = async () => {
+    if (!selectedChildId) return;
+    
+    setIsGeneratingReport(true);
+    setSuccessMessage(null);
+    try {
+      await generateReport(selectedChildId);
+      // Refresh dashboard data and reports
+      queryClient.invalidateQueries({ queryKey: ['dashboard', selectedChildId] });
+      queryClient.invalidateQueries({ queryKey: ['reports', selectedChildId] });
+      setSuccessMessage('Report generated successfully! Check the Reports section below.');
+      setTimeout(() => setSuccessMessage(null), 5000);
+    } catch (error) {
+      console.error('Failed to generate report:', error);
+      setSuccessMessage('Failed to generate report. Please try again.');
+      setTimeout(() => setSuccessMessage(null), 5000);
+    } finally {
+      setIsGeneratingReport(false);
+    }
+  };
+
 
   const renderSkillIcon = (skill: string) => {
     const Icon = SKILL_ICONS[skill] || SKILL_ICONS.Logic;
@@ -48,6 +79,43 @@ const DashboardSidebar = ({ skillData }: DashboardSidebarProps) => {
 
   return (
     <div className="space-y-5">
+      {/* Action Buttons Block */}
+      <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-4 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300">
+        <h3 className="text-base font-bold text-gray-900 mb-3 flex items-center gap-2">
+          <FileText className="w-4 h-4 text-primary-500" />
+          AI Actions
+        </h3>
+        <div className="space-y-2">
+          <Button
+            variant="primary"
+            size="sm"
+            fullWidth
+            loading={isGeneratingReport}
+            icon={<FileText className="w-4 h-4" />}
+            onClick={handleGenerateReport}
+            disabled={!selectedChildId || isGeneratingReport}
+          >
+            Generate Report
+          </Button>
+        </div>
+        <p className="text-xs text-gray-500 mt-3">
+          Generate comprehensive reports analyzing your child's progress, emotions, and development insights.
+        </p>
+        {successMessage && (
+          <div className={`mt-3 p-2 rounded-lg text-xs flex items-center gap-2 ${
+            successMessage.includes('Failed') 
+              ? 'bg-red-50 text-red-700' 
+              : 'bg-green-50 text-green-700'
+          }`}>
+            <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
+            <span>{successMessage}</span>
+          </div>
+        )}
+      </div>
+
+      {/* Reports List */}
+      <ReportsList />
+
       {/* Calendar Block */}
       <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-4 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300">
         <Calendar
@@ -56,7 +124,6 @@ const DashboardSidebar = ({ skillData }: DashboardSidebarProps) => {
           className="w-full"
         />
       </div>
-
       {/* Skills Development Block */}
       <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-5 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 cursor-pointer">
         <div className="flex items-center justify-between mb-4">

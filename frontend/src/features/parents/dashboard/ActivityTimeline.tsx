@@ -1,9 +1,11 @@
 import { CheckCircle2, Circle, CheckCircle } from 'lucide-react';
+import toast from 'react-hot-toast';
+import { handleApiError } from '../../../utils/errorHandler';
 import { Badge } from '../../../components/ui';
 import type { ActivityTimelineItem } from '../../../api/services/dashboardService';
 import { getCategoryIconType, getCategoryColorClasses } from '../../../constants/categoryConfig';
 import { verifyTask } from '../../../api/services/taskService';
-import { useChild } from '../../../providers/ChildProvider';
+import { useChildContext } from '../../../providers/ChildProvider';
 
 interface Activity {
   id: string;
@@ -27,7 +29,7 @@ interface ActivityTimelineProps {
 }
 
 const ActivityTimeline = ({ data, onRefresh }: ActivityTimelineProps) => {
-  const { selectedChildId } = useChild();
+  const { selectedChildId } = useChildContext();
   
   // Use data from API instead of mock
   const activities: Activity[] = data.map((item) => ({
@@ -44,15 +46,18 @@ const ActivityTimeline = ({ data, onRefresh }: ActivityTimelineProps) => {
 
   const handleVerifyClick = async (childTaskId: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!selectedChildId) return;
+    if (!selectedChildId) {
+      toast.error('Please select a child first');
+      return;
+    }
     
     try {
       await verifyTask(selectedChildId, childTaskId);
+      toast.success('Task verified and rewards awarded! 🎉');
       // Refresh dashboard if callback provided
       onRefresh?.();
     } catch (err) {
-      console.error('Failed to verify task:', err);
-      // TODO: Show error toast notification
+      handleApiError(err, 'Failed to verify task');
     }
   };
 

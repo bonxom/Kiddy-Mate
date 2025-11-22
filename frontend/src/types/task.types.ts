@@ -1,4 +1,4 @@
-export type TaskStatus = 'assigned' | 'in-progress' | 'need-verify' | 'completed' | 'missed';
+export type TaskStatus = 'assigned' | 'in-progress' | 'need-verify' | 'completed' | 'missed' | 'giveup' | 'unassigned';
 
 export type TaskCategory = 'self-discipline' | 'logic' | 'creativity' | 'social' | 'physical' | 'academic';
 
@@ -19,6 +19,7 @@ export interface LibraryTask {
   description: string;
   suggestedReward?: number;
   suggestedChild?: string;
+  childTaskId?: string; // For unassigned tasks, this is the ChildTask ID
 }
 
 export interface CreateTaskFormData {

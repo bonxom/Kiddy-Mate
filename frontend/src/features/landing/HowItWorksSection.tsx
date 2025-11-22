@@ -50,12 +50,18 @@ const HowItWorksSection = () => {
             return (
               <div 
                 key={index} 
-                className="relative animate-fade-in"
+                className="relative animate-fade-in group"
+                style={{ animationDelay: `${index * 150}ms` }}
               >
-                <Card padding="lg" className="text-center h-full">
-                  {/* Icon - Larger and more prominent */}
-                  <div className="bg-linear-to-br from-blue-200 to-purple-200 p-6 rounded-3xl w-fit mx-auto mb-6 shadow-medium">
+                <Card padding="lg" className="text-center h-full transition-all duration-300 hover:shadow-strong hover:-translate-y-2">
+                  {/* Icon - Larger and more prominent with animation */}
+                  <div className="bg-linear-to-br from-blue-200 to-purple-200 p-6 rounded-3xl w-fit mx-auto mb-6 shadow-medium transition-all duration-300 group-hover:scale-110 group-hover:shadow-glow-accent animate-pulse-soft">
                     <Icon className="w-14 h-14 text-primary-600" />
+                  </div>
+
+                  {/* Step number badge */}
+                  <div className="absolute -top-4 -right-4 w-12 h-12 bg-gradient-primary rounded-full flex items-center justify-center text-white font-bold text-xl shadow-strong">
+                    {step.step}
                   </div>
 
                   <h3 className="text-2xl font-bold text-gray-900 mb-4">

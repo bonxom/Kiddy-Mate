@@ -3,7 +3,8 @@
  * Provides data fetching and mutations for tasks
  */
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
+import { TaskEvents } from '../utils/events';
 import {
   getAllTasks,
   createTask,
@@ -16,6 +17,12 @@ import {
   unassignTask,
   completeTask,
   verifyTask,
+  rejectTaskVerification,
+  giveupTask,
+  checkTaskStatus,
+  getUnassignedTasks,
+  getGiveupTasks,
+  getCompletedTasks,
 } from '../api/services/taskService';
 import type {
   Task,
@@ -73,6 +80,8 @@ export const useTaskLibrary = () => {
       setTasks((prev) =>
         prev.map((t) => (t.id === taskId ? updatedTask : t))
       );
+      // Emit event for cross-tab sync
+      TaskEvents.emit(TaskEvents.LIBRARY_UPDATED, { taskId });
       return updatedTask;
     } catch (err: any) {
       setError(err.message || 'Failed to update task');
@@ -88,6 +97,8 @@ export const useTaskLibrary = () => {
     try {
       await deleteTask(taskId);
       setTasks((prev) => prev.filter((t) => t.id !== taskId));
+      // Emit event for cross-tab sync
+      TaskEvents.emit(TaskEvents.TASK_DELETED, { taskId });
     } catch (err: any) {
       setError(err.message || 'Failed to delete task');
       throw err;
@@ -118,8 +129,11 @@ export const useAssignedTasks = (childId: string) => {
 
   const fetchTasks = useCallback(
     async (params?: GetChildTasksParams) => {
-      if (!childId) return [];
-      
+      if (!childId) {
+        setTasks([]);
+        return [];
+      }
+
       setLoading(true);
       setError(null);
       try {
@@ -136,14 +150,31 @@ export const useAssignedTasks = (childId: string) => {
     [childId]
   );
 
+  // Auto-fetch tasks when childId changes
+  useEffect(() => {
+    if (childId) {
+      fetchTasks();
+    } else {
+      // Clear tasks when no childId
+      setTasks([]);
+    }
+  }, [childId]); // Remove fetchTasks from dependencies to avoid infinite loops
+
   const assignNewTask = useCallback(
-    async (taskId: string) => {
+    async (
+      taskId: string,
+      params?: {
+        due_date?: string;
+        priority?: 'high' | 'medium' | 'low';
+        notes?: string;
+      }
+    ) => {
       if (!childId) throw new Error('Child ID is required');
-      
+
       setLoading(true);
       setError(null);
       try {
-        await assignTask(childId, taskId);
+        await assignTask(childId, taskId, params);
         // Refresh tasks after assignment
         await fetchTasks();
       } catch (err: any) {
@@ -159,7 +190,7 @@ export const useAssignedTasks = (childId: string) => {
   const updateTask = useCallback(
     async (childTaskId: string, updates: ChildTaskUpdate) => {
       if (!childId) throw new Error('Child ID is required');
-      
+
       setLoading(true);
       setError(null);
       try {
@@ -181,7 +212,7 @@ export const useAssignedTasks = (childId: string) => {
   const unassign = useCallback(
     async (childTaskId: string) => {
       if (!childId) throw new Error('Child ID is required');
-      
+
       setLoading(true);
       setError(null);
       try {
@@ -200,7 +231,7 @@ export const useAssignedTasks = (childId: string) => {
   const markComplete = useCallback(
     async (childTaskId: string) => {
       if (!childId) throw new Error('Child ID is required');
-      
+
       setLoading(true);
       setError(null);
       try {
@@ -220,7 +251,7 @@ export const useAssignedTasks = (childId: string) => {
   const verify = useCallback(
     async (childTaskId: string) => {
       if (!childId) throw new Error('Child ID is required');
-      
+
       setLoading(true);
       setError(null);
       try {
@@ -229,6 +260,46 @@ export const useAssignedTasks = (childId: string) => {
         await fetchTasks();
       } catch (err: any) {
         setError(err.message || 'Failed to verify task');
+        throw err;
+      } finally {
+        setLoading(false);
+      }
+    },
+    [childId, fetchTasks]
+  );
+
+  const reject = useCallback(
+    async (childTaskId: string) => {
+      if (!childId) throw new Error('Child ID is required');
+
+      setLoading(true);
+      setError(null);
+      try {
+        await rejectTaskVerification(childId, childTaskId);
+        // Refresh tasks to get updated status
+        await fetchTasks();
+      } catch (err: any) {
+        setError(err.message || 'Failed to reject task verification');
+        throw err;
+      } finally {
+        setLoading(false);
+      }
+    },
+    [childId, fetchTasks]
+  );
+
+  const giveup = useCallback(
+    async (childTaskId: string) => {
+      if (!childId) throw new Error('Child ID is required');
+
+      setLoading(true);
+      setError(null);
+      try {
+        await giveupTask(childId, childTaskId);
+        // Refresh tasks to get updated status
+        await fetchTasks();
+      } catch (err: any) {
+        setError(err.message || 'Failed to give up task');
         throw err;
       } finally {
         setLoading(false);
@@ -247,6 +318,8 @@ export const useAssignedTasks = (childId: string) => {
     unassignTask: unassign,
     completeTask: markComplete,
     verifyTask: verify,
+    rejectTaskVerification: reject,
+    giveupTask: giveup,
   };
 };
 
@@ -261,7 +334,7 @@ export const useSuggestedTasks = (childId: string) => {
 
   const fetchSuggestions = useCallback(async () => {
     if (!childId) return [];
-    
+
     setLoading(true);
     setError(null);
     try {

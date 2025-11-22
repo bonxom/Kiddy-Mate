@@ -34,6 +34,7 @@ export interface RewardCreate {
 export interface RewardUpdate {
   name?: string;
   description?: string;
+  type?: RewardType;  // Allow updating reward type
   image_url?: string;
   cost_coins?: number;
   stock_quantity?: number;

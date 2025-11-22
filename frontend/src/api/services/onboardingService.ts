@@ -7,6 +7,8 @@ export interface ChildOnboardingData {
   nickname: string;
   date_of_birth: string; // ISO format YYYY-MM-DD
   gender: string;
+  username: string; // For child login
+  password: string; // Plain password, will be hashed by backend
   favorite_topics: string[];
   personality?: string[];
   interests?: string[];
@@ -18,6 +20,7 @@ export interface ChildOnboardingData {
 }
 
 export interface OnboardingRequest {
+  parent_email: string;  // Email to identify the parent
   parent_display_name: string;
   phone_number?: string;
   children: ChildOnboardingData[];

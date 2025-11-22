@@ -31,7 +31,8 @@ const Model = () => {
       group.current.position.y = -center.y * scale;
       group.current.position.z = -center.z * scale;
 
-      group.current.rotation.y = Math.PI / 2.7;
+      // Bot nhìn thẳng về phía người dùng ban đầu
+      group.current.rotation.y = Math.PI / 2.5; // Quay mặt về phía camera
       group.current.rotation.x = Math.PI / 33;
       group.current.rotation.z = Math.PI / 50;
       
@@ -145,18 +146,17 @@ const RobotCanvas = () => {
           intensity={0.3}
         />
 
-        {/* Orbit Controls - cho phép xoay camera 360 độ */}
+        {/* Orbit Controls - chỉ cho phép xoay, không zoom */}
         <OrbitControls
-          enableZoom={true}
-          enablePan={false} // Disable pan for better UX
-          enableRotate={true}
-          minDistance={5.35} // Closer minimum zoom
-          maxDistance={15} // Closer maximum zoom for tighter view
-          enableDamping={true} // Smooth camera movement
-          dampingFactor={0.05}
-          autoRotate={false} // Can enable for auto-spin effect
-          autoRotateSpeed={1}
-          target={[0, 0, 0]} // Look at center
+          enableZoom={false} // Tắt zoom
+          enablePan={false}
+          enableRotate={true} // Cho phép xoay bằng chuột
+          enableDamping={true}
+          dampingFactor={0.08}
+          autoRotate={false}
+          target={[0, 0, 0]}
+          minPolarAngle={Math.PI / 3} // Giới hạn góc xoay dọc
+          maxPolarAngle={Math.PI / 1.5}
         />
 
         {/* Suspense wrapper cho model với fallback */}

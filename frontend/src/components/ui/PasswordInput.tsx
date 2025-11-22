@@ -66,6 +66,7 @@ const PasswordInput = forwardRef<HTMLInputElement, PasswordInputProps>(
           error={error}
           fullWidth={fullWidth}
           autoComplete={autoComplete}
+          iconPosition="right"
           icon={
             <button
               type="button"

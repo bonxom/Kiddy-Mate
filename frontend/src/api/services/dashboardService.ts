@@ -9,6 +9,8 @@ import { getChildTasks } from './taskService';
 import { getLatestAssessment, calculateSkillScores } from './assessmentService';
 import { getEmotionData } from './interactionService';
 import type { EmotionData } from './interactionService';
+import type { Child } from './childService';
+import type { ChildTaskWithDetails } from './taskService';
 
 // ==================== TYPES ====================
 
@@ -116,7 +118,8 @@ export const getCompletionTrend = async (
   childId: string,
   days: number = 7
 ): Promise<CompletionTrendDataPoint[]> => {
-  const tasks = await getChildTasks(childId);
+  try {
+    const tasks = await getChildTasks(childId);
 
   // Get last N days
   const today = new Date();
@@ -152,50 +155,47 @@ export const getCompletionTrend = async (
   }
 
   return daysData;
+  } catch (error) {
+    console.error('Failed to fetch completion trend:', error);
+    // Return empty 7 days for newly registered children
+    const today = new Date();
+    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    return Array.from({ length: days }, (_, i) => {
+      const date = new Date(today);
+      date.setDate(date.getDate() - (days - 1 - i));
+      return {
+        name: dayNames[date.getDay()],
+        completed: 0,
+        total: 0,
+        rate: 0,
+      };
+    });
+  }
 };
 
 /**
- * Get category progress data
- * Groups tasks by category and calculates completion
+ * Get category progress data from backend API
+ * Returns task completion statistics grouped by category
  */
 export const getCategoryProgress = async (
   childId: string
 ): Promise<CategoryProgressData[]> => {
-  const tasks = await getChildTasks(childId);
-
-  // Initialize category map with all standard categories
-  const categories = ['Independence', 'Logic', 'Physical', 'Creativity', 'Social', 'Academic'];
-  const categoryMap: Record<string, CategoryProgressData> = {};
-  
-  categories.forEach(cat => {
-    categoryMap[cat] = { name: cat, completed: 0, total: 0, percentage: 0 };
-  });
-
-  // Process tasks and normalize category names (IQ→Logic, EQ→Social)
-  tasks.forEach((ct) => {
-    const rawCategory = ct.task?.category;
-    if (!rawCategory) return;
-    
-    // Normalize legacy categories (IQ→Logic, EQ→Social)
-    let category = rawCategory;
-    if (category === 'IQ') category = 'Logic';
-    if (category === 'EQ') category = 'Social';
-    
-    if (categoryMap[category]) {
-      categoryMap[category].total++;
-      if (ct.status === 'completed') {
-        categoryMap[category].completed++;
-      }
-    }
-  });
-
-  // Calculate percentages
-  Object.keys(categoryMap).forEach((category) => {
-    const data = categoryMap[category];
-    data.percentage = data.total > 0 ? Math.round((data.completed / data.total) * 100) : 0;
-  });
-
-  return Object.values(categoryMap);
+  try {
+    const response = await axiosClient.get<CategoryProgressData[]>(
+      `/dashboard/${childId}/category-progress`
+    );
+    return response.data;
+  } catch (error) {
+    console.error('Failed to fetch category progress:', error);
+    // Return empty data for all categories as fallback
+    const categories = ['Independence', 'Logic', 'Physical', 'Creativity', 'Social', 'Academic'];
+    return categories.map(cat => ({
+      name: cat,
+      completed: 0,
+      total: 0,
+      percentage: 0,
+    }));
+  }
 };
 
 /**
@@ -234,13 +234,40 @@ export const getActivityTimeline = async (
 };
 
 /**
- * Get skill radar data from assessments
+ * Get skill radar data from initial_traits (Gemini analysis) or fallback to assessment calculation
  */
 export const getSkillRadar = async (
   childId: string
 ): Promise<SkillRadarData[]> => {
-  const assessment = await getLatestAssessment(childId);
-  return calculateSkillScores(assessment);
+  try {
+    // First, try to get from initial_traits (Gemini analysis results)
+    const child = await getChild(childId);
+    
+    if (child.initial_traits?.overall_traits) {
+      const traits = child.initial_traits.overall_traits;
+      return [
+        { skill: 'Independence', value: traits.independence || 50, fullMark: 100 },
+        { skill: 'Emotional', value: traits.emotional || 50, fullMark: 100 },
+        { skill: 'Discipline', value: traits.discipline || 50, fullMark: 100 },
+        { skill: 'Social', value: traits.social || 50, fullMark: 100 },
+        { skill: 'Logic', value: traits.logic || 50, fullMark: 100 },
+      ];
+    }
+    
+    // Fallback: Calculate from assessment if initial_traits not available
+    const assessment = await getLatestAssessment(childId);
+    return calculateSkillScores(assessment);
+  } catch (error) {
+    console.error('Failed to fetch skill radar data:', error);
+    // Return default scores if both methods fail
+    return [
+      { skill: 'Independence', value: 50, fullMark: 100 },
+      { skill: 'Emotional', value: 50, fullMark: 100 },
+      { skill: 'Discipline', value: 50, fullMark: 100 },
+      { skill: 'Social', value: 50, fullMark: 100 },
+      { skill: 'Logic', value: 50, fullMark: 100 },
+    ];
+  }
 };
 
 /**
@@ -267,17 +294,50 @@ export const getEmotions = async (childId: string): Promise<EmotionData[]> => {
 /**
  * Get complete dashboard data (all components)
  * Optimized with parallel API calls
+ * Uses Promise.allSettled for graceful degradation - if one API fails, others still work
  */
 export const getDashboardData = async (childId: string): Promise<DashboardData> => {
-  const [stats, completionTrend, categoryProgress, activityTimeline, skillRadar, emotions] =
-    await Promise.all([
-      getStatsCards(childId),
-      getCompletionTrend(childId, 7),
-      getCategoryProgress(childId),
-      getActivityTimeline(childId, 10),
-      getSkillRadar(childId),
-      getEmotions(childId),
-    ]);
+  const results = await Promise.allSettled([
+    getStatsCards(childId),
+    getCompletionTrend(childId, 7),
+    getCategoryProgress(childId),
+    getActivityTimeline(childId, 10),
+    getSkillRadar(childId),
+    getEmotions(childId),
+  ]);
+
+  // Extract values with fallbacks for failed promises
+  const stats = results[0].status === 'fulfilled' 
+    ? results[0].value 
+    : { level: '1', totalCoins: '0', achievements: '0', completion: '0%' };
+    
+  const completionTrend = results[1].status === 'fulfilled' 
+    ? results[1].value 
+    : [];
+    
+  const categoryProgress = results[2].status === 'fulfilled' 
+    ? results[2].value 
+    : [];
+    
+  const activityTimeline = results[3].status === 'fulfilled' 
+    ? results[3].value 
+    : [];
+    
+  const skillRadar = results[4].status === 'fulfilled' 
+    ? results[4].value 
+    : [];
+    
+  const emotions = results[5].status === 'fulfilled' 
+    ? results[5].value 
+    : [];
+
+  // Log any failures for debugging
+  results.forEach((result, index) => {
+    if (result.status === 'rejected') {
+      const names = ['stats', 'completionTrend', 'categoryProgress', 'activityTimeline', 'skillRadar', 'emotions'];
+      console.error(`Failed to fetch ${names[index]}:`, result.reason);
+    }
+  });
 
   return {
     stats,
@@ -307,6 +367,22 @@ const formatTime = (timestamp: string): string => {
   return `${hours}:${minutesStr} ${ampm}`;
 };
 
+/**
+ * Analyze emotion report and generate new tasks based on the analysis
+ * If reportId is provided, uses that specific report. Otherwise, uses the most recent report.
+ * Generates up to 20 tasks based on emotional patterns and insights.
+ */
+export const analyzeEmotionReportAndGenerateTasks = async (
+  childId: string,
+  reportId?: string
+): Promise<ChildTaskWithDetails[]> => {
+  const response = await axiosClient.post<ChildTaskWithDetails[]>(
+    `/dashboard/${childId}/analyze-emotion-report`,
+    { report_id: reportId || null }
+  );
+  return response.data;
+};
+
 export default {
   getDashboardStats,
   getStatsCards,
@@ -316,4 +392,5 @@ export default {
   getSkillRadar,
   getEmotions,
   getDashboardData,
+  analyzeEmotionReportAndGenerateTasks,
 };

@@ -11,7 +11,10 @@ const EmotionPieChart = ({ data }: EmotionPieChartProps) => {
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
 
   // Show empty state if no emotion data yet
-  if (!data || data.length === 0) {
+  // Check for empty array OR all values are 0 (newly registered children)
+  const hasData = data && data.length > 0 && data.some(item => item.value > 0);
+  
+  if (!hasData) {
     return (
       <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-4 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 cursor-pointer">
         <div className="mb-3">

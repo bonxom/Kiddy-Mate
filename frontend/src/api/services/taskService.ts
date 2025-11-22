@@ -6,12 +6,12 @@
 import axiosClient from '../client/axiosClient';
 
 // Updated to match backend TaskCategory enum (8 categories)
-export type TaskCategory = 
-  | 'Independence' 
-  | 'Logic' 
-  | 'Physical' 
-  | 'Creativity' 
-  | 'Social' 
+export type TaskCategory =
+  | 'Independence'
+  | 'Logic'
+  | 'Physical'
+  | 'Creativity'
+  | 'Social'
   | 'Academic'
   | 'IQ'  // Backward compatibility
   | 'EQ'; // Backward compatibility
@@ -30,6 +30,7 @@ export interface Task {
   suggested_age_range: string;
   reward_coins: number;
   reward_badge_name?: string;
+  unity_type?: string;
 }
 
 export interface TaskCreate {
@@ -41,6 +42,21 @@ export interface TaskCreate {
   suggested_age_range: string;
   reward_coins?: number;
   reward_badge_name?: string;
+}
+
+export interface CreateAndAssignTaskRequest {
+  title: string;
+  description?: string;
+  category: TaskCategory;
+  type: TaskType;
+  difficulty: number;
+  suggested_age_range: string;
+  reward_coins: number;
+  reward_badge_name?: string;
+  // Assignment params
+  due_date?: string;
+  priority?: ChildTaskPriority;
+  notes?: string;
 }
 
 export interface TaskUpdate {
@@ -66,6 +82,10 @@ export interface ChildTaskWithDetails extends ChildTask {
   due_date?: string;
   progress?: number;
   notes?: string;
+  custom_title?: string;
+  custom_reward_coins?: number;
+  custom_category?: TaskCategory;
+  unity_type?: string;
   task: Task;
 }
 
@@ -74,6 +94,9 @@ export interface ChildTaskUpdate {
   due_date?: string;
   progress?: number;
   notes?: string;
+  custom_title?: string;
+  custom_reward_coins?: number;
+  custom_category?: TaskCategory;
 }
 
 export interface GetChildTasksParams {
@@ -151,14 +174,34 @@ export const getChildTasks = async (
 };
 
 /**
- * Assign task to child
+ * Assign task to child with optional parameters
  */
 export const assignTask = async (
   childId: string,
-  taskId: string
-): Promise<ChildTask> => {
-  const response = await axiosClient.post<ChildTask>(
-    `/children/${childId}/tasks/${taskId}/start`
+  taskId: string,
+  params?: {
+    due_date?: string;
+    priority?: ChildTaskPriority;
+    notes?: string;
+  }
+): Promise<ChildTaskWithDetails> => {
+  const response = await axiosClient.post<ChildTaskWithDetails>(
+    `/children/${childId}/tasks/${taskId}/assign`,
+    params || {}
+  );
+  return response.data;
+};
+
+/**
+ * Create and assign task in one step
+ */
+export const createAndAssignTask = async (
+  childId: string,
+  request: CreateAndAssignTaskRequest
+): Promise<ChildTaskWithDetails> => {
+  const response = await axiosClient.post<ChildTaskWithDetails>(
+    `/children/${childId}/tasks/create-and-assign`,
+    request
   );
   return response.data;
 };
@@ -221,23 +264,114 @@ export const verifyTask = async (
   return response.data;
 };
 
+/**
+ * Reject task verification (return task to in-progress)
+ */
+export const rejectTaskVerification = async (
+  childId: string,
+  childTaskId: string
+): Promise<{ message: string }> => {
+  const response = await axiosClient.post<{ message: string }>(
+    `/children/${childId}/tasks/${childTaskId}/reject`
+  );
+  return response.data;
+};
+
+/**
+ * Check task status
+ */
+export const checkTaskStatus = async (
+  childId: string,
+  taskId: string
+): Promise<{ status: ChildTaskStatus }> => {
+  const response = await axiosClient.get<{ status: ChildTaskStatus }>(
+    `/children/${childId}/tasks/${taskId}/status`
+  );
+  return response.data;
+};
+
+/**
+ * Give up on a task (change status to 'giveup')
+ */
+export const giveupTask = async (
+  childId: string,
+  taskId: string
+): Promise<{ message: string; status: string }> => {
+  const response = await axiosClient.post<{ message: string; status: string }>(
+    `/children/${childId}/tasks/${taskId}/giveup`
+  );
+  return response.data;
+};
+
+/**
+ * Get unassigned tasks (tasks generated but not yet assigned)
+ */
+export const getUnassignedTasks = async (
+  childId: string,
+  category?: TaskCategory
+): Promise<ChildTaskWithDetails[]> => {
+  const response = await axiosClient.post<ChildTaskWithDetails[]>(
+    `/children/${childId}/tasks/unassigned`,
+    {},
+    { params: category ? { category } : undefined }
+  );
+  return response.data;
+};
+
+/**
+ * Get tasks that were given up
+ */
+export const getGiveupTasks = async (
+  childId: string,
+  category?: TaskCategory
+): Promise<ChildTaskWithDetails[]> => {
+  const response = await axiosClient.post<ChildTaskWithDetails[]>(
+    `/children/${childId}/tasks/giveup`,
+    {},
+    { params: category ? { category } : undefined }
+  );
+  return response.data;
+};
+
+/**
+ * Get completed tasks
+ */
+export const getCompletedTasks = async (
+  childId: string,
+  limit?: number
+): Promise<ChildTaskWithDetails[]> => {
+  const response = await axiosClient.get<ChildTaskWithDetails[]>(
+    `/children/${childId}/tasks/completed`,
+    { params: limit ? { limit } : undefined }
+  );
+  return response.data;
+};
+
 export default {
   // Library Management
   getAllTasks,
   createTask,
   updateTask,
   deleteTask,
-  
+
   // Suggestions
   getSuggestedTasks,
-  
+
   // Assigned Tasks
   getChildTasks,
   assignTask,
+  createAndAssignTask,
   updateAssignedTask,
   unassignTask,
-  
+
   // Lifecycle
   completeTask,
   verifyTask,
+  checkTaskStatus,
+  giveupTask,
+  
+  // Task Lists
+  getUnassignedTasks,
+  getGiveupTasks,
+  getCompletedTasks,
 };
