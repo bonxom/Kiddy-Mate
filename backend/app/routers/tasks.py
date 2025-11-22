@@ -34,9 +34,9 @@ def merge_task_details(child_task: ChildTask, task_source) -> dict:
     return {
         "title": child_task.custom_title if child_task.custom_title else task_source.title,
         "reward_coins": child_task.custom_reward_coins if child_task.custom_reward_coins is not None else task_source.reward_coins,
+        "category": child_task.custom_category if child_task.custom_category else task_source.category,
         # Other fields always from template/embedded
         "description": task_source.description,
-        "category": task_source.category,
         "type": task_source.type,
         "difficulty": task_source.difficulty,
         "suggested_age_range": task_source.suggested_age_range,
@@ -53,6 +53,7 @@ class ChildTaskUpdateRequest(BaseModel):
     # Allow updating custom overrides
     custom_title: Optional[str] = None
     custom_reward_coins: Optional[int] = None
+    custom_category: Optional[str] = None
 
 # Request schema for assigning tasks
 class AssignTaskRequest(BaseModel):
@@ -163,6 +164,7 @@ async def get_child_tasks(
                 # Fields from HEAD
                 custom_title=ct.custom_title,
                 custom_reward_coins=ct.custom_reward_coins,
+                custom_category=ct.custom_category,
 
                 # Field from LDT
                 unity_type=ct.unity_type.value if ct.unity_type else None,
@@ -182,12 +184,13 @@ async def get_child_tasks(
                     unity_type=merged_details.get("unity_type"),
                 )
             )
-        )  
-        
-        if limit:
-            results = results[:limit]
-        
-        return results
+        )
+    
+    # Apply limit after processing all tasks
+    if limit:
+        results = results[:limit]
+    
+    return results
 
 @router.post("/{child_id}/tasks/{task_id}/start", response_model=ChildTaskPublic)
 async def start_task(
@@ -459,6 +462,8 @@ async def update_assigned_task(
         child_task.custom_title = task_update.custom_title
     if task_update.custom_reward_coins is not None:
         child_task.custom_reward_coins = task_update.custom_reward_coins
+    if task_update.custom_category is not None:
+        child_task.custom_category = TaskCategory(task_update.custom_category)
     
     update_data = {}
     if task_update.priority is not None:
@@ -469,6 +474,12 @@ async def update_assigned_task(
         update_data["progress"] = task_update.progress
     if task_update.notes is not None:
         update_data["notes"] = task_update.notes
+    if task_update.custom_title is not None:
+        update_data["custom_title"] = task_update.custom_title
+    if task_update.custom_reward_coins is not None:
+        update_data["custom_reward_coins"] = task_update.custom_reward_coins
+    if task_update.custom_category is not None:
+        update_data["custom_category"] = task_update.custom_category
     
     # Update child_task first
     if update_data:
@@ -502,6 +513,7 @@ async def update_assigned_task(
         notes=child_task.notes,  # type: ignore
         custom_title=child_task.custom_title,  # pat  # type: ignore
         custom_reward_coins=child_task.custom_reward_coins,  # pat  # type: ignore
+        custom_category=child_task.custom_category,  # pat  # type: ignore
         unity_type=child_task.unity_type.value if child_task.unity_type else None,  # ldt  # type: ignore
         task=TaskPublic(
             id=task_id,
@@ -561,6 +573,7 @@ async def create_and_assign_task(
         notes=child_task.notes,
         custom_title=child_task.custom_title,
         custom_reward_coins=child_task.custom_reward_coins,
+        custom_category=child_task.custom_category,
         unity_type=child_task.unity_type.value if child_task.unity_type else None,
         task=TaskPublic(
             id=f"custom-{child_task.id}",  # Custom tasks use ChildTask ID
@@ -638,11 +651,10 @@ async def check_task_status(
 async def giveup_task(
     child_id: str,
     task_id: str,
-    child: Child = Depends(verify_child_ownership),
-    current_user: User = Depends(verify_child_token)
+    child: Child = Depends(verify_child_ownership)
 ):
     """
-    Give up on a task (CHILD ONLY).
+    Give up on a task (PARENT or CHILD).
     Changes task status from 'in_progress' to 'giveup'.
     Accepts both task_id (Task library ID) or child_task_id (ChildTask ID).
     """
@@ -788,6 +800,9 @@ async def get_giveup_tasks(
                 due_date=ct.due_date,
                 progress=ct.progress,
                 notes=ct.notes,
+                custom_title=ct.custom_title,
+                custom_reward_coins=ct.custom_reward_coins,
+                custom_category=ct.custom_category,
                 unity_type=ct.unity_type.value if ct.unity_type else None,
                 task=TaskPublic(
                     id=str(task.id),

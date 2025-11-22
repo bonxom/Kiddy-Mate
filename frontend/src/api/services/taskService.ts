@@ -93,6 +93,7 @@ export interface ChildTaskUpdate {
   notes?: string;
   custom_title?: string;
   custom_reward_coins?: number;
+  custom_category?: TaskCategory;
 }
 
 export interface GetChildTasksParams {

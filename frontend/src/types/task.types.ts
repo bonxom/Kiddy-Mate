@@ -1,4 +1,4 @@
-export type TaskStatus = 'assigned' | 'in-progress' | 'need-verify' | 'completed' | 'missed';
+export type TaskStatus = 'assigned' | 'in-progress' | 'need-verify' | 'completed' | 'missed' | 'giveup' | 'unassigned';
 
 export type TaskCategory = 'self-discipline' | 'logic' | 'creativity' | 'social' | 'physical' | 'academic';
 

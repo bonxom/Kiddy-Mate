@@ -3,7 +3,7 @@
  * Provides data fetching and mutations for tasks
  */
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { TaskEvents } from '../utils/events';
 import {
   getAllTasks,
@@ -145,6 +145,13 @@ export const useAssignedTasks = (childId: string) => {
     },
     [childId]
   );
+
+  // Auto-fetch tasks when childId changes
+  useEffect(() => {
+    if (childId) {
+      fetchTasks();
+    }
+  }, [childId, fetchTasks]);
 
   const assignNewTask = useCallback(
     async (

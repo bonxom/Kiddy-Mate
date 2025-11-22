@@ -8,14 +8,16 @@ import Badge from '../../../components/ui/Badge';
 import { Star } from 'lucide-react';
 import type { AssignedTask } from '../../../types/task.types';
 import { useAssignedTasks } from '../../../hooks/useTasks';
-import { mapToBackendPriority } from '../../../utils/taskMappers';
+import { mapToBackendPriority, mapToBackendCategory } from '../../../utils/taskMappers';
 import type { ChildTaskUpdate } from '../../../api/services/taskService';
 import { useChildContext } from '../../../providers/ChildProvider';
 import {
   getCategoryConfig,
   getPriorityConfig,
   getStatusConfig,
-  ICON_SIZES
+  ICON_SIZES,
+  TASK_CATEGORY_LABELS,
+  type TaskCategoryKey
 } from '../../../constants/taskConfig';
 
 interface ExtendedAssignedTask extends AssignedTask {
@@ -91,6 +93,10 @@ const TaskDetailModal = ({ isOpen, onClose, task, onSave, onDelete, onUpdate }: 
 
       if (formData.reward !== task.reward) {
         updates.custom_reward_coins = formData.reward;
+      }
+
+      if (formData.category !== task.category) {
+        updates.custom_category = mapToBackendCategory(formData.category);
       }
 
       // Call API to update
@@ -177,20 +183,20 @@ const TaskDetailModal = ({ isOpen, onClose, task, onSave, onDelete, onUpdate }: 
                 <p className="text-xs text-gray-500 mt-1">This creates a custom version for this assignment</p>
               </div>
 
-              {/* Category - READ ONLY */}
+              {/* Category */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Category</label>
-                {(() => {
-                  const config = getCategoryConfig(formData.category);
-                  const Icon = config.icon;
-                  return (
-                    <div className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold border ${config.color}`}>
-                      <Icon className={ICON_SIZES.sm} />
-                      <span>{config.label}</span>
-                    </div>
-                  );
-                })()}
-                <p className="text-xs text-gray-500 mt-2">Category is from task template</p>
+                <select
+                  value={formData.category}
+                  onChange={(e) => setFormData({ ...formData, category: e.target.value as TaskCategoryKey })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent"
+                >
+                  {Object.entries(TASK_CATEGORY_LABELS).map(([key, label]) => (
+                    <option key={key} value={key}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               {/* Priority */}
@@ -321,8 +327,7 @@ const TaskDetailModal = ({ isOpen, onClose, task, onSave, onDelete, onUpdate }: 
                   <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Reward</label>
                   <div className="flex items-center gap-1.5 w-fit px-3 py-2 rounded-lg border border-yellow-200" style={{ background: 'linear-gradient(to right, rgb(254 252 232), rgb(254 243 199))' }}>
                     <Star className="w-5 h-5 text-yellow-600 fill-yellow-500" />
-                    <span className="font-bold text-gray-900 text-lg">{formData.reward}</span>
-                    <span className="text-sm text-gray-700">Stars</span>
+                    <span className="font-bold text-gray-900 text-lg">{formData.reward} Coins</span>
                   </div>
                 </div>
 

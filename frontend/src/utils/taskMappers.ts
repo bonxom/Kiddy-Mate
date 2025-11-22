@@ -70,10 +70,10 @@ export const mapToBackendCategory = (
  * Now aligned with new backend ChildTaskStatus enum
  */
 const mapBackendStatus = (
-  status: 'assigned' | 'in_progress' | 'need_verify' | 'completed' | 'missed'
-): 'assigned' | 'in-progress' | 'need-verify' | 'completed' | 'missed' => {
+  status: 'assigned' | 'in_progress' | 'need_verify' | 'completed' | 'missed' | 'giveup' | 'unassigned'
+): 'assigned' | 'in-progress' | 'need-verify' | 'completed' | 'missed' | 'giveup' | 'unassigned' => {
   // Direct mapping with underscore to hyphen conversion
-  return status.replace(/_/g, '-') as 'assigned' | 'in-progress' | 'need-verify' | 'completed' | 'missed';
+  return status.replace(/_/g, '-') as 'assigned' | 'in-progress' | 'need-verify' | 'completed' | 'missed' | 'giveup' | 'unassigned';
 };
 
 // ============================================================================

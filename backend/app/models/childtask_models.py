@@ -54,6 +54,7 @@ class ChildTask(Document):
     # pat
     custom_title: Optional[str] = None  # If set, use this instead of task.title
     custom_reward_coins: Optional[int] = None  # If set, use this instead of task.reward_coins
+    custom_category: Optional[TaskCategory] = None  # If set, use this instead of task.category
     
     # ldt
     unity_type: Optional[UnityType] = None  

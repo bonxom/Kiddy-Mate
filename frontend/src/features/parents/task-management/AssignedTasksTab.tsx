@@ -46,14 +46,6 @@ const AssignedTasksTab = ({ onCountChange }: AssignedTasksTabProps) => {
     giveupTask,
   } = useAssignedTasks(selectedChildId || '');
 
-  // Fetch tasks on mount and when selected child changes
-  useEffect(() => {
-    if (selectedChildId) {
-      fetchTasks();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedChildId]); // Only re-fetch when selectedChildId changes
-
   // Listen for library task updates and refresh assigned tasks
   useEffect(() => {
     return TaskEvents.listen(TaskEvents.LIBRARY_UPDATED, () => {
@@ -396,9 +388,8 @@ const AssignedTasksTab = ({ onCountChange }: AssignedTasksTabProps) => {
                           ? 'text-yellow-600'
                           : 'text-yellow-500'
                           }`}>
-                          {task.reward}
+                          {task.reward} Coins
                         </span>
-                        <span className="text-xs text-yellow-600">Coins</span>
                       </div>
                     </td>
 

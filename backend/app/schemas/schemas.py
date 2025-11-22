@@ -322,6 +322,7 @@ class ChildTaskWithDetails(BaseModel):
     # Custom override fields
     custom_title: Optional[str] = None
     custom_reward_coins: Optional[int] = None
+    custom_category: Optional[TaskCategory] = None
     unity_type: Optional[str] = None  
     task: TaskPublic  
     model_config = ConfigDict(from_attributes=True)
