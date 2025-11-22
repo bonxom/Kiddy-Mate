@@ -227,12 +227,13 @@ async def complete_onboarding(
         # Create child with initial_traits from ChatGPT
         logging.info(f"📝 Saving child {child_data.full_name} with initial_traits: {list(initial_traits.get('overall_traits', {}).keys())}")
         from beanie import Link
+        from app.services.auth import hash_password
         new_child = Child(
             parent=Link(current_user, User),  
             name=child_data.full_name,
             birth_date=birth_date,
             username=child_data.username,
-            password_hash=hashed_password,
+            password_hash=hash_password(child_data.password),
             nickname=child_data.nickname,
             gender=child_data.gender,
             personality=child_data.personality,

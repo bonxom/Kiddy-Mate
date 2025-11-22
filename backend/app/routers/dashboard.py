@@ -4,10 +4,9 @@ from app.models.child_models import Child
 from app.models.childtask_models import ChildTask, ChildTaskStatus
 from app.models.reward_models import ChildReward
 from app.models.task_models import Task
-from app.dependencies import verify_child_ownership, get_child_tasks_by_child, fetch_link_or_get_object
+from app.dependencies import verify_child_ownership, get_child_tasks_by_child, fetch_link_or_get_object, extract_id_from_link
 from typing import Dict, List
 from pydantic import BaseModel
-from beanie import Link
 
 router = APIRouter()
 
@@ -32,20 +31,17 @@ async def get_dashboard(
     All counts are calculated in real-time from database.
     Frontend should use child.coins directly.
     """
-    child_id_str = str(child.id)
+    # Get all child tasks using optimized helper
+    tasks_for_child = await get_child_tasks_by_child(child)
     
     # Count completed tasks
-    all_tasks = await ChildTask.find_all().to_list()
-    tasks_for_child = [
-        t for t in all_tasks 
-        if extract_id_from_link(t.child) == child_id_str
-    ]
     tasks_completed = sum(
         1 for t in tasks_for_child 
         if t.status == ChildTaskStatus.COMPLETED
     )
 
     # Count badges earned
+    child_id_str = str(child.id)
     all_rewards = await ChildReward.find_all().to_list()
     badges_earned = sum(
         1 for r in all_rewards 

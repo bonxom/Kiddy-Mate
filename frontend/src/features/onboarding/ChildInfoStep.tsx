@@ -9,13 +9,20 @@ import type { ChildBasicInfo } from '../../types/auth.types';
 interface ChildInfoStepProps {
   childNumber: number;
   totalChildren: number;
-  initialData: ChildBasicInfo;
+  initialData?: ChildBasicInfo;
   onComplete: (data: ChildBasicInfo) => void;
   onBack: () => void;
 }
 
 const ChildInfoStep = ({ childNumber, totalChildren, initialData, onComplete, onBack }: ChildInfoStepProps) => {
-  const [formData, setFormData] = useState<ChildBasicInfo>(initialData);
+  const [formData, setFormData] = useState<ChildBasicInfo>(initialData || {
+    fullName: '',
+    dateOfBirth: '',
+    gender: 'male',
+    username: '',
+    password: '',
+    favoriteTopics: []
+  });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [ageWarning, setAgeWarning] = useState<string | null>(null);
 
@@ -78,7 +85,12 @@ const ChildInfoStep = ({ childNumber, totalChildren, initialData, onComplete, on
         <h2 className="text-xl font-bold text-slate-800">Child Information</h2>
       </div>
 
-      <form onSubmit={(e) => { e.preventDefault(); if(validateForm()) onComplete(formData); }} className="space-y-4">
+      <form onSubmit={(e) => {
+        e.preventDefault();
+        if (validateForm()) {
+          onComplete(formData);
+        }
+      }} className="space-y-4">
         
         {/* Full Name */}
         <Input
@@ -156,7 +168,7 @@ const ChildInfoStep = ({ childNumber, totalChildren, initialData, onComplete, on
             </div>
         </div>
 
-        {/* Compact Gender Select */
+        {/* Gender Select */}
         <div>
           <label className="block text-xs font-bold text-slate-500 mb-2 uppercase tracking-wide">Gender</label>
           <div className="grid grid-cols-3 gap-2">
@@ -176,8 +188,8 @@ const ChildInfoStep = ({ childNumber, totalChildren, initialData, onComplete, on
             ))}
           </div>
         </div>
-        } 
-        {/* Compact Interests (Scrollable) */}
+
+        {/* Interests */}
         <div>
           <label className="block text-xs font-bold text-slate-500 mb-3 uppercase tracking-wide">Interests (Select all)</label>
           <div className="flex flex-wrap gap-2 max-h-36 overflow-y-auto pr-1 custom-scrollbar content-start">

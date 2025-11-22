@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Sparkles, Quote, ArrowLeft, Bot } from 'lucide-react';
@@ -49,7 +49,7 @@ const OnboardingPage = () => {
 
   const [currentQuoteIndex, setCurrentQuoteIndex] = useState(0); 
 
-    // 2. Logic tự động chuyển Quote (sau 7 giây)
+    // 2. Logic tự động chuyển Quote (sau 7 giây) - Optimized
     useEffect(() => {
         const quoteInterval = setInterval(() => {
             setCurrentQuoteIndex(prevIndex => (prevIndex + 1) % QUOTES.length);
@@ -58,83 +58,136 @@ const OnboardingPage = () => {
         return () => clearInterval(quoteInterval);
     }, []);
 
-    const currentQuote = QUOTES[currentQuoteIndex];
+    const currentQuote = useMemo(() => QUOTES[currentQuoteIndex], [currentQuoteIndex]);
 
-          // Determine which question set to use based on child's age
-          const birthYear = new Date(child.basicInfo.dateOfBirth).getFullYear();
-          const currentYear = new Date().getFullYear();
-          const age = currentYear - birthYear;
-          const relevantQuestions = age > 10 ? assessmentQuestionsSecondary : assessmentQuestionsPrimary;
-          
-          // Create a map of question ID to category
-          const questionCategoryMap = new Map<string, 'discipline' | 'emotional' | 'social'>();
-          relevantQuestions.forEach(q => {
-            questionCategoryMap.set(q.id, q.category);
-          });
+  const handleParentInfoComplete = useCallback((parentInfo: ParentInfo) => {
+    setOnboardingData(prev => ({ ...prev, parentInfo }));
+    setCurrentStep('child-info');
+    setCurrentChildIndex(0);
+  }, []);
 
-          child.assessment.answers.forEach((answer) => {
-            const key = answer.questionId;
-            const value = answer.rating.toString();
-            
-            // Determine category based on question's category field
-            const category = questionCategoryMap.get(key);
-            if (category === 'discipline') {
-              disciplineAnswers[key] = value;
-            } else if (category === 'emotional') {
-              emotionalAnswers[key] = value;
-            } else if (category === 'social') {
-              socialAnswers[key] = value;
-            }
-          });
+  const handleChildInfoComplete = useCallback((childInfo: ChildBasicInfo) => {
+    setOnboardingData(prev => {
+      const updatedChildren = [...prev.children];
+      // If child doesn't exist yet, create a new entry
+      if (!updatedChildren[currentChildIndex]) {
+        updatedChildren[currentChildIndex] = {
+          basicInfo: childInfo,
+          assessment: { answers: [] }
+        };
+      } else {
+        updatedChildren[currentChildIndex] = { 
+          ...updatedChildren[currentChildIndex], 
+          basicInfo: childInfo 
+        };
+      }
+      return { ...prev, children: updatedChildren };
+    });
+    setCurrentStep('assessment');
+  }, [currentChildIndex]);
 
-  const handleChildInfoComplete = (childInfo: ChildBasicInfo) => {
-    const updatedChildren = [...onboardingData.children];
-    updatedChildren[currentChildIndex] = { ...updatedChildren[currentChildIndex], basicInfo: childInfo };
-    setOnboardingData({ ...onboardingData, children: updatedChildren });
-    setCurrentStep('assessment');
-  };
+  const handleAssessmentComplete = useCallback((assessment: ChildAssessment) => {
+    setOnboardingData(prev => {
+      const updatedChildren = [...prev.children];
+      // Update assessment for current child (should already exist from handleChildInfoComplete)
+      if (updatedChildren[currentChildIndex]) {
+        updatedChildren[currentChildIndex] = { 
+          ...updatedChildren[currentChildIndex], 
+          assessment 
+        };
+      } else {
+        // This shouldn't happen, but handle it gracefully
+        console.error('Child info missing when completing assessment');
+        return prev;
+      }
+      
+      const newData = { ...prev, children: updatedChildren };
+      
+      // Check if we should move to next child or finish
+      if (currentChildIndex < prev.parentInfo.numberOfChildren - 1) {
+        // Move to next child
+        setCurrentChildIndex(currentChildIndex + 1);
+        setCurrentStep('child-info');
+      } else {
+        // Finish onboarding - pass the updated data
+        handleFinishOnboarding(newData);
+      }
+      
+      return newData;
+    });
+  }, [currentChildIndex]);
 
-  const handleAssessmentComplete = (assessment: ChildAssessment) => {
-    const updatedChildren = [...onboardingData.children];
-    updatedChildren[currentChildIndex] = { ...updatedChildren[currentChildIndex], assessment };
-    setOnboardingData({ ...onboardingData, children: updatedChildren });
+  const handleFinishOnboarding = useCallback(async (data?: OnboardingData) => {
+    const finalData = data || onboardingData;
+    
+    try {
+      const userStr = localStorage.getItem(STORAGE_KEYS.AUTH_USER);
+      if (!userStr) {
+        alert('Session expired. Please login again.');
+        navigate('/login');
+        return;
+      }
+      const user = JSON.parse(userStr);
+      
+      const allQuestions = [...assessmentQuestionsPrimary, ...assessmentQuestionsSecondary];
 
-    if (currentChildIndex < onboardingData.parentInfo.numberOfChildren - 1) {
-      setCurrentChildIndex(currentChildIndex + 1);
-      setCurrentStep('child-info');
-    } else {
-      handleFinishOnboarding();
-    }
-  };
+      // Validate required fields before sending
+      if (!finalData.parentInfo.displayName || !finalData.parentInfo.displayName.trim()) {
+        alert('Please enter your display name');
+        return;
+      }
 
-  const handleFinishOnboarding = async () => {
-    try {
-      const userStr = localStorage.getItem(STORAGE_KEYS.AUTH_USER);
-      if (!userStr) {
-        alert('Session expired. Please login again.');
-        navigate('/login');
-        return;
-      }
-      const user = JSON.parse(userStr);
-      
-      const allQuestions = [...assessmentQuestionsPrimary, ...assessmentQuestionsSecondary];
+      for (let i = 0; i < finalData.children.length; i++) {
+        const child = finalData.children[i];
+        if (!child.basicInfo.fullName || !child.basicInfo.fullName.trim()) {
+          alert(`Please enter full name for child ${i + 1}`);
+          return;
+        }
+        if (!child.basicInfo.dateOfBirth) {
+          alert(`Please enter date of birth for child ${i + 1}`);
+          return;
+        }
+        if (!child.basicInfo.username || !child.basicInfo.username.trim()) {
+          alert(`Please enter username for child ${i + 1}`);
+          return;
+        }
+        if (!child.basicInfo.password || !child.basicInfo.password.trim()) {
+          alert(`Please enter password for child ${i + 1}`);
+          return;
+        }
+        if (!child.assessment || !child.assessment.answers || child.assessment.answers.length === 0) {
+          alert(`Please complete the assessment for child ${i + 1}`);
+          return;
+        }
+      }
 
-      const onboardingRequest = {
-        parent_email: user.email,
-        parent_display_name: onboardingData.parentInfo.displayName,
-        phone_number: onboardingData.parentInfo.phoneNumber || undefined,
-        children: onboardingData.children.map(child => {
-          const getCategoryAnswers = (category: string) => 
-            child.assessment.answers
-              .filter(a => allQuestions.find(q => q.id === a.questionId)?.category === category)
-              .reduce((acc, a) => ({ ...acc, [a.questionId]: String(a.rating) }), {});
+      const onboardingRequest = {
+        parent_email: user.email,
+        parent_display_name: finalData.parentInfo.displayName.trim(),
+        phone_number: finalData.parentInfo.phoneNumber || undefined,
+        children: finalData.children.map(child => {
+          const getCategoryAnswers = (category: string) => {
+            const answers = child.assessment.answers
+              .filter(a => {
+                const question = allQuestions.find(q => q.id === a.questionId);
+                return question?.category === category;
+              })
+              .reduce((acc, a) => {
+                // Ensure rating is converted to string and not null/undefined
+                if (a.rating != null) {
+                  acc[a.questionId] = String(a.rating);
+                }
+                return acc;
+              }, {} as Record<string, string>);
+            return answers;
+          };
 
           return {
-            full_name: child.basicInfo.fullName,
-            nickname: child.basicInfo.nickname || child.basicInfo.fullName,
+            full_name: child.basicInfo.fullName.trim(),
+            nickname: (child.basicInfo.nickname || child.basicInfo.fullName).trim(),
             date_of_birth: child.basicInfo.dateOfBirth,
-            gender: child.basicInfo.gender,
-            username: child.basicInfo.username,
+            gender: child.basicInfo.gender || 'male',
+            username: child.basicInfo.username.trim(),
             password: child.basicInfo.password,
             favorite_topics: child.basicInfo.favoriteTopics || [],
             discipline_autonomy: getCategoryAnswers('discipline'),
@@ -144,23 +197,35 @@ const OnboardingPage = () => {
         }),
       };
 
+      // Log request for debugging
+      console.log('Sending onboarding request:', JSON.stringify(onboardingRequest, null, 2));
+
       const response = await completeOnboarding(onboardingRequest);
       
-      // Cập nhật trạng thái người dùng
-      user.hasCompletedOnboarding = true;
-      user.displayName = onboardingData.parentInfo.displayName;
-      if (onboardingData.parentInfo.phoneNumber) {
-        user.phoneNumber = onboardingData.parentInfo.phoneNumber;
-      }
-      localStorage.setItem(STORAGE_KEYS.AUTH_USER, JSON.stringify(user));
+      // Cập nhật trạng thái người dùng
+      user.hasCompletedOnboarding = true;
+      user.displayName = finalData.parentInfo.displayName;
+      if (finalData.parentInfo.phoneNumber) {
+        user.phoneNumber = finalData.parentInfo.phoneNumber;
+      }
+      localStorage.setItem(STORAGE_KEYS.AUTH_USER, JSON.stringify(user));
 
-      console.log('Onboarding completed successfully:', response);
-      navigate('/parent/dashboard');
-    } catch (error) {
-      console.error('Onboarding error:', error);
-      alert('Failed to complete onboarding. Please try again.');
-    }
-  };
+      console.log('Onboarding completed successfully:', response);
+      navigate('/parent/dashboard');
+    } catch (error: any) {
+      console.error('Onboarding error:', error);
+      
+      // Extract error message from response
+      let errorMessage = 'Failed to complete onboarding. Please try again.';
+      if (error?.response?.data?.detail) {
+        errorMessage = error.response.data.detail;
+      } else if (error?.message) {
+        errorMessage = error.message;
+      }
+      
+      alert(errorMessage);
+    }
+  }, [onboardingData, navigate]);
 
   const handleBack = () => {
     if (currentStep === 'assessment') setCurrentStep('child-info');
@@ -170,14 +235,14 @@ const OnboardingPage = () => {
     } else if (currentStep === 'child-info') setCurrentStep('parent-info');
   };
 
-  const calculateProgress = () => {
+  const progress = useMemo(() => {
     if (currentStep === 'parent-info') return 10;
     const totalStepsPerChild = 2; // Child Info + Assessment
     const completedChildrenSteps = currentChildIndex * totalStepsPerChild;
     const currentChildStep = currentStep === 'child-info' ? 1 : 2;
     const totalSteps = onboardingData.parentInfo.numberOfChildren * totalStepsPerChild;
     return 10 + ((completedChildrenSteps + currentChildStep) / totalSteps) * 90;
-  };
+  }, [currentStep, currentChildIndex, onboardingData.parentInfo.numberOfChildren]);
 
   // --- GIAO DIỆN (Đã cải tiến UI/UX) ---
   return (
@@ -189,22 +254,26 @@ const OnboardingPage = () => {
       =========================================================== */}
       <div className="hidden lg:flex lg:w-5/12 bg-[#06325a] relative flex-col justify-between p-12 text-white h-full">
         
-        {/* Background Effects */}
+        {/* Background Effects - Optimized for performance */}
         <div className="absolute inset-0 z-0 overflow-hidden">
-            {/* Lớp phủ gradient và nhiễu */}
+            {/* Lớp phủ gradient - Static, no animation */}
             <div className="absolute top-0 left-0 w-full h-full" style={{ background: 'linear-gradient(to bottom right, #06325a 0%, #1e40af 100%)', opacity: 0.9 }}></div>
-            <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 mix-blend-soft-light"></div>
-            
-            {/* Mảng màu chuyển động (Framer Motion) */}
-            <motion.div 
-                animate={{ scale: [1, 1.2, 1], rotate: [0, 10, 0] }} 
-                transition={{ duration: 15, repeat: Infinity }}
-                className="absolute -top-20 -right-20 w-96 h-96 bg-blue-500 rounded-full mix-blend-overlay filter blur-[100px] opacity-40" 
-            />
-             <motion.div 
-                animate={{ scale: [1, 1.5, 1], x: [0, -50, 0] }} 
-                transition={{ duration: 20, repeat: Infinity }}
-                className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-purple-600 rounded-full mix-blend-overlay filter blur-[120px] opacity-30" 
+            
+            {/* Simplified background blobs - Reduced blur and opacity for better performance */}
+            <div 
+                className="absolute -top-20 -right-20 w-96 h-96 bg-blue-500 rounded-full mix-blend-overlay opacity-30"
+                style={{ 
+                    filter: 'blur(60px)',
+                    transform: 'scale(1)',
+                    willChange: 'transform'
+                }}
+            />
+            <div 
+                className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-purple-600 rounded-full mix-blend-overlay opacity-20"
+                style={{ 
+                    filter: 'blur(70px)',
+                    willChange: 'transform'
+                }}
             />
         </div>
 
@@ -221,30 +290,34 @@ const OnboardingPage = () => {
             </div>
         </div>
 
-        {/* ROBOT MASCOT (Center) */}
+        {/* ROBOT MASCOT (Center) - Optimized animation */}
         <div className="relative z-10 flex-1 flex flex-col items-center justify-center">
-            <motion.div 
-                // Robot bay lơ lửng
-                animate={{ y: [-15, 15, -15] }}
-                transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+            <div 
                 className="relative"
+                style={{
+                    animation: 'float 6s ease-in-out infinite',
+                    willChange: 'transform'
+                }}
             >
-               {/* Vòng hào quang */}
-               <div className="absolute inset-0 bg-cyan-500 blur-3xl opacity-20 rounded-full transform scale-150" />
+              {/* Vòng hào quang - Reduced blur for performance */}
+              <div className="absolute inset-0 bg-cyan-500 opacity-15 rounded-full transform scale-150" style={{ filter: 'blur(40px)' }} />
                
                {/* Icon Robot khổng lồ */}
                <Bot strokeWidth={1} className="w-72 h-72 text-white drop-shadow-[0_0_30px_rgba(103,232,249,0.6)]" />
                
-               {/* Bong bóng chat (xuất hiện nhẹ nhàng) */}
-               <motion.div 
-                 initial={{ opacity: 0, scale: 0, x: 50 }}
-                 animate={{ opacity: 1, scale: 1, x: 0 }}
-                 transition={{ delay: 1, type: 'spring' }}
-                 className="absolute -top-4 -right-12 bg-white text-[#06325a] px-4 py-2 rounded-xl rounded-bl-none shadow-lg font-bold text-sm whitespace-nowrap"
-               >
+              {/* Bong bóng chat - Static after initial render */}
+              <div className="absolute -top-4 -right-12 bg-white text-[#06325a] px-4 py-2 rounded-xl rounded-bl-none shadow-lg font-bold text-sm whitespace-nowrap">
                  Hi there! 👋
-               </motion.div>
-            </motion.div>
+              </div>
+            </div>
+            
+            {/* CSS Animation for floating effect */}
+            <style>{`
+              @keyframes float {
+                0%, 100% { transform: translateY(0px); }
+                50% { transform: translateY(-15px); }
+              }
+            `}</style>
 
             <div className="mt-10 text-center max-w-xs">
                 <h2 className="text-2xl font-bold mb-2 text-transparent bg-clip-text bg-linear-to-r from-white to-blue-200">
@@ -256,15 +329,15 @@ const OnboardingPage = () => {
             </div>
         </div>
 
-        {/* Quote (Bottom) */}
-        <div className="relative z-10 h-32 flex items-end"> {/* Thêm h-32 để cố định chiều cao */}
+        {/* Quote (Bottom) - Simplified animation */}
+        <div className="relative z-10 h-32 flex items-end">
             <AnimatePresence mode="wait">
                 <motion.div 
-                    key={currentQuote.text} // Key thay đổi mỗi lần quote thay đổi để kích hoạt animation
-                    initial={{ opacity: 0, y: 15 }} // Vị trí ban đầu (mờ và hơi trượt lên)
-                    animate={{ opacity: 1, y: 0 }} // Vị trí cuối cùng
-                    exit={{ opacity: 0, y: -15 }} // Hiệu ứng khi biến mất
-                    transition={{ duration: 0.5 }}
+                    key={currentQuote.text}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.3 }}
                     className="absolute w-full"
                 >
                     <div className="bg-white/5 backdrop-blur-sm p-4 rounded-xl border border-white/10 flex gap-3 items-start">
@@ -291,13 +364,13 @@ const OnboardingPage = () => {
         {/* Progress Bar (Sticky Top) */}
         <div className="sticky top-0 z-50 w-full bg-white border-b border-slate-100 shadow-sm">
             <div className="h-1.5 w-full bg-slate-100">
-                <motion.div 
-                    className="h-full"
-                    // Sử dụng style cứng cho gradient thanh tiến trình
-                    style={{ background: 'linear-gradient(to right, #3498db, #8e44ad)' }} 
-                    initial={{ width: 0 }}
-                    animate={{ width: `${calculateProgress()}%` }}
-                    transition={{ duration: 0.5, ease: "circOut" }}
+                <div 
+                    className="h-full transition-all duration-500 ease-out"
+                    style={{ 
+                        background: 'linear-gradient(to right, #3498db, #8e44ad)',
+                        width: `${progress}%`,
+                        willChange: 'width'
+                    }}
                 />
             </div>
             
@@ -330,7 +403,7 @@ const OnboardingPage = () => {
                     </button>
                 )}
 
-                {/* Content with Animate Presence (chuyển đổi bước mượt mà) */}
+                {/* Content with Animate Presence - Optimized transitions */}
                 <AnimatePresence mode='wait'>
                     {currentStep === 'parent-info' && (
                         <ParentInfoStep
@@ -345,7 +418,14 @@ const OnboardingPage = () => {
                             key={`child-info-${currentChildIndex}`}
                             childNumber={currentChildIndex + 1}
                             totalChildren={onboardingData.parentInfo.numberOfChildren}
-                            initialData={onboardingData.children[currentChildIndex]?.basicInfo}
+                            initialData={onboardingData.children[currentChildIndex]?.basicInfo || {
+                                fullName: '',
+                                dateOfBirth: '',
+                                gender: 'male',
+                                username: '',
+                                password: '',
+                                favoriteTopics: []
+                            }}
                             onComplete={handleChildInfoComplete}
                             onBack={handleBack}
                         />
@@ -356,9 +436,9 @@ const OnboardingPage = () => {
                             key={`assessment-${currentChildIndex}`}
                             childNumber={currentChildIndex + 1}
                             totalChildren={onboardingData.parentInfo.numberOfChildren}
-                            childName={onboardingData.children[currentChildIndex]?.basicInfo.nickname || onboardingData.children[currentChildIndex]?.basicInfo.fullName}
-                            dateOfBirth={onboardingData.children[currentChildIndex]?.basicInfo.dateOfBirth}
-                            initialData={onboardingData.children[currentChildIndex]?.assessment}
+                            childName={onboardingData.children[currentChildIndex]?.basicInfo.nickname || onboardingData.children[currentChildIndex]?.basicInfo.fullName || ''}
+                            dateOfBirth={onboardingData.children[currentChildIndex]?.basicInfo.dateOfBirth || ''}
+                            initialData={onboardingData.children[currentChildIndex]?.assessment || { answers: [] }}
                             onComplete={handleAssessmentComplete}
                             onBack={handleBack}
                         />
