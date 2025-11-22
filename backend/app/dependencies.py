@@ -1,4 +1,5 @@
 from fastapi import Depends, HTTPException, status
+from pydantic import ValidationError
 from app.models.child_models import Child
 from app.models.user_models import User
 from app.services.auth import get_current_user

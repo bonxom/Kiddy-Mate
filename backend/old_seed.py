@@ -314,7 +314,7 @@ async def seed_database():
     child_task7 = ChildTask(
         child=child2,
         task=unassigned_task_ref,
-        status=ChildTaskStatus.UNASSIGNED,
+        status=ChildTaskStatus.ASSIGNED,
         assigned_at=datetime.now() - timedelta(days=1)
     )
     

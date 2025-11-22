@@ -8,6 +8,9 @@ from app.config import settings
 
 router = APIRouter()
 
+# Stores the latest issued access token (UNITY PURPOSES ONLY)
+latest_access_token: str | None = None
+
 class RegisterRequest(BaseModel):
     email: EmailStr
     password: str
@@ -74,20 +77,27 @@ async def login_user(request: LoginRequest):
         data={"sub": user.email},
         expires_delta=timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     )
+    global latest_access_token
+    latest_access_token = access_token
     return {"access_token": access_token, "token_type": "bearer"}
 
-@router.post("/token", response_model=TokenResponse)
-async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
+@router.get("/token")
+async def login_for_access_token():
     """
-    OAuth2 compatible token endpoint (form data).
-    Use 'username' field for email.
+    get token for UNITY
     """
-    user = await authenticate_user(form_data.username, form_data.password)
-    access_token = create_access_token(
-        data={"sub": user.email},
-        expires_delta=timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
-    )
-    return {"access_token": access_token, "token_type": "bearer"}
+    print(latest_access_token)
+    return {"access_token": latest_access_token}
+
+@router.get("/latest-token", response_model=TokenResponse)
+async def get_latest_token():
+    """Public endpoint returning the most recently issued token."""
+    if latest_access_token is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No token has been issued yet."
+        )
+    return {"access_token": latest_access_token, "token_type": "bearer"}
 
 @router.post("/logout", response_model=dict)
 async def logout_user(current_user: User = Depends(get_current_user)):
