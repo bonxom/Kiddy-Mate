@@ -399,3 +399,34 @@ async def ensure_link_references_for_save(child_task, child):
             
             
             pass
+
+async def verify_reward_ownership(reward_id: str, current_user: User):
+    """
+    Verify that the current user owns the reward.
+    Returns the reward if ownership is verified, raises HTTPException otherwise.
+    """
+    from app.models.reward_models import Reward
+    from fastapi import HTTPException, status
+    
+    reward = await Reward.get(reward_id)
+    if not reward:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Reward not found"
+        )
+    
+    # If reward has no created_by, allow access (backward compatibility)
+    if reward.created_by is None:
+        return reward
+    
+    # Extract created_by user ID
+    created_by_id = extract_id_from_link(reward.created_by)
+    current_user_id = str(current_user.id)
+    
+    if not created_by_id or created_by_id != current_user_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Forbidden: You do not own this reward"
+        )
+    
+    return reward

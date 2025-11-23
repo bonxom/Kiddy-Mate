@@ -3,7 +3,7 @@ from beanie import Link
 from app.models.reward_models import Reward, RewardType, ChildReward, RedemptionRequest
 from app.models.child_models import Child
 from app.models.user_models import User
-from app.dependencies import verify_child_ownership, get_current_user
+from app.dependencies import verify_child_ownership, get_current_user, verify_reward_ownership, get_user_children, extract_id_from_link
 from typing import List, Optional
 from datetime import datetime
 from pydantic import BaseModel
@@ -43,7 +43,7 @@ async def get_all_rewards(
     current_user: User = Depends(get_current_user)
 ):
     """
-    Get all rewards in shop (for parents to manage)
+    Get all rewards in shop created by the current user (for parents to manage)
     Query params: is_active, type
     """
     query_dict = {}
@@ -52,7 +52,18 @@ async def get_all_rewards(
     if type is not None:
         query_dict["type"] = type
     
-    rewards = await Reward.find(query_dict).to_list()
+    # Filter rewards by created_by (only show rewards created by current user)
+    all_rewards = await Reward.find(query_dict).to_list()
+    current_user_id = str(current_user.id)
+    
+    filtered_rewards = []
+    for r in all_rewards:
+        # Only include rewards created by current user
+        if r.created_by is not None:
+            created_by_id = extract_id_from_link(r.created_by)
+            if created_by_id == current_user_id:
+                filtered_rewards.append(r)
+    
     return [
         {
             "id": str(r.id),
@@ -64,7 +75,7 @@ async def get_all_rewards(
             "remain": r.stock_quantity,     
             "is_active": r.is_active,
         }
-        for r in rewards
+        for r in filtered_rewards
     ]
 
 @shop_router.post("/rewards", response_model=dict, status_code=status.HTTP_201_CREATED)
@@ -81,6 +92,7 @@ async def create_reward(
         cost_coins=reward_data.cost_coins,
         stock_quantity=reward_data.stock_quantity,
         is_active=reward_data.is_active,
+        created_by=Link(current_user, User),  # Track who created this reward
     )
     await reward.insert()
     
@@ -101,13 +113,9 @@ async def update_reward(
     reward_update: RewardUpdate,
     current_user: User = Depends(get_current_user)
 ):
-    """Update reward (parent only)"""
-    reward = await Reward.get(reward_id)
-    if not reward:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Reward not found"
-        )
+    """Update reward (parent only) - only owner can update"""
+    # Verify ownership
+    reward = await verify_reward_ownership(reward_id, current_user)
     
     if reward_update.name is not None:
         reward.name = reward_update.name
@@ -142,13 +150,9 @@ async def delete_reward(
     reward_id: str,
     current_user: User = Depends(get_current_user)
 ):
-    """Delete reward (parent only)"""
-    reward = await Reward.get(reward_id)
-    if not reward:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Reward not found"
-        )
+    """Delete reward (parent only) - only owner can delete"""
+    # Verify ownership
+    reward = await verify_reward_ownership(reward_id, current_user)
     
     await reward.delete()
     return None
@@ -159,13 +163,9 @@ async def update_reward_quantity(
     delta: int = Query(..., description="Change in quantity (+/- number)"),
     current_user: User = Depends(get_current_user)
 ):
-    """Update reward stock quantity (parent only)"""
-    reward = await Reward.get(reward_id)
-    if not reward:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Reward not found"
-        )
+    """Update reward stock quantity (parent only) - only owner can update"""
+    # Verify ownership
+    reward = await verify_reward_ownership(reward_id, current_user)
     
     reward.stock_quantity = max(0, reward.stock_quantity + delta)
     await reward.save()
@@ -183,7 +183,7 @@ async def request_redemption(
     request_data: RedemptionRequestCreate,
     child: Child = Depends(verify_child_ownership)
 ):
-    """Child requests to redeem a reward"""
+    """Child requests to redeem a reward - verify reward belongs to child's parent"""
     reward = await Reward.get(request_data.reward_id)
     if not reward:
         raise HTTPException(
@@ -196,6 +196,17 @@ async def request_redemption(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Reward is not available"
         )
+    
+    # Verify reward belongs to child's parent (or allow if created_by is None for backward compatibility)
+    if reward.created_by is not None:
+        child_parent = await child.parent.fetch()  # type: ignore
+        child_parent_id = str(child_parent.id)  # type: ignore
+        reward_owner_id = extract_id_from_link(reward.created_by)
+        if not reward_owner_id or reward_owner_id != child_parent_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Forbidden: This reward does not belong to your parent"
+            )
     
     # Check stock (0 = unlimited, >0 = limited stock)
     # If stock is being tracked (>0 initially) but now depleted
@@ -230,27 +241,37 @@ async def get_redemption_requests(
     status_filter: Optional[str] = Query(None, alias="status"),
     current_user: User = Depends(get_current_user)
 ):
-    """Get all redemption requests (parent only)"""
+    """Get all redemption requests for children owned by current user (parent only)"""
     query_dict = {}
     if status_filter:
         query_dict["status"] = status_filter
     
-    requests = await RedemptionRequest.find(query_dict).sort("-requested_at").to_list()
+    # Get all children owned by current user
+    user_children = await get_user_children(current_user)
+    user_children_ids = {str(child.id) for child in user_children}
     
+    # Get all redemption requests
+    all_requests = await RedemptionRequest.find(query_dict).sort("-requested_at").to_list()
+    
+    # Filter requests to only include those from user's children
     results = []
-    for req in requests:
+    for req in all_requests:
         child = await req.child.fetch()
-        reward = await req.reward.fetch()
-        results.append({
-            "id": str(req.id),
-            "child": child.name,  # type: ignore
-            "childId": str(child.id),  # type: ignore
-            "rewardName": reward.name,  # type: ignore
-            "rewardId": str(reward.id),  # type: ignore
-            "dateCreated": req.requested_at.strftime("%Y-%m-%d"),
-            "cost": req.cost_coins,
-            "status": req.status,
-        })
+        child_id = str(child.id)  # type: ignore
+        
+        # Only include if child belongs to current user
+        if child_id in user_children_ids:
+            reward = await req.reward.fetch()
+            results.append({
+                "id": str(req.id),
+                "child": child.name,  # type: ignore
+                "childId": child_id,  # type: ignore
+                "rewardName": reward.name,  # type: ignore
+                "rewardId": str(reward.id),  # type: ignore
+                "dateCreated": req.requested_at.strftime("%Y-%m-%d"),
+                "cost": req.cost_coins,
+                "status": req.status,
+            })
     
     return results
 
@@ -259,7 +280,7 @@ async def approve_redemption(
     request_id: str,
     current_user: User = Depends(get_current_user)
 ):
-    """Approve redemption request (parent only)"""
+    """Approve redemption request (parent only) - verify child and reward ownership"""
     redemption = await RedemptionRequest.get(request_id)
     if not redemption:
         raise HTTPException(
@@ -276,30 +297,48 @@ async def approve_redemption(
     child = await redemption.child.fetch()
     reward = await redemption.reward.fetch()
     
+    # Verify child belongs to current user
+    child_parent_id = extract_id_from_link(child.parent)  # type: ignore
+    current_user_id = str(current_user.id)
+    if not child_parent_id or child_parent_id != current_user_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Forbidden: You do not own this child"
+        )
     
+    # Verify reward belongs to current user (or allow if created_by is None for backward compatibility)
+    if reward.created_by is not None:
+        reward_owner_id = extract_id_from_link(reward.created_by)
+        if not reward_owner_id or reward_owner_id != current_user_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Forbidden: You do not own this reward"
+            )
+    
+    # Check if child has enough coins
     if child.current_coins < redemption.cost_coins:  # type: ignore
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Child has insufficient coins"
         )
     
-    
+    # Deduct coins from child
     child.current_coins -= redemption.cost_coins  # type: ignore
     await child.save()  # type: ignore
     
-    
+    # Decrement stock if tracking stock
     if reward.stock_quantity > 0:  # type: ignore
         reward.stock_quantity -= 1  # type: ignore
         await reward.save()  # type: ignore
     
-    
+    # Create child reward record
     child_reward = ChildReward(
         child=child,  # type: ignore
         reward=reward,  # type: ignore
     )
     await child_reward.insert()
     
-    
+    # Update redemption status
     redemption.status = "approved"
     redemption.processed_at = datetime.utcnow()
     redemption.processed_by = str(current_user.id)
@@ -315,7 +354,7 @@ async def reject_redemption(
     request_id: str,
     current_user: User = Depends(get_current_user)
 ):
-    """Reject redemption request (parent only)"""
+    """Reject redemption request (parent only) - verify child ownership"""
     redemption = await RedemptionRequest.get(request_id)
     if not redemption:
         raise HTTPException(
@@ -327,6 +366,16 @@ async def reject_redemption(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Request already {redemption.status}"
+        )
+    
+    # Verify child belongs to current user
+    child = await redemption.child.fetch()
+    child_parent_id = extract_id_from_link(child.parent)  # type: ignore
+    current_user_id = str(current_user.id)
+    if not child_parent_id or child_parent_id != current_user_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Forbidden: You do not own this child"
         )
     
     redemption.status = "rejected"

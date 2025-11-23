@@ -1,8 +1,11 @@
 from beanie import Document, Link
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 import enum
 from datetime import datetime
 from app.models.child_models import Child
+
+if TYPE_CHECKING:
+    from app.models.user_models import User
 
 class RewardType(str, enum.Enum):
     BADGE = "badge"
@@ -21,6 +24,7 @@ class Reward(Document):
     stock_quantity: int = 0  
     is_active: bool = True  
     created_at: datetime = datetime.utcnow()
+    created_by: Optional[Link["User"]] = None  # Track which parent created this reward
 
     class Settings:
         name = "rewards"

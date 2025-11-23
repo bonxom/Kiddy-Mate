@@ -13,13 +13,17 @@ async def init_database():
     """
     Initialize database connection and Beanie models.
     Rebuilds User model to resolve forward reference to Child.
+    Rebuilds Reward model to resolve forward reference to User.
     """
     
     from app.models.child_models import Child
     from app.models.user_models import User
+    from app.models.reward_models import Reward
     
     
     User.model_rebuild()
+    # Rebuild Reward after User is defined to resolve forward reference
+    Reward.model_rebuild()
     
     await init_beanie(database=db, document_models=[
         User,

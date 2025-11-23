@@ -24,9 +24,12 @@ async def init_db():
     
     from app.models.child_models import Child
     from app.models.user_models import User
+    from app.models.reward_models import Reward
     
     
     User.model_rebuild()
+    # Rebuild Reward after User is defined to resolve forward reference
+    Reward.model_rebuild()
     
     client = AsyncIOMotorClient(settings.DATABASE_URL)
     await init_beanie(
@@ -622,9 +625,13 @@ async def seed_database():
         {"name": "Special Outing", "description": "Special day out with parents", "type": RewardType.ITEM, "image_url": "/items/outing.png", "cost_coins": 300, "stock_quantity": 1, "is_active": True},
     ]
     
-    rewards = [Reward(**reward_data) for reward_data in rewards_data]
+    # Create rewards and assign them to demo_user
+    rewards = []
+    for reward_data in rewards_data:
+        reward = Reward(**reward_data, created_by=Link(demo_user, User))
+        rewards.append(reward)
     await Reward.insert_many(rewards)
-    print(f"   ✓ Created {len(rewards)} rewards (badges, skins, items)\n")
+    print(f"   ✓ Created {len(rewards)} rewards (badges, skins, items) for demo user\n")
 
     
     
