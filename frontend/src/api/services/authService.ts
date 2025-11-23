@@ -54,8 +54,6 @@ export const register = async (data: RegisterRequest): Promise<AuthResponse> => 
       data
     );
 
-    console.log('Registration response:', response.data);
-
     // After successful registration, login to get token
     const loginResponse = await login({
       email: data.email,

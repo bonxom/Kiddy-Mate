@@ -10,30 +10,20 @@ interface EmotionPieChartProps {
 const EmotionPieChart = ({ data }: EmotionPieChartProps) => {
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
 
-  // Show empty state if no emotion data yet
+  // Hardcoded sample data for demo purposes when no real data is available
+  const sampleData: EmotionData[] = [
+    { name: 'Happy', value: 35 },
+    { name: 'Excited', value: 25 },
+    { name: 'Calm', value: 20 },
+    { name: 'Neutral', value: 15 },
+    { name: 'Sad', value: 5 },
+  ];
+
   // Check for empty array OR all values are 0 (newly registered children)
   const hasData = data && data.length > 0 && data.some(item => item.value > 0);
   
-  if (!hasData) {
-    return (
-      <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-4 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 cursor-pointer">
-        <div className="mb-3">
-          <h3 className="text-base font-bold text-gray-900 mb-1">
-            Emotion Report
-          </h3>
-          <p className="text-sm text-gray-600">Children's mood patterns throughout the day</p>
-        </div>
-
-        <div className="flex flex-col items-center justify-center h-[220px] text-gray-400">
-          <svg className="w-16 h-16 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          <p className="text-sm font-medium">No emotion data yet</p>
-          <p className="text-xs text-gray-400 mt-1">Start chatting with the avatar to track emotions</p>
-        </div>
-      </div>
-    );
-  }
+  // Use sample data if no real data is available
+  const displayData = hasData ? data : sampleData;
 
   return (
     <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-4 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 cursor-pointer">
@@ -47,7 +37,7 @@ const EmotionPieChart = ({ data }: EmotionPieChartProps) => {
       <ResponsiveContainer width="100%" height={220}>
         <PieChart>
           <Pie
-            data={data as any}
+            data={displayData as any}
             cx="50%"
             cy="50%"
             labelLine={false}
@@ -59,7 +49,7 @@ const EmotionPieChart = ({ data }: EmotionPieChartProps) => {
             onMouseEnter={(_, index) => setActiveIndex(index)}
             onMouseLeave={() => setActiveIndex(null)}
           >
-            {data.map((_entry, index) => (
+            {displayData.map((_entry, index) => (
               <Cell
                 key={`cell-${index}`}
                 fill={EMOTION_COLORS[index % EMOTION_COLORS.length]}
@@ -88,6 +78,14 @@ const EmotionPieChart = ({ data }: EmotionPieChartProps) => {
           />
         </PieChart>
       </ResponsiveContainer>
+      
+      {!hasData && (
+        <div className="mt-2 text-center">
+          <p className="text-xs text-gray-500 italic">
+            Showing sample data • Start chatting to see real emotions
+          </p>
+        </div>
+      )}
     </div>
   );
 };

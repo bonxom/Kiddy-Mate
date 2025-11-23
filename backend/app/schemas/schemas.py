@@ -1,5 +1,5 @@
 from pydantic import BaseModel, EmailStr, ConfigDict, Field
-from typing import Optional
+from typing import Optional, Dict
 from datetime import datetime
 import enum
 
@@ -36,7 +36,10 @@ class ChildBase(BaseModel):
     challenges: Optional[list[str]] = None
 
 class ChildCreate(ChildBase):
-    pass
+    """Schema for creating a child - includes optional assessment for LLM analysis"""
+    username: Optional[str] = None  # For child login account
+    password: Optional[str] = None  # Plain password, will be hashed
+    assessment: Optional[Dict[str, Dict[str, Optional[str]]]] = None  # Assessment answers for LLM analysis
 
 class ChildUpdate(BaseModel):
     """Schema for updating child profile - all fields optional"""

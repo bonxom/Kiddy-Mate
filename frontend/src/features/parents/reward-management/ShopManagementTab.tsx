@@ -7,8 +7,8 @@ import {
   deleteReward, 
   updateRewardQuantity 
 } from '../../../api/services/rewardService';
-import RewardCard from './RewardCard.tsx';
-import RewardModal from './RewardModal.tsx';
+import RewardCard from './RewardCard';
+import RewardModal from './RewardModal';
 
 interface ShopManagementTabProps {
   isCreateModalOpen: boolean;

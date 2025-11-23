@@ -3,6 +3,7 @@ from pydantic import BaseModel
 from datetime import datetime
 from typing import List, Dict, Optional
 import logging
+import asyncio
 from app.models.user_models import User
 from app.models.child_models import Child, ChildDevelopmentAssessment
 from app.services.auth import get_current_user
@@ -177,8 +178,7 @@ async def complete_onboarding(
 
         try:
             birth_date = datetime.fromisoformat(child_data.date_of_birth.replace('Z', '+00:00'))
-        except:
-            
+        except (ValueError, AttributeError):
             birth_date = datetime.strptime(child_data.date_of_birth, '%Y-%m-%d')
         
         # Calculate age for OpenAI analysis
@@ -293,7 +293,6 @@ async def complete_onboarding(
         
         # Trigger initial task generation in background (non-blocking)
         # This runs asynchronously and won't block the response
-        import asyncio
         from app.routers.generate import generate_initial_tasks_for_child
         asyncio.create_task(generate_initial_tasks_for_child(str(new_child.id)))
         logging.info(f"🚀 Triggered background task generation for {child_data.full_name}")

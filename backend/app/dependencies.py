@@ -4,6 +4,7 @@ from app.models.user_models import User, UserRole
 from app.models.childtask_models import ChildTask
 from app.services.auth import get_current_user
 from typing import List, Optional
+import logging
 
 async def verify_child_ownership(
     child_id: str,
@@ -13,7 +14,6 @@ async def verify_child_ownership(
     Verify that the current user owns the child profile.
     Allows both parent (who owns the child) and child (who is the child) to access.
     """
-    import logging
     
     child_id = child_id.strip()
     

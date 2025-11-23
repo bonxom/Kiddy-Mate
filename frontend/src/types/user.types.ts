@@ -18,6 +18,10 @@ export interface ChildProfile {
   interests?: string[];
   strengths?: string[];
   challenges?: string[];
+  // Assessment data for LLM analysis
+  assessment?: import('./auth.types').ChildAssessment;
+  username?: string;
+  password?: string;
 }
 
 export interface PasswordChangeData {

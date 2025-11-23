@@ -11,6 +11,7 @@ from app.services.auth import get_current_user
 from app.models.user_models import User
 from pydantic import ValidationError, BaseModel
 import logging
+import asyncio
 
 logger = logging.getLogger(__name__)
 
@@ -659,7 +660,6 @@ async def verify_task(
     
     # Trigger skills update in background (non-blocking)
     # Skills will be recalculated based on task completion history
-    import asyncio
     from app.routers.dashboard import update_child_skills
     asyncio.create_task(update_child_skills(child))
     logger.info(f"🚀 Triggered background skills update for {child.name} after task verification")

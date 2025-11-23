@@ -72,7 +72,7 @@ const AccountSettingsTab = () => {
   };
 
   // Keyboard shortcut: Ctrl+S to save
-  useState(() => {
+  useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 's') {
         e.preventDefault();
@@ -83,7 +83,8 @@ const AccountSettingsTab = () => {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasUnsavedChanges]);
 
   const getPasswordStrength = (password: string): { strength: number; label: string; color: string } => {
     if (!password) return { strength: 0, label: '', color: '' };
@@ -386,7 +387,7 @@ const AccountSettingsTab = () => {
         size="md"
       >
         <div className="space-y-4">
-          <div className="p-4 rounded-xl border-2 border-red-300 shadow-soft\" style={{ background: 'linear-gradient(to right, rgb(254 242 242), rgb(254 226 226))' }}>
+          <div className="p-4 rounded-xl border-2 border-red-300 shadow-soft" style={{ background: 'linear-gradient(to right, rgb(254 242 242), rgb(254 226 226))' }}>
             <div className="flex items-start gap-3">
               <AlertTriangle className="w-6 h-6 text-red-600 shrink-0 mt-0.5" />
               <div>

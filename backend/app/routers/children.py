@@ -1,11 +1,17 @@
 from fastapi import APIRouter, HTTPException, status, Depends
 from beanie import Link
-from app.models.child_models import Child
+from app.models.child_models import Child, ChildDevelopmentAssessment
 from app.models.user_models import User
 from app.schemas.schemas import ChildCreate, ChildPublic, ChildUpdate
-from app.services.auth import get_current_user
+from app.services.auth import get_current_user, hash_password
+from app.services.llm import analyze_assessment_with_chatgpt
+from app.data.assessment_questions import ASSESSMENT_QUESTIONS
 from app.dependencies import verify_child_ownership, get_user_children, extract_id_from_link
-from typing import List
+from app.routers.onboarding import _calculate_fallback_traits
+from typing import List, Dict, Optional
+from datetime import datetime
+import logging
+import asyncio
 
 router = APIRouter()
 
@@ -34,11 +40,96 @@ async def create_child(
     child: ChildCreate,
     current_user: User = Depends(get_current_user)
 ):
+    """
+    Create a new child profile.
+    If assessment data is provided, calls LLM to analyze and generate initial_traits.
+    Similar to onboarding flow.
+    """
+    # Validate username if provided
+    if child.username:
+        username = child.username.strip()
+        if not username:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Username cannot be empty."
+            )
+        
+        # Check if username already exists
+        existing_child = await Child.find_one(Child.username == username)
+        if existing_child:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Username '{username}' is already taken. Please choose another username."
+            )
+    else:
+        username = None
+    
+    # Calculate age for LLM analysis
+    age = (datetime.now() - child.birth_date).days // 365
+    
+    # Prepare initial_traits
+    initial_traits = child.initial_traits or {}
+    
+    # If assessment data is provided, call LLM to analyze (same as onboarding)
+    if child.assessment:
+        # Prepare child info for OpenAI
+        child_info = {
+            "name": child.name,
+            "nickname": child.nickname or child.name,
+            "age": age,
+            "gender": child.gender or "unknown",
+            "favorite_topics": child.interests or [],
+            "personality": child.personality or [],
+            "interests": child.interests or [],
+            "strengths": child.strengths or [],
+            "challenges": child.challenges or []
+        }
+        
+        # Prepare assessment answers for OpenAI
+        assessment_answers = {
+            "discipline_autonomy": child.assessment.get("discipline_autonomy", {}),
+            "emotional_intelligence": child.assessment.get("emotional_intelligence", {}),
+            "social_interaction": child.assessment.get("social_interaction", {})
+        }
+        
+        # Call OpenAI API to analyze assessment and get initial traits
+        initial_traits = {"favorite_topics": child.interests or []}
+        
+        # Check if OpenAI API key is configured
+        from app.config import settings
+        if not settings.OPENAI_API_KEY:
+            logging.warning(f"⚠️ OPENAI_API_KEY not configured. Using fallback calculation for {child.name}")
+            initial_traits.update(_calculate_fallback_traits(assessment_answers))
+        else:
+            try:
+                logging.info(f"🔍 Calling OpenAI API to analyze assessment for {child.name}...")
+                openai_result = analyze_assessment_with_chatgpt(
+                    child_info=child_info,
+                    assessment_answers=assessment_answers,
+                    questions_data=ASSESSMENT_QUESTIONS
+                )
+                
+                # Store the OpenAI analysis results in initial_traits
+                initial_traits.update({
+                    "overall_traits": openai_result["overall_traits"],
+                    "explanations": openai_result["explanations"],
+                    "recommended_focus": openai_result["recommended_focus"],
+                    "favorite_topics": child.interests or []
+                })
+                
+                logging.info(f"✅ Successfully analyzed assessment for {child.name} using OpenAI")
+            except Exception as e:
+                error_msg = str(e)
+                logging.error(f"❌ Failed to analyze assessment with OpenAI for {child.name}: {error_msg}")
+                logging.warning(f"   Using fallback calculation")
+                initial_traits.update(_calculate_fallback_traits(assessment_answers))
+    
+    # Create child
     new_child = Child(
-        parent=current_user,  # type: ignore
+        parent=Link(current_user, User),  # type: ignore
         name=child.name,
         birth_date=child.birth_date,
-        initial_traits=child.initial_traits,
+        initial_traits=initial_traits,
         nickname=child.nickname,
         gender=child.gender,
         avatar_url=child.avatar_url,
@@ -46,15 +137,27 @@ async def create_child(
         interests=child.interests,
         strengths=child.strengths,
         challenges=child.challenges,
+        username=username,
+        password_hash=hash_password(child.password) if child.password else None,
     )
     await new_child.insert()
+    logging.info(f"💾 Child {child.name} saved with parent ID: {str(current_user.id)}")
+    
+    # Create assessment record if assessment data was provided
+    if child.assessment:
+        assessment = ChildDevelopmentAssessment(
+            child=new_child,  # type: ignore
+            parent=Link(current_user, User),  # type: ignore
+            discipline_autonomy=child.assessment.get("discipline_autonomy", {}),
+            emotional_intelligence=child.assessment.get("emotional_intelligence", {}),
+            social_interaction=child.assessment.get("social_interaction", {})
+        )
+        await assessment.insert()
+        logging.info(f"📊 Created assessment record for {child.name}")
     
     # Trigger initial task generation in background (non-blocking)
-    # This runs asynchronously and won't block the response
-    import asyncio
     from app.routers.generate import generate_initial_tasks_for_child
     asyncio.create_task(generate_initial_tasks_for_child(str(new_child.id)))
-    import logging
     logging.info(f"🚀 Triggered background task generation for new child: {child.name}")
     
     return _to_child_public(new_child)

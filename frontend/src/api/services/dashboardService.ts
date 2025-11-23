@@ -9,7 +9,6 @@ import { getChildTasks } from './taskService';
 import { getLatestAssessment, calculateSkillScores } from './assessmentService';
 import { getEmotionData } from './interactionService';
 import type { EmotionData } from './interactionService';
-import type { Child } from './childService';
 import type { ChildTaskWithDetails } from './taskService';
 
 // ==================== TYPES ====================

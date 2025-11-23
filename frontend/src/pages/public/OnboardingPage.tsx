@@ -6,9 +6,9 @@ import { Sparkles, Quote, ArrowLeft, Bot } from 'lucide-react';
 // Dịch vụ và dữ liệu API (giả định các paths này là chính xác)
 import { completeOnboarding } from '../../api/services/onboardingService';
 import { STORAGE_KEYS } from '../../api/client/apiConfig';
-import ParentInfoStep from '../../features/onboarding/ParentInfoStep.tsx';
-import ChildInfoStep from '../../features/onboarding/ChildInfoStep.tsx';
-import AssessmentStep from '../../features/onboarding/AssessmentStep.tsx';
+import ParentInfoStep from '../../features/onboarding/ParentInfoStep';
+import ChildInfoStep from '../../features/onboarding/ChildInfoStep';
+import AssessmentStep from '../../features/onboarding/AssessmentStep';
 import { assessmentQuestionsPrimary, assessmentQuestionsSecondary } from '../../data/assessmentQuestions';
 import type { OnboardingData, OnboardingStep, ParentInfo, ChildBasicInfo, ChildAssessment } from '../../types/auth.types';
 
@@ -196,9 +196,6 @@ const OnboardingPage = () => {
           };
         }),
       };
-
-      // Log request for debugging
-      console.log('Sending onboarding request:', JSON.stringify(onboardingRequest, null, 2));
 
       // Update user info immediately (optimistic update)
       user.hasCompletedOnboarding = true;

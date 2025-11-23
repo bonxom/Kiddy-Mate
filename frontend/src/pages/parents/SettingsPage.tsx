@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { User, Users, Bell } from 'lucide-react';
 import Badge from '../../components/ui/Badge';
-import AccountSettingsTab from '../../features/parents/settings/AccountSettingsTab.tsx';
-import ChildProfilesTab from '../../features/parents/settings/ChildProfilesTab.tsx';
-import NotificationSettingsTab from '../../features/parents/settings/NotificationSettingsTab.tsx';
+import AccountSettingsTab from '../../features/parents/settings/AccountSettingsTab';
+import ChildProfilesTab from '../../features/parents/settings/ChildProfilesTab';
+import NotificationSettingsTab from '../../features/parents/settings/NotificationSettingsTab';
 import { useChild } from '../../providers/ChildProvider';
 
 type TabType = 'account' | 'children' | 'notifications';

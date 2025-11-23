@@ -9,8 +9,7 @@ from datetime import datetime
 from pydantic import BaseModel
 
 router = APIRouter()
-shop_router = APIRouter()  
-
+shop_router = APIRouter()
 
 
 class RewardCreate(BaseModel):

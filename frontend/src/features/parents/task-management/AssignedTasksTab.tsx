@@ -3,7 +3,7 @@ import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import { handleApiError } from '../../../utils/errorHandler';
 import { TaskEvents } from '../../../utils/events';
-import { Search, Trash2, ArrowUpDown, CheckCircle, ListTodo, X } from 'lucide-react';
+import { Search, Trash2, ArrowUpDown, CheckCircle, ListTodo, X, Star } from 'lucide-react';
 import Input from '../../../components/ui/Input';
 import Badge from '../../../components/ui/Badge';
 import Modal from '../../../components/ui/Modal';
@@ -26,7 +26,6 @@ import {
   getProgressGradient,
   ICON_SIZES
 } from '../../../constants/taskConfig';
-import { Star } from 'lucide-react';
 
 // Extended interface for UI
 interface ExtendedAssignedTask extends AssignedTask {
@@ -179,9 +178,6 @@ const AssignedTasksTab = ({ onCountChange }: AssignedTasksTabProps) => {
 
     // If still not found, try to search across all children's tasks
     // This is a fallback for edge cases
-    console.warn(`Task ${childTaskId} not found in allTasks or cache. Available task IDs:`, 
-      allTasks.map(({ task }) => task.id).slice(0, 10));
-    
     throw new Error(`Task not found with ID: ${childTaskId}. Please refresh the page and try again.`);
   };
 
@@ -194,7 +190,6 @@ const AssignedTasksTab = ({ onCountChange }: AssignedTasksTabProps) => {
     try {
       // If childId is provided (from task data), use it directly
       if (childId) {
-        console.log(`Verifying task ${childTaskId} for child ${childId} (from task data)`);
         await verifyMutation.mutateAsync({ childTaskId, childId });
         return;
       }
@@ -204,7 +199,6 @@ const AssignedTasksTab = ({ onCountChange }: AssignedTasksTabProps) => {
       if (!taskWithChild || !taskWithChild.childId) {
         throw new Error(`Cannot find child ID for task ${childTaskId}`);
       }
-      console.log(`Verifying task ${childTaskId} for child ${taskWithChild.childId} (from allTasks)`);
       await verifyMutation.mutateAsync({ childTaskId, childId: taskWithChild.childId });
     } catch (error) {
       console.error('Error in verifyTask:', error);
@@ -281,13 +275,6 @@ const AssignedTasksTab = ({ onCountChange }: AssignedTasksTabProps) => {
     try {
       const childTaskId = task.id;
       const childId = task.childId; // Get childId from task data
-      
-      console.log(`Attempting to verify task with ID: ${childTaskId}, childId: ${childId}`);
-      
-      if (!childId) {
-        // Fallback: try to find in allTasks
-        console.warn('childId not found in task data, searching in allTasks...');
-      }
       
       await verifyTask(childTaskId, childId);
       toast.success('Task verified successfully! Rewards have been awarded. 🎉');

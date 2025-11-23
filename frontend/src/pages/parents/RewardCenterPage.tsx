@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react';
 import { Plus, Store, Gift } from 'lucide-react';
 import Button from '../../components/ui/Button';
 import Badge from '../../components/ui/Badge';
-import ShopManagementTab from '../../features/parents/reward-management/ShopManagementTab.tsx';
-import RedemptionRequestsTab from '../../features/parents/reward-management/RedemptionRequestsTab.tsx';
+import ShopManagementTab from '../../features/parents/reward-management/ShopManagementTab';
+import RedemptionRequestsTab from '../../features/parents/reward-management/RedemptionRequestsTab';
 import { getAllRewards, getRedemptionRequests } from '../../api/services/rewardService';
 
 type TabType = 'shop' | 'redemption';

@@ -4,12 +4,14 @@ import Button from '../../../components/ui/Button';
 import Modal from '../../../components/ui/Modal';
 import ChildFormModal from '../../parents/settings/ChildFormModal';
 import type { ChildProfile } from '../../../types/user.types';
+import { useChild } from '../../../providers/ChildProvider';
 import {
   getChildren,
   createChild,
   updateChild,
   deleteChild,
 } from '../../../api/services/childService';
+import { assessmentQuestionsPrimary, assessmentQuestionsSecondary } from '../../../data/assessmentQuestions';
 
 const ChildProfilesTab = () => {
   const [children, setChildren] = useState<ChildProfile[]>([]);
@@ -21,6 +23,7 @@ const ChildProfilesTab = () => {
     message: string;
     type: 'success' | 'error';
   }>({ show: false, message: '', type: 'success' });
+  const { refreshChildren } = useChild(); // Get refresh function from ChildProvider
   
   // State quản lý Form Modal (Add/Edit dùng chung)
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -104,7 +107,7 @@ const ChildProfilesTab = () => {
       setError(null);
       
       // Map frontend format to backend format
-      const backendData = {
+      const backendData: any = {
         name: childData.fullName,
         birth_date: childData.dateOfBirth,
         nickname: childData.nickname,
@@ -117,6 +120,42 @@ const ChildProfilesTab = () => {
         initial_traits: {},
       };
       
+      // If creating new child and has assessment data, include it for LLM analysis
+      if (!selectedChild && childData.assessment && childData.assessment.answers.length > 0) {
+        // Combine all assessment questions (same as onboarding)
+        const allQuestions = [...assessmentQuestionsPrimary, ...assessmentQuestionsSecondary];
+        
+        // Convert assessment answers to backend format (same as onboarding)
+        const getCategoryAnswers = (category: string) => {
+          const answers = childData.assessment!.answers
+            .filter(a => {
+              const question = allQuestions.find(q => q.id === a.questionId);
+              return question?.category === category;
+            })
+            .reduce((acc, a) => {
+              if (a.rating != null) {
+                acc[a.questionId] = String(a.rating);
+              }
+              return acc;
+            }, {} as Record<string, string>);
+          return answers;
+        };
+        
+        backendData.assessment = {
+          discipline_autonomy: getCategoryAnswers('discipline'),
+          emotional_intelligence: getCategoryAnswers('emotional'),
+          social_interaction: getCategoryAnswers('social'),
+        };
+        
+        // Include username and password if provided (for child account creation)
+        if (childData.username) {
+          backendData.username = childData.username;
+        }
+        if (childData.password) {
+          backendData.password = childData.password;
+        }
+      }
+      
       if (selectedChild) {
         // Update existing child
         await updateChild(selectedChild.id, backendData);
@@ -127,8 +166,10 @@ const ChildProfilesTab = () => {
         showToast(`${childData.nickname} added successfully!`, 'success');
       }
       
-      // Refresh list
+      // Refresh local list
       await fetchChildren();
+      // Refresh children in ChildProvider (for dashboard and other components)
+      await refreshChildren();
       setIsFormOpen(false);
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Failed to save child';

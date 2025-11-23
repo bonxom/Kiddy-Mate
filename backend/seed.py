@@ -596,33 +596,38 @@ async def seed_database():
     
     print("🏪 Creating reward shop...")
     
+    # Default image URLs for each reward type
+    BADGE_IMAGE_URL = "https://upload.wikimedia.org/wikipedia/commons/d/df/Badge_1012.jpg"
+    SKIN_IMAGE_URL = "https://images2.thanhnien.vn/zoom/686_429/Uploaded/nthanhluan/2021_11_08/picture3-1618.png"
+    ITEM_IMAGE_URL = "https://res.cloudinary.com/hksqkdlah/image/upload/c_fill,dpr_2.0,f_auto,fl_lossy.progressive.strip_profile,g_faces:auto,q_auto:low/SFS_Crunchy_Battered-Fried_Chicken_63_wcz66g"
+    
     rewards_data = [
         
-        {"name": "Morning Star", "description": "For making bed every day", "type": RewardType.BADGE, "image_url": "/badges/morning-star.png", "cost_coins": 0},
-        {"name": "Super Organized", "description": "Master of organization", "type": RewardType.BADGE, "image_url": "/badges/organized.png", "cost_coins": 0},
-        {"name": "Helper Star", "description": "Always helping others", "type": RewardType.BADGE, "image_url": "/badges/helper.png", "cost_coins": 0},
-        {"name": "Pattern Master", "description": "Expert at finding patterns", "type": RewardType.BADGE, "image_url": "/badges/pattern.png", "cost_coins": 0},
-        {"name": "Math Wizard", "description": "Math genius!", "type": RewardType.BADGE, "image_url": "/badges/math.png", "cost_coins": 0},
-        {"name": "Energizer", "description": "Full of energy!", "type": RewardType.BADGE, "image_url": "/badges/energy.png", "cost_coins": 0},
-        {"name": "Dream Artist", "description": "Creative dreamer", "type": RewardType.BADGE, "image_url": "/badges/artist.png", "cost_coins": 0},
-        {"name": "Grateful Heart", "description": "Always thankful", "type": RewardType.BADGE, "image_url": "/badges/grateful.png", "cost_coins": 0},
-        {"name": "Bookworm", "description": "Loves reading", "type": RewardType.BADGE, "image_url": "/badges/book.png", "cost_coins": 0},
+        {"name": "Morning Star", "description": "For making bed every day", "type": RewardType.BADGE, "image_url": BADGE_IMAGE_URL, "cost_coins": 0},
+        {"name": "Super Organized", "description": "Master of organization", "type": RewardType.BADGE, "image_url": BADGE_IMAGE_URL, "cost_coins": 0},
+        {"name": "Helper Star", "description": "Always helping others", "type": RewardType.BADGE, "image_url": BADGE_IMAGE_URL, "cost_coins": 0},
+        {"name": "Pattern Master", "description": "Expert at finding patterns", "type": RewardType.BADGE, "image_url": BADGE_IMAGE_URL, "cost_coins": 0},
+        {"name": "Math Wizard", "description": "Math genius!", "type": RewardType.BADGE, "image_url": BADGE_IMAGE_URL, "cost_coins": 0},
+        {"name": "Energizer", "description": "Full of energy!", "type": RewardType.BADGE, "image_url": BADGE_IMAGE_URL, "cost_coins": 0},
+        {"name": "Dream Artist", "description": "Creative dreamer", "type": RewardType.BADGE, "image_url": BADGE_IMAGE_URL, "cost_coins": 0},
+        {"name": "Grateful Heart", "description": "Always thankful", "type": RewardType.BADGE, "image_url": BADGE_IMAGE_URL, "cost_coins": 0},
+        {"name": "Bookworm", "description": "Loves reading", "type": RewardType.BADGE, "image_url": BADGE_IMAGE_URL, "cost_coins": 0},
         
         
-        {"name": "Superhero Skin", "description": "Transform into a superhero!", "type": RewardType.SKIN, "image_url": "/skins/superhero.png", "cost_coins": 100, "stock_quantity": 0, "is_active": True},
-        {"name": "Princess Skin", "description": "Become a beautiful princess", "type": RewardType.SKIN, "image_url": "/skins/princess.png", "cost_coins": 100, "stock_quantity": 0, "is_active": True},
-        {"name": "Astronaut Skin", "description": "Explore space!", "type": RewardType.SKIN, "image_url": "/skins/astronaut.png", "cost_coins": 120, "stock_quantity": 0, "is_active": True},
-        {"name": "Pirate Skin", "description": "Sail the seven seas", "type": RewardType.SKIN, "image_url": "/skins/pirate.png", "cost_coins": 100, "stock_quantity": 0, "is_active": True},
-        {"name": "Ninja Skin", "description": "Stealth and speed", "type": RewardType.SKIN, "image_url": "/skins/ninja.png", "cost_coins": 150, "stock_quantity": 0, "is_active": True},
-        {"name": "Unicorn Skin", "description": "Magical unicorn transformation", "type": RewardType.SKIN, "image_url": "/skins/unicorn.png", "cost_coins": 200, "stock_quantity": 0, "is_active": True},
+        {"name": "Superhero Skin", "description": "Transform into a superhero!", "type": RewardType.SKIN, "image_url": SKIN_IMAGE_URL, "cost_coins": 100, "stock_quantity": 0, "is_active": True},
+        {"name": "Princess Skin", "description": "Become a beautiful princess", "type": RewardType.SKIN, "image_url": SKIN_IMAGE_URL, "cost_coins": 100, "stock_quantity": 0, "is_active": True},
+        {"name": "Astronaut Skin", "description": "Explore space!", "type": RewardType.SKIN, "image_url": SKIN_IMAGE_URL, "cost_coins": 120, "stock_quantity": 0, "is_active": True},
+        {"name": "Pirate Skin", "description": "Sail the seven seas", "type": RewardType.SKIN, "image_url": SKIN_IMAGE_URL, "cost_coins": 100, "stock_quantity": 0, "is_active": True},
+        {"name": "Ninja Skin", "description": "Stealth and speed", "type": RewardType.SKIN, "image_url": SKIN_IMAGE_URL, "cost_coins": 150, "stock_quantity": 0, "is_active": True},
+        {"name": "Unicorn Skin", "description": "Magical unicorn transformation", "type": RewardType.SKIN, "image_url": SKIN_IMAGE_URL, "cost_coins": 200, "stock_quantity": 0, "is_active": True},
         
         
-        {"name": "Favorite Snack", "description": "Your favorite snack as a treat", "type": RewardType.ITEM, "image_url": "/items/snack.png", "cost_coins": 30, "stock_quantity": 10, "is_active": True},
-        {"name": "30 Min Extra Screen Time", "description": "30 minutes extra screen time", "type": RewardType.ITEM, "image_url": "/items/screen.png", "cost_coins": 50, "stock_quantity": 5, "is_active": True},
-        {"name": "Movie Night Choice", "description": "Choose the family movie", "type": RewardType.ITEM, "image_url": "/items/movie.png", "cost_coins": 80, "stock_quantity": 3, "is_active": True},
-        {"name": "Ice Cream Trip", "description": "Trip to the ice cream shop", "type": RewardType.ITEM, "image_url": "/items/icecream.png", "cost_coins": 100, "stock_quantity": 2, "is_active": True},
-        {"name": "New Toy", "description": "Small toy of your choice", "type": RewardType.ITEM, "image_url": "/items/toy.png", "cost_coins": 200, "stock_quantity": 2, "is_active": True},
-        {"name": "Special Outing", "description": "Special day out with parents", "type": RewardType.ITEM, "image_url": "/items/outing.png", "cost_coins": 300, "stock_quantity": 1, "is_active": True},
+        {"name": "Favorite Snack", "description": "Your favorite snack as a treat", "type": RewardType.ITEM, "image_url": ITEM_IMAGE_URL, "cost_coins": 30, "stock_quantity": 10, "is_active": True},
+        {"name": "30 Min Extra Screen Time", "description": "30 minutes extra screen time", "type": RewardType.ITEM, "image_url": ITEM_IMAGE_URL, "cost_coins": 50, "stock_quantity": 5, "is_active": True},
+        {"name": "Movie Night Choice", "description": "Choose the family movie", "type": RewardType.ITEM, "image_url": ITEM_IMAGE_URL, "cost_coins": 80, "stock_quantity": 3, "is_active": True},
+        {"name": "Ice Cream Trip", "description": "Trip to the ice cream shop", "type": RewardType.ITEM, "image_url": ITEM_IMAGE_URL, "cost_coins": 100, "stock_quantity": 2, "is_active": True},
+        {"name": "New Toy", "description": "Small toy of your choice", "type": RewardType.ITEM, "image_url": ITEM_IMAGE_URL, "cost_coins": 200, "stock_quantity": 2, "is_active": True},
+        {"name": "Special Outing", "description": "Special day out with parents", "type": RewardType.ITEM, "image_url": ITEM_IMAGE_URL, "cost_coins": 300, "stock_quantity": 1, "is_active": True},
     ]
     
     # Create rewards and assign them to demo_user

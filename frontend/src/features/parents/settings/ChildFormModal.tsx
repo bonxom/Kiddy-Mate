@@ -72,6 +72,9 @@ const ChildFormModal = ({ isOpen, onClose, initialData, onSave }: ChildFormModal
       personality: [],
       strengths: [],
       challenges: [],
+      assessment: data, // Include assessment data for LLM analysis
+      username: basicInfo.username,
+      password: basicInfo.password,
     };
 
     onSave(finalProfile);

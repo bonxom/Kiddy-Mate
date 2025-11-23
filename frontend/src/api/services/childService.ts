@@ -32,6 +32,13 @@ export interface CreateChildRequest {
   strengths?: string[];
   challenges?: string[];
   initial_traits?: any;
+  username?: string; // For child login account
+  password?: string; // Plain password, will be hashed
+  assessment?: {
+    discipline_autonomy: Record<string, string>;
+    emotional_intelligence: Record<string, string>;
+    social_interaction: Record<string, string>;
+  }; // Assessment answers for LLM analysis
 }
 
 /**

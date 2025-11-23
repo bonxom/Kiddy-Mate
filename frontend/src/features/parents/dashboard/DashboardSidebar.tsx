@@ -151,7 +151,7 @@ const DashboardSidebar = ({ skillData, onViewReport }: DashboardSidebarProps) =>
               ? 'bg-red-50 text-red-700' 
               : 'bg-green-50 text-green-700'
           }`}>
-            <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
+            <CheckCircle2 className="w-4 h-4 shrink-0" />
             <span>{successMessage}</span>
           </div>
         )}
