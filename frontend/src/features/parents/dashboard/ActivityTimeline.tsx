@@ -1,3 +1,4 @@
+import React from 'react';
 import { CheckCircle2, Circle, CheckCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { handleApiError } from '../../../utils/errorHandler';
@@ -87,9 +88,9 @@ const ActivityTimeline = ({ data, onRefresh }: ActivityTimelineProps) => {
     return acc;
   }, {} as GroupedActivities);
 
-  const renderCategoryIcon = (category: string) => {
+  const renderCategoryIcon = (category: string): React.ReactElement => {
     const Icon = getCategoryIconType(category);
-    return <Icon className="w-4 h-4" />;
+    return React.createElement(Icon, { className: "w-4 h-4" });
   };
 
   const getCategoryColor = getCategoryColorClasses;

@@ -13,7 +13,7 @@ export interface UIAssignedTask {
   childId?: string; // Store childId for operations
   task: string;
   date: string;
-  status: 'assigned' | 'in-progress' | 'need-verify' | 'completed' | 'missed';
+  status: 'assigned' | 'in-progress' | 'need-verify' | 'completed' | 'missed' | 'giveup' | 'unassigned';
   reward: number; // Always required, default to 0 if not provided
   category: TaskCategory;
   priority: 'high' | 'medium' | 'low';

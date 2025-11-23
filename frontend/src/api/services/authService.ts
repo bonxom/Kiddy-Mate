@@ -49,7 +49,7 @@ export interface AuthResponse {
 export const register = async (data: RegisterRequest): Promise<AuthResponse> => {
   try {
     // Call register endpoint
-    const response = await axiosClient.post<{ message: string }>(
+    await axiosClient.post<{ message: string }>(
       API_ENDPOINTS.AUTH.REGISTER,
       data
     );

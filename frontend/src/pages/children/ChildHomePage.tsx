@@ -7,7 +7,7 @@ const ChildHomePage = () => {
     <div className="container mx-auto px-4 py-8">
       <div className="max-w-4xl mx-auto">
         <h1 className="text-3xl font-bold text-gray-900 mb-4">
-          Welcome, {user?.name || 'Child'}! 🎮
+          Welcome, {user?.displayName || 'Child'}! 🎮
         </h1>
         
         <div className="bg-white rounded-2xl shadow-lg p-8">

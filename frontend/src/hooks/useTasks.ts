@@ -19,10 +19,6 @@ import {
   verifyTask,
   rejectTaskVerification,
   giveupTask,
-  checkTaskStatus,
-  getUnassignedTasks,
-  getGiveupTasks,
-  getCompletedTasks,
 } from '../api/services/taskService';
 import type {
   Task,

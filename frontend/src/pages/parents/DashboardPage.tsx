@@ -22,7 +22,7 @@ const DashboardPage = () => {
   const { selectedChildId, children, loading: childLoading, refreshChildren } = useChild();
   const queryClient = useQueryClient();
   const [onboardingTimeout, setOnboardingTimeout] = useState(false);
-  const [pollingAttempts, setPollingAttempts] = useState(0);
+  const [, setPollingAttempts] = useState(0);
   const maxPollingAttempts = 30; // 30 attempts = ~30 seconds (1 second per attempt)
   const [selectedReport, setSelectedReport] = useState<Report | null>(null);
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
