@@ -44,6 +44,7 @@ export const AppRouter = () => {
       <Route path="/" element={<RouteSuspense><LandingPage /></RouteSuspense>} />
       <Route path="/login" element={<RouteSuspense><AuthPage /></RouteSuspense>} />
       <Route path="/register" element={<RouteSuspense><AuthPage /></RouteSuspense>} />
+      <Route path="/child/login" element={<RouteSuspense><AuthPage /></RouteSuspense>} />
       <Route path="/onboarding" element={<RouteSuspense><OnboardingPage /></RouteSuspense>} />
 
       {/* Parent Routes - Protected & Lazy Loaded */}
