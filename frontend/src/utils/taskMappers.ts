@@ -8,8 +8,9 @@ import type { LibraryTask, TaskCategory } from '../types/task.types';
 
 // Frontend UI model for AssignedTasksTab
 export interface UIAssignedTask {
-  id: string;
+  id: string; // childTaskId
   child: string;
+  childId?: string; // Store childId for operations
   task: string;
   date: string;
   status: 'assigned' | 'in-progress' | 'need-verify' | 'completed' | 'missed';
@@ -123,7 +124,8 @@ export const mapToLibraryTask = (backendTask: Task): LibraryTask => {
  */
 export const mapToUIAssignedTask = (
   backendTask: ChildTaskWithDetails,
-  childName: string
+  childName: string,
+  childId?: string // Optional childId to store in task
 ): UIAssignedTask => {
   // Use custom_title if available, otherwise use task.title
   const taskTitle = backendTask.custom_title || backendTask.task.title;
@@ -137,8 +139,9 @@ export const mapToUIAssignedTask = (
       : 0);
 
   return {
-    id: backendTask.id,
+    id: backendTask.id, // childTaskId
     child: childName,
+    childId: childId, // Store childId for operations
     task: taskTitle,
     date: new Date(backendTask.assigned_at).toISOString().split('T')[0],
     status: mapBackendStatus(backendTask.status),

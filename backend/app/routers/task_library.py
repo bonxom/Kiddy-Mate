@@ -29,8 +29,17 @@ class TaskUpdateRequest(BaseModel):
     unity_type: Optional[UnityType] = None
 
 @router.get("/tasks", response_model=List[TaskPublic])
-async def list_all_tasks() -> List[TaskPublic]:
-    """Get all tasks from the library."""
+async def list_all_tasks(
+    current_user: User = Depends(get_current_user)
+) -> List[TaskPublic]:
+    """
+    Get all tasks from the library.
+    Note: Task Library is global (shared across all users).
+    Tasks are filtered by child ownership when assigned via ChildTask.
+    This endpoint returns all available tasks in the global library.
+    """
+    # Get all tasks from library (global, not filtered by user)
+    # Task ownership is determined when tasks are assigned to children
     tasks = await Task.find_all().to_list()
     return [
         TaskPublic(

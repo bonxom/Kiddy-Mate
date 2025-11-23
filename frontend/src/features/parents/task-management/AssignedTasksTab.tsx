@@ -1,24 +1,23 @@
-import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import { handleApiError } from '../../../utils/errorHandler';
 import { TaskEvents } from '../../../utils/events';
-import { Search, Trash2, ArrowUpDown, CheckCircle, ListTodo, XCircle, X } from 'lucide-react';
+import { Search, Trash2, ArrowUpDown, CheckCircle, ListTodo, X } from 'lucide-react';
 import Input from '../../../components/ui/Input';
 import Badge from '../../../components/ui/Badge';
 import Modal from '../../../components/ui/Modal';
 import Button from '../../../components/ui/Button';
 import Loading from '../../../components/ui/Loading';
 import TaskDetailModal from './TaskDetailModal';
-import type { AssignedTask, ChildTaskWithDetails } from '../../../types/task.types';
+import type { AssignedTask } from '../../../types/task.types';
 import { mapToUIAssignedTask } from '../../../utils/taskMappers';
 import { useChildContext } from '../../../providers/ChildProvider';
 import { 
   getChildTasks, 
   unassignTask as unassignTaskFromAPI,
   verifyTask as verifyTaskFromAPI,
-  rejectTaskVerification as rejectTaskVerificationFromAPI,
-  giveupTask as giveupTaskFromAPI
+  rejectTaskVerification as rejectTaskVerificationFromAPI
 } from '../../../api/services/taskService';
 import {
   getCategoryConfig,
@@ -34,6 +33,7 @@ interface ExtendedAssignedTask extends AssignedTask {
   category: 'self-discipline' | 'logic' | 'creativity' | 'social' | 'physical' | 'academic';
   priority: 'high' | 'medium' | 'low';
   progress?: number;
+  childId?: string; // Store childId for operations
 }
 
 interface AssignedTasksTabProps {
@@ -41,7 +41,7 @@ interface AssignedTasksTabProps {
 }
 
 const AssignedTasksTab = ({ onCountChange }: AssignedTasksTabProps) => {
-  const { selectedChildId, children } = useChildContext();
+  const { children } = useChildContext();
   const queryClient = useQueryClient();
 
   // Fetch tasks from all children using React Query
@@ -113,12 +113,16 @@ const AssignedTasksTab = ({ onCountChange }: AssignedTasksTabProps) => {
   // Filter out tasks with status "unassigned" - they should not appear in Assigned Tasks tab
   const tasks = useMemo(() => {
     return allTasks
-      .filter(({ task }) => task.status !== 'unassigned') // Exclude unassigned tasks
+      .filter(({ task }) => {
+        // Exclude unassigned tasks
+        const status = task.status;
+        return status !== 'unassigned';
+      })
       .map(({ task, childId }) => {
         // Get child name from childId
         const child = children.find(c => c.id === childId);
         const childName = child?.name || 'Unknown Child';
-        return mapToUIAssignedTask(task, childName);
+        return mapToUIAssignedTask(task, childName, childId); // Pass childId to store in task
       });
   }, [allTasks, children]);
 
@@ -138,7 +142,9 @@ const AssignedTasksTab = ({ onCountChange }: AssignedTasksTabProps) => {
       await verifyTaskFromAPI(childId, childTaskId);
     },
     onSuccess: () => {
+      // Invalidate both assigned tasks and dashboard to refresh coins/rewards
       queryClient.invalidateQueries({ queryKey: ['assigned-tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
     },
   });
 
@@ -151,47 +157,62 @@ const AssignedTasksTab = ({ onCountChange }: AssignedTasksTabProps) => {
     },
   });
 
-  const giveupMutation = useMutation({
-    mutationFn: async ({ childTaskId, childId }: { childTaskId: string; childId: string }) => {
-      await giveupTaskFromAPI(childId, childTaskId);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['assigned-tasks'] });
-    },
-  });
-
   // Wrapper functions for task operations that need childId
-  const unassignTask = async (childTaskId: string) => {
+  // These functions find the task in allTasks and extract childId
+  const findTaskWithChild = (childTaskId: string) => {
+    // First, try to find in current allTasks
     const taskWithChild = allTasks.find(({ task }) => task.id === childTaskId);
-    if (!taskWithChild) {
-      throw new Error('Task not found');
+    if (taskWithChild) {
+      return taskWithChild;
     }
+
+    // If not found, try to find in cached query data
+    // This handles cases where allTasks might be stale
+    const queryKey = ['assigned-tasks', children.map(c => c.id).sort().join(',')];
+    const cachedData = queryClient.getQueryData<typeof allTasks>(queryKey);
+    if (cachedData) {
+      const found = cachedData.find(({ task }) => task.id === childTaskId);
+      if (found) {
+        return found;
+      }
+    }
+
+    // If still not found, try to search across all children's tasks
+    // This is a fallback for edge cases
+    console.warn(`Task ${childTaskId} not found in allTasks or cache. Available task IDs:`, 
+      allTasks.map(({ task }) => task.id).slice(0, 10));
+    
+    throw new Error(`Task not found with ID: ${childTaskId}. Please refresh the page and try again.`);
+  };
+
+  const unassignTask = async (childTaskId: string) => {
+    const taskWithChild = findTaskWithChild(childTaskId);
     await unassignMutation.mutateAsync({ childTaskId, childId: taskWithChild.childId });
   };
 
-  const verifyTask = async (childTaskId: string) => {
-    const taskWithChild = allTasks.find(({ task }) => task.id === childTaskId);
-    if (!taskWithChild) {
-      throw new Error('Task not found');
+  const verifyTask = async (childTaskId: string, childId?: string) => {
+    try {
+      // If childId is provided (from task data), use it directly
+      if (childId) {
+        console.log(`Verifying task ${childTaskId} for child ${childId} (from task data)`);
+        await verifyMutation.mutateAsync({ childTaskId, childId });
+        return;
+      }
+
+      // Otherwise, try to find in allTasks
+      const taskWithChild = findTaskWithChild(childTaskId);
+      if (!taskWithChild || !taskWithChild.childId) {
+        throw new Error(`Cannot find child ID for task ${childTaskId}`);
+      }
+      console.log(`Verifying task ${childTaskId} for child ${taskWithChild.childId} (from allTasks)`);
+      await verifyMutation.mutateAsync({ childTaskId, childId: taskWithChild.childId });
+    } catch (error) {
+      console.error('Error in verifyTask:', error);
+      throw error;
     }
-    await verifyMutation.mutateAsync({ childTaskId, childId: taskWithChild.childId });
   };
 
-  const rejectTaskVerification = async (childTaskId: string) => {
-    const taskWithChild = allTasks.find(({ task }) => task.id === childTaskId);
-    if (!taskWithChild) {
-      throw new Error('Task not found');
-    }
-    await rejectMutation.mutateAsync({ childTaskId, childId: taskWithChild.childId });
-  };
 
-  const giveupTask = async (childTaskId: string) => {
-    const taskWithChild = allTasks.find(({ task }) => task.id === childTaskId);
-    if (!taskWithChild) {
-      throw new Error('Task not found');
-    }
-    await giveupMutation.mutateAsync({ childTaskId, childId: taskWithChild.childId });
-  };
 
   // Update parent count when tasks change
   useEffect(() => {
@@ -255,21 +276,53 @@ const AssignedTasksTab = ({ onCountChange }: AssignedTasksTabProps) => {
     setDeleteModalOpen(true);
   };
 
-  const handleVerifyClick = async (taskId: string, e: React.MouseEvent) => {
+  const handleVerifyClick = async (task: ExtendedAssignedTask, e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent row click
     try {
-      await verifyTask(taskId);
+      const childTaskId = task.id;
+      const childId = task.childId; // Get childId from task data
+      
+      console.log(`Attempting to verify task with ID: ${childTaskId}, childId: ${childId}`);
+      
+      if (!childId) {
+        // Fallback: try to find in allTasks
+        console.warn('childId not found in task data, searching in allTasks...');
+      }
+      
+      await verifyTask(childTaskId, childId);
       toast.success('Task verified successfully! Rewards have been awarded. 🎉');
       // Tasks will auto-refresh via the hook
-    } catch (err) {
-      handleApiError(err, 'Failed to verify task');
+    } catch (err: any) {
+      console.error('Verify task error:', err);
+      const errorMessage = err?.message || 'Failed to verify task';
+      
+      // If task not found, suggest refreshing
+      if (errorMessage.includes('not found')) {
+        toast.error('Task not found. Please refresh the page and try again.');
+        // Optionally trigger a refetch
+        queryClient.invalidateQueries({ queryKey: ['assigned-tasks'] });
+      } else {
+        handleApiError(err, 'Failed to verify task');
+      }
     }
   };
 
-  const handleRejectClick = async (taskId: string, e: React.MouseEvent) => {
+  const handleRejectClick = async (task: ExtendedAssignedTask, e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent row click
     try {
-      await rejectTaskVerification(taskId);
+      const childTaskId = task.id;
+      const childId = task.childId;
+      
+      if (!childId) {
+        const taskWithChild = findTaskWithChild(childTaskId);
+        if (!taskWithChild || !taskWithChild.childId) {
+          throw new Error(`Cannot find child ID for task ${childTaskId}`);
+        }
+        await rejectMutation.mutateAsync({ childTaskId, childId: taskWithChild.childId });
+      } else {
+        await rejectMutation.mutateAsync({ childTaskId, childId });
+      }
+      
       toast.success('Task verification rejected. Task returned to in-progress.');
       // Tasks will auto-refresh via the hook
     } catch (err) {
@@ -277,17 +330,6 @@ const AssignedTasksTab = ({ onCountChange }: AssignedTasksTabProps) => {
     }
   };
 
-  const handleGiveupClick = async (taskId: string, e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevent row click
-    
-    try {
-      await giveupTask(taskId);
-      toast.success('Task marked as given up. Try assigning an easier one! 💪');
-      // Tasks will auto-refresh via fetchAllTasks
-    } catch (err) {
-      handleApiError(err, 'Failed to give up task');
-    }
-  };
 
   const handleConfirmDelete = async () => {
     if (taskToDelete) {
@@ -548,14 +590,14 @@ const AssignedTasksTab = ({ onCountChange }: AssignedTasksTabProps) => {
                         {task.status === 'need-verify' && (
                           <>
                             <button
-                              onClick={(e) => handleVerifyClick(task.id, e)}
+                              onClick={(e) => handleVerifyClick(task, e)}
                               className="p-2 text-green-500 hover:bg-green-50 rounded-lg transition-all duration-200 hover:scale-110 hover:shadow-md"
                               title="Verify and approve task"
                             >
                               <CheckCircle className="w-4 h-4" />
                             </button>
                             <button
-                              onClick={(e) => handleRejectClick(task.id, e)}
+                              onClick={(e) => handleRejectClick(task, e)}
                               className="p-2 text-orange-500 hover:bg-orange-50 rounded-lg transition-all duration-200 hover:scale-110 hover:shadow-md"
                               title="Reject verification and return to in-progress"
                             >
@@ -641,7 +683,9 @@ const AssignedTasksTab = ({ onCountChange }: AssignedTasksTabProps) => {
           onSave={handleSaveTask}
           onDelete={handleDeleteTask}
           onUpdate={async () => {
-            await fetchAllTasks(); // Refresh task list
+            // Invalidate and refetch assigned tasks
+            await queryClient.invalidateQueries({ queryKey: ['assigned-tasks'] });
+            await queryClient.refetchQueries({ queryKey: ['assigned-tasks'] });
             setSelectedTask(null); // Clear selected task to force re-render
             setDetailModalOpen(false); // Close modal after refresh
           }}

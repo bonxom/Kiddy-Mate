@@ -113,102 +113,96 @@ async def generate_weekly_reports():
         )
         await new_report.insert()
 
-@router.post("/{child_id}/generate", response_model=ReportPublic)
-async def generate_report(
-    child_id: str,
-    child: Child = Depends(verify_child_ownership),
-    current_user: User = Depends(verify_parent_token)
-):
+async def _generate_report_internal(child: Child) -> Report:
     """
-    Generate a comprehensive report about a child.
-    Collects data from tasks, interactions, and emotions, then uses LLM to analyze and create insights.
+    Internal helper function to generate a report for a child.
+    Can be called from other routers.
     """
-    try:
-        # Set period (last 7 days by default)
-        period_end = datetime.utcnow()
-        period_start = period_end - timedelta(days=7)
-        
-        # Collect task data
-        all_child_tasks = await get_child_tasks_by_child(child)
-        tasks_completed = [
-            ct for ct in all_child_tasks 
-            if ct.status == ChildTaskStatus.COMPLETED 
-            and ct.completed_at 
-            and period_start <= ct.completed_at <= period_end
-        ]
-        tasks_in_progress = [
-            ct for ct in all_child_tasks 
-            if ct.status in [ChildTaskStatus.ASSIGNED, ChildTaskStatus.IN_PROGRESS]
-        ]
-        tasks_given_up = [
-            ct for ct in all_child_tasks 
-            if ct.status == ChildTaskStatus.GIVEUP
-            and ct.assigned_at
-            and period_start <= ct.assigned_at <= period_end
-        ]
-        
-        # Collect interaction logs and emotions
-        all_logs = await InteractionLog.find_all().to_list()
-        child_id_str = str(child.id)
-        interaction_logs = []
-        emotion_counts = {}
-        
-        for log in all_logs:
-            log_child_id = extract_id_from_link(log.child) if hasattr(log, 'child') else None
-            if log_child_id == child_id_str and period_start <= log.timestamp <= period_end:
-                interaction_logs.append({
-                    "timestamp": log.timestamp.isoformat(),
-                    "user_input": log.user_input,
-                    "avatar_response": log.avatar_response,
-                    "detected_emotion": log.detected_emotion or "Neutral"
-                })
-                emotion = log.detected_emotion or "Neutral"
-                emotion_counts[emotion] = emotion_counts.get(emotion, 0) + 1
-        
-        # Calculate age
-        age = datetime.utcnow().year - child.birth_date.year
-        if datetime.utcnow().month < child.birth_date.month or (
-            datetime.utcnow().month == child.birth_date.month and 
-            datetime.utcnow().day < child.birth_date.day
-        ):
-            age -= 1
-        
-        # Build context for LLM
-        context_data = {
-            "child_info": {
-                "name": child.name,
-                "nickname": child.nickname,
-                "age": age,
-                "personality": child.personality or [],
-                "interests": child.interests or [],
-                "strengths": child.strengths or [],
-                "challenges": child.challenges or []
-            },
-            "period": {
-                "start": period_start.isoformat(),
-                "end": period_end.isoformat()
-            },
-            "tasks": {
-                "completed": len(tasks_completed),
-                "in_progress": len(tasks_in_progress),
-                "given_up": len(tasks_given_up)
-            },
-            "emotions": emotion_counts,
-            "interactions": {
-                "total": len(interaction_logs),
-                "recent_logs": interaction_logs[-10:] if len(interaction_logs) > 10 else interaction_logs
-            }
+    # Set period (last 7 days by default)
+    period_end = datetime.utcnow()
+    period_start = period_end - timedelta(days=7)
+    
+    # Collect task data
+    all_child_tasks = await get_child_tasks_by_child(child)
+    tasks_completed = [
+        ct for ct in all_child_tasks 
+        if ct.status == ChildTaskStatus.COMPLETED 
+        and ct.completed_at 
+        and period_start <= ct.completed_at <= period_end
+    ]
+    tasks_in_progress = [
+        ct for ct in all_child_tasks 
+        if ct.status in [ChildTaskStatus.ASSIGNED, ChildTaskStatus.IN_PROGRESS]
+    ]
+    tasks_given_up = [
+        ct for ct in all_child_tasks 
+        if ct.status == ChildTaskStatus.GIVEUP
+        and ct.assigned_at
+        and period_start <= ct.assigned_at <= period_end
+    ]
+    
+    # Collect interaction logs and emotions
+    all_logs = await InteractionLog.find_all().to_list()
+    child_id_str = str(child.id)
+    interaction_logs = []
+    emotion_counts = {}
+    
+    for log in all_logs:
+        log_child_id = extract_id_from_link(log.child) if hasattr(log, 'child') else None
+        if log_child_id == child_id_str and period_start <= log.timestamp <= period_end:
+            interaction_logs.append({
+                "timestamp": log.timestamp.isoformat(),
+                "user_input": log.user_input,
+                "avatar_response": log.avatar_response,
+                "detected_emotion": log.detected_emotion or "Neutral"
+            })
+            emotion = log.detected_emotion or "Neutral"
+            emotion_counts[emotion] = emotion_counts.get(emotion, 0) + 1
+    
+    # Calculate age
+    age = datetime.utcnow().year - child.birth_date.year
+    if datetime.utcnow().month < child.birth_date.month or (
+        datetime.utcnow().month == child.birth_date.month and 
+        datetime.utcnow().day < child.birth_date.day
+    ):
+        age -= 1
+    
+    # Build context for LLM
+    context_data = {
+        "child_info": {
+            "name": child.name,
+            "nickname": child.nickname,
+            "age": age,
+            "personality": child.personality or [],
+            "interests": child.interests or [],
+            "strengths": child.strengths or [],
+            "challenges": child.challenges or []
+        },
+        "period": {
+            "start": period_start.isoformat(),
+            "end": period_end.isoformat()
+        },
+        "tasks": {
+            "completed": len(tasks_completed),
+            "in_progress": len(tasks_in_progress),
+            "given_up": len(tasks_given_up)
+        },
+        "emotions": emotion_counts,
+        "interactions": {
+            "total": len(interaction_logs),
+            "recent_logs": interaction_logs[-10:] if len(interaction_logs) > 10 else interaction_logs
         }
-        
-        # Use LLM to generate report
-        system_instruction = (
-            "You are an expert child development analyst. "
-            "Analyze the provided child data and generate a comprehensive report with insights and suggestions. "
-            "Focus on emotional patterns, task completion patterns, and areas for improvement. "
-            "Return ONLY valid JSON, no markdown, no extra text."
-        )
-        
-        prompt = f"""
+    }
+    
+    # Use LLM to generate report
+    system_instruction = (
+        "You are an expert child development analyst. "
+        "Analyze the provided child data and generate a comprehensive report with insights and suggestions. "
+        "Focus on emotional patterns, task completion patterns, and areas for improvement. "
+        "Return ONLY valid JSON, no markdown, no extra text."
+    )
+    
+    prompt = f"""
 Analyze the following child data and generate a comprehensive report:
 
 CHILD INFORMATION:
@@ -253,55 +247,70 @@ Generate a report with the following structure (JSON only):
   }}
 }}
 """
+    
+    # Call LLM
+    llm_response = generate_openai_response(prompt, system_instruction, max_tokens=2000)
+    
+    # Parse JSON response
+    try:
+        # Clean response
+        response_text = llm_response.strip()
+        if response_text.startswith("```json"):
+            response_text = response_text[7:]
+        if response_text.startswith("```"):
+            response_text = response_text[3:]
+        if response_text.endswith("```"):
+            response_text = response_text[:-3]
+        response_text = response_text.strip()
         
-        # Call LLM
-        llm_response = generate_openai_response(prompt, system_instruction, max_tokens=2000)
+        report_data = json.loads(response_text)
+    except json.JSONDecodeError as e:
+        logger.error(f"Failed to parse LLM response as JSON: {llm_response}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to parse report data: {str(e)}"
+        )
+    
+    # Create report
+    new_report = Report(
+        child=Link(child, Child),
+        period_start=period_start,
+        period_end=period_end,
+        generated_at=datetime.utcnow(),
+        summary_text=report_data.get("summary_text", ""),
+        insights=report_data.get("insights", {}),
+        suggestions=report_data.get("suggestions", {})
+    )
+    await new_report.insert()
+    child_id_str = str(child.id)
+    logger.info(f"Generated report {new_report.id} for child {child_id_str}")
+    
+    return new_report
+
+@router.post("/{child_id}/generate", response_model=ReportPublic)
+async def generate_report(
+    child_id: str,
+    child: Child = Depends(verify_child_ownership),
+    current_user: User = Depends(verify_parent_token)
+):
+    """
+    Generate a comprehensive report about a child.
+    Collects data from tasks, interactions, and emotions, then uses LLM to analyze and create insights.
+    """
+    try:
+        new_report = await _generate_report_internal(child)
         
-        # Parse JSON response
-        try:
-            # Clean response
-            response_text = llm_response.strip()
-            if response_text.startswith("```json"):
-                response_text = response_text[7:]
-            if response_text.startswith("```"):
-                response_text = response_text[3:]
-            if response_text.endswith("```"):
-                response_text = response_text[:-3]
-            response_text = response_text.strip()
-            
-            report_data = json.loads(response_text)
-            
-            # Create and save report
-            new_report = Report(
-                child=child,  # type: ignore
-                period_start=period_start,
-                period_end=period_end,
-                generated_at=datetime.utcnow(),
-                summary_text=report_data.get("summary_text", f"Report for {child.name}"),
-                insights=report_data.get("insights", {}),
-                suggestions=report_data.get("suggestions", {})
-            )
-            await new_report.insert()
-            
-            logger.info(f"✅ Generated report for child {child.name} (ID: {child_id})")
-            
-            return ReportPublic(
-                id=str(new_report.id),
-                period_start=new_report.period_start,
-                period_end=new_report.period_end,
-                generated_at=new_report.generated_at,
-                summary_text=new_report.summary_text,
-                insights=new_report.insights,
-                suggestions=new_report.suggestions
-            )
-            
-        except json.JSONDecodeError as e:
-            logger.error(f"Failed to parse LLM response: {e}")
-            logger.error(f"Response: {llm_response[:500]}")
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Failed to parse LLM response: {str(e)}"
-            )
+        logger.info(f"✅ Generated report for child {child.name} (ID: {child_id})")
+        
+        return ReportPublic(
+            id=str(new_report.id),
+            period_start=new_report.period_start,
+            period_end=new_report.period_end,
+            generated_at=new_report.generated_at,
+            summary_text=new_report.summary_text,
+            insights=new_report.insights,
+            suggestions=new_report.suggestions
+        )
         
     except HTTPException:
         raise

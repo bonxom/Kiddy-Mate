@@ -55,23 +55,13 @@ const AssignTaskModal = ({ isOpen, onClose, task, onSuccess }: AssignTaskModalPr
         // Still proceed as task might have been assigned
       }
 
-      // Invalidate and refetch queries immediately
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['dashboard', formData.childId] }),
-        queryClient.invalidateQueries({ queryKey: ['dashboard'] }),
-        queryClient.invalidateQueries({ queryKey: ['assignedTasks', formData.childId] }),
-        queryClient.invalidateQueries({ queryKey: ['assigned-tasks'] }),
-        queryClient.invalidateQueries({ queryKey: ['task-library', formData.childId] }),
-      ]);
+      // Optimized: Only invalidate necessary queries, let React Query handle refetching
+      // Don't await refetch - let it happen in background for better UX
+      queryClient.invalidateQueries({ queryKey: ['assigned-tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['task-library', formData.childId] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard', formData.childId] });
 
-      // Refetch assigned tasks and task library immediately to ensure fresh data
-      await Promise.all([
-        queryClient.refetchQueries({ queryKey: ['assigned-tasks'] }),
-        queryClient.refetchQueries({ queryKey: ['task-library', formData.childId] }),
-      ]);
-
-      // Emit events to notify both library and assigned tasks to refresh
-      TaskEvents.emit(TaskEvents.LIBRARY_UPDATED);
+      // Emit events to notify components to refresh (they will handle their own refetching)
       TaskEvents.emit(TaskEvents.TASK_ASSIGNED, { childId: formData.childId });
       
       // Call success callback if provided (this will trigger tab switch)
@@ -88,18 +78,10 @@ const AssignTaskModal = ({ isOpen, onClose, task, onSuccess }: AssignTaskModalPr
       
       // If error mentions task was assigned, show success message
       if (errorMessage.includes('assigned') || errorMessage.includes('Task was assigned')) {
-        // Task was likely assigned successfully, just refresh
-        await Promise.all([
-          queryClient.invalidateQueries({ queryKey: ['assignedTasks', formData.childId] }),
-          queryClient.invalidateQueries({ queryKey: ['assigned-tasks'] }),
-          queryClient.invalidateQueries({ queryKey: ['task-library'] }),
-          queryClient.invalidateQueries({ queryKey: ['assigned-task-ids'] }),
-        ]);
+        // Task was likely assigned successfully, just invalidate queries
+        queryClient.invalidateQueries({ queryKey: ['assigned-tasks'] });
+        queryClient.invalidateQueries({ queryKey: ['task-library', formData.childId] });
         
-        // Refetch immediately
-        await queryClient.refetchQueries({ queryKey: ['assigned-tasks'] });
-        
-        TaskEvents.emit(TaskEvents.LIBRARY_UPDATED);
         TaskEvents.emit(TaskEvents.TASK_ASSIGNED, { childId: formData.childId });
         
         // Call success callback to switch tab

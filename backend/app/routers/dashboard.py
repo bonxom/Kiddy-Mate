@@ -272,45 +272,30 @@ async def analyze_emotion_report_and_generate_tasks(
                 logger.info(f"Found {len(child_reports)} reports using manual filter")
             
             if not child_reports:
-                # Log all reports for debugging
-                all_reports_debug = await Report.find_all().to_list()
-                logger.error(f"No reports found for child {child_id_str}. Total reports in DB: {len(all_reports_debug)}")
-                
-                # Collect debug info
-                debug_info = {
-                    "child_id": child_id_str,
-                    "total_reports_in_db": len(all_reports_debug),
-                    "sample_report_ids": []
-                }
-                
-                if all_reports_debug:
-                    logger.error("Sample report child IDs:")
-                    for r in all_reports_debug[:10]:
-                        r_child_id = extract_id_from_link(r.child) if hasattr(r, 'child') else None
-                        logger.error(f"  Report {r.id}: child_id={r_child_id}, generated_at={r.generated_at}")
-                        debug_info["sample_report_ids"].append({
-                            "report_id": str(r.id),
-                            "child_id": r_child_id,
-                            "generated_at": r.generated_at.isoformat() if r.generated_at else None
-                        })
-                
-                error_detail = (
-                    f"No reports found for this child (ID: {child_id_str}). "
-                    f"Total reports in database: {len(all_reports_debug)}. "
-                    "Please generate a report first using the 'Generate Report' button."
-                )
-                
-                logger.error(f"Error details: {json.dumps(debug_info, indent=2)}")
-                
-                raise HTTPException(
-                    status_code=status.HTTP_404_NOT_FOUND,
-                    detail=error_detail
-                )
-            
-            # Sort by generated_at descending and get most recent
-            child_reports.sort(key=lambda x: x.generated_at, reverse=True)
-            report = child_reports[0]
-            logger.info(f"Using most recent report: {report.id}, generated at: {report.generated_at}")
+                # No reports found - automatically generate one
+                logger.info(f"No reports found for child {child_id_str}. Auto-generating report...")
+                try:
+                    # Import the helper function from reports router
+                    from app.routers.reports import _generate_report_internal
+                    report = await _generate_report_internal(child)
+                    logger.info(f"✅ Auto-generated report {report.id} for child {child_id_str}")
+                    # Use the newly generated report
+                except Exception as e:
+                    logger.error(f"Failed to auto-generate report: {e}", exc_info=True)
+                    # If auto-generation fails, return helpful error
+                    error_detail = (
+                        f"No reports found for this child (ID: {child_id_str}). "
+                        "Failed to auto-generate report. Please generate a report first using the 'Generate Report' button."
+                    )
+                    raise HTTPException(
+                        status_code=status.HTTP_404_NOT_FOUND,
+                        detail=error_detail
+                    )
+            else:
+                # Sort by generated_at descending and get most recent
+                child_reports.sort(key=lambda x: x.generated_at, reverse=True)
+                report = child_reports[0]
+                logger.info(f"Using most recent report: {report.id}, generated at: {report.generated_at}")
         
         # Get emotion data from report
         emotion_trends = report.insights.get("emotion_trends", {}) if report.insights else {}

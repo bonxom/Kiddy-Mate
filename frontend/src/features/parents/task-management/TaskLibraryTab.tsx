@@ -6,10 +6,9 @@ import Button from '../../../components/ui/Button';
 import Loading from '../../../components/ui/Loading';
 import type { LibraryTask, TaskCategory } from '../../../types/task.types';
 import AssignTaskModal from './AssignTaskModal';
-import { mapToLibraryTask } from '../../../utils/taskMappers';
 import { getCategoryConfig, TASK_CATEGORY_LABELS, ICON_SIZES } from '../../../constants/taskConfig';
 import { useChildContext } from '../../../providers/ChildProvider';
-import { getAllTasks, getChildTasks } from '../../../api/services/taskService';
+import { getChildTasks } from '../../../api/services/taskService';
 import { analyzeEmotionReportAndGenerateTasks } from '../../../api/services/dashboardService';
 import { TaskEvents } from '../../../utils/events';
 
@@ -19,7 +18,7 @@ interface TaskLibraryTabProps {
 }
 
 const TaskLibraryTab = ({ onCountChange, onTaskAssigned }: TaskLibraryTabProps) => {
-  const { children, selectedChildId } = useChildContext();
+  const { children, selectedChildId, setSelectedChildId } = useChildContext();
   const queryClient = useQueryClient();
 
   // Fetch unassigned tasks for selected child (this is their personal task library)
@@ -84,6 +83,10 @@ const TaskLibraryTab = ({ onCountChange, onTaskAssigned }: TaskLibraryTabProps) 
         category = 'academic';
       }
       
+      // Get child name from selectedChildId
+      const child = children.find(c => c.id === selectedChildId);
+      const childName = child?.name || 'Unknown Child';
+      
       return {
         id: childTask.task.id,
         task: childTask.task.title,
@@ -92,6 +95,7 @@ const TaskLibraryTab = ({ onCountChange, onTaskAssigned }: TaskLibraryTabProps) 
         suggestedReward: childTask.task.reward_coins || 10,
         difficulty: childTask.task.difficulty || 1,
         suggestedAgeRange: childTask.task.suggested_age_range || '6-12',
+        suggestedChild: childName, // Populate with child name
         childTaskId: childTask.id, // Store childTaskId for assignment
       };
     });
@@ -235,7 +239,7 @@ const TaskLibraryTab = ({ onCountChange, onTaskAssigned }: TaskLibraryTabProps) 
           )}
 
           {/* Generate Tasks from Report Button */}
-          <div className="mb-4 p-4 bg-gradient-to-r from-purple-50 to-blue-50 rounded-xl border border-purple-200">
+          <div className="mb-4 p-4 bg-linear-to-r from-purple-50 to-blue-50 rounded-xl border border-purple-200">
             <div className="flex items-center justify-between flex-wrap gap-4">
               <div className="flex-1 min-w-[200px]">
                 <h3 className="text-sm font-semibold text-gray-900 mb-1 flex items-center gap-2">
@@ -284,6 +288,8 @@ const TaskLibraryTab = ({ onCountChange, onTaskAssigned }: TaskLibraryTabProps) 
                               onClick={() => {
                                 setSelectedChildId(child.id);
                                 setIsChildSelectorOpen(false);
+                                // Invalidate task library query when child changes
+                                queryClient.invalidateQueries({ queryKey: ['task-library', child.id] });
                               }}
                               className={`w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors text-left ${
                                 selectedChildId === child.id ? 'bg-purple-50' : ''
@@ -332,7 +338,7 @@ const TaskLibraryTab = ({ onCountChange, onTaskAssigned }: TaskLibraryTabProps) 
                   ? 'bg-red-50 text-red-700' 
                   : 'bg-green-50 text-green-700'
               }`}>
-                <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
+                <CheckCircle2 className="w-4 h-4 shrink-0" />
                 <span>{successMessage}</span>
               </div>
             )}
