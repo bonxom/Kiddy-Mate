@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { User, Users, Bell } from 'lucide-react';
 import Badge from '../../components/ui/Badge';
 import AccountSettingsTab from '../../features/parents/settings/AccountSettingsTab';
@@ -12,7 +12,8 @@ const SettingsPage = () => {
   const [activeTab, setActiveTab] = useState<TabType>('account');
   const { children } = useChild();
 
-  const tabs = [
+  // Use useMemo to recalculate tabs when children.length changes
+  const tabs = useMemo(() => [
     {
       id: 'account' as TabType,
       label: 'Account Settings',
@@ -29,7 +30,7 @@ const SettingsPage = () => {
       label: 'Notifications',
       icon: Bell,
     },
-  ];
+  ], [children.length]);
 
   return (
     <div className="min-h-screen overflow-y-auto p-4 md:p-6 lg:p-8 scrollbar-thin bg-gray-50">

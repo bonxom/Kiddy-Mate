@@ -12,6 +12,7 @@ from app.models.beanie_models import (
     User, Child, Task, Reward, ChildReward, MiniGame, 
     GameSession, InteractionLog, Report, ChildTask, ChildDevelopmentAssessment
 )
+from app.models.reward_models import RedemptionRequest
 from app.models.user_models import UserRole
 from app.models.task_models import TaskCategory, TaskType, UnityType as TaskUnityType
 from app.models.childtask_models import ChildTaskStatus, ChildTaskPriority, UnityType as ChildTaskUnityType
@@ -35,7 +36,7 @@ async def init_db():
     await init_beanie(
         database=client[settings.DATABASE_NAME],
         document_models=[
-            User, Child, Task, Reward, ChildReward, MiniGame, 
+            User, Child, Task, Reward, ChildReward, RedemptionRequest, MiniGame, 
             GameSession, InteractionLog, Report, ChildTask, ChildDevelopmentAssessment
         ]
     )
@@ -61,6 +62,7 @@ async def seed_database():
     await Report.delete_all()
     await ChildTask.delete_all()
     await ChildDevelopmentAssessment.delete_all()
+    await RedemptionRequest.delete_all()
     print("   ✓ All collections cleared\n")
 
     
@@ -656,8 +658,12 @@ async def seed_database():
         ChildTask(child=Link(emma, Child), task=Link(tasks[24], Task), status=ChildTaskStatus.COMPLETED, priority=ChildTaskPriority.HIGH, assigned_at=now - timedelta(days=3), completed_at=now - timedelta(days=2), progress=100),
         
         
+        # Tasks waiting for verification
         ChildTask(child=Link(emma, Child), task=Link(tasks[1], Task), status=ChildTaskStatus.NEED_VERIFY, priority=ChildTaskPriority.HIGH, assigned_at=now - timedelta(days=1), progress=100, notes="Completed morning routine"),
         ChildTask(child=Link(emma, Child), task=Link(tasks[13], Task), status=ChildTaskStatus.NEED_VERIFY, priority=ChildTaskPriority.MEDIUM, assigned_at=now - timedelta(days=1), progress=100, notes="Story about a magic garden"),
+        ChildTask(child=Link(emma, Child), task=Link(tasks[17], Task), status=ChildTaskStatus.NEED_VERIFY, priority=ChildTaskPriority.HIGH, assigned_at=now - timedelta(hours=12), progress=100, notes="Helped friend with homework"),
+        ChildTask(child=Link(emma, Child), task=Link(tasks[20], Task), status=ChildTaskStatus.NEED_VERIFY, priority=ChildTaskPriority.MEDIUM, assigned_at=now - timedelta(hours=8), progress=100, notes="Read for 20 minutes"),
+        ChildTask(child=Link(emma, Child), task=Link(tasks[25], Task), status=ChildTaskStatus.NEED_VERIFY, priority=ChildTaskPriority.LOW, assigned_at=now - timedelta(hours=4), progress=100, notes="Did 3 kind things today"),
         
         
         ChildTask(child=Link(emma, Child), task=Link(tasks[5], Task), status=ChildTaskStatus.IN_PROGRESS, priority=ChildTaskPriority.HIGH, assigned_at=now - timedelta(hours=5), due_date=now + timedelta(days=1), progress=60, notes="Working on problem 3/5", unity_type=ChildTaskUnityType.CHOICE),
@@ -684,7 +690,11 @@ async def seed_database():
         ChildTask(child=Link(lucas, Child), task=Link(tasks[27], Task), status=ChildTaskStatus.COMPLETED, priority=ChildTaskPriority.HIGH, assigned_at=now - timedelta(days=3), completed_at=now - timedelta(days=2), progress=100),
         
         
+        # Tasks waiting for verification
         ChildTask(child=Link(lucas, Child), task=Link(tasks[14], Task), status=ChildTaskStatus.NEED_VERIFY, priority=ChildTaskPriority.MEDIUM, assigned_at=now - timedelta(days=1), progress=100, notes="Built a robot castle"),
+        ChildTask(child=Link(lucas, Child), task=Link(tasks[4], Task), status=ChildTaskStatus.NEED_VERIFY, priority=ChildTaskPriority.HIGH, assigned_at=now - timedelta(hours=10), progress=100, notes="Solved pattern puzzle"),
+        ChildTask(child=Link(lucas, Child), task=Link(tasks[7], Task), status=ChildTaskStatus.NEED_VERIFY, priority=ChildTaskPriority.MEDIUM, assigned_at=now - timedelta(hours=6), progress=100, notes="Completed sudoku"),
+        ChildTask(child=Link(lucas, Child), task=Link(tasks[27], Task), status=ChildTaskStatus.NEED_VERIFY, priority=ChildTaskPriority.HIGH, assigned_at=now - timedelta(hours=2), progress=100, notes="Won memory game"),
         
         
         ChildTask(child=Link(lucas, Child), task=Link(tasks[22], Task), status=ChildTaskStatus.IN_PROGRESS, priority=ChildTaskPriority.HIGH, assigned_at=now - timedelta(hours=4), due_date=now + timedelta(days=1), progress=70, notes="Almost done with homework", unity_type=ChildTaskUnityType.CHOICE),
@@ -707,11 +717,10 @@ async def seed_database():
         ChildTask(child=Link(sophia, Child), task=Link(tasks[0], Task), status=ChildTaskStatus.COMPLETED, priority=ChildTaskPriority.HIGH, assigned_at=now - timedelta(days=3), completed_at=now - timedelta(days=2), progress=100),
         ChildTask(child=Link(sophia, Child), task=Link(tasks[8], Task), status=ChildTaskStatus.COMPLETED, priority=ChildTaskPriority.MEDIUM, assigned_at=now - timedelta(days=2), completed_at=now - timedelta(days=1), progress=100),
         
+        # Tasks waiting for verification
+        ChildTask(child=Link(sophia, Child), task=Link(tasks[16], Task), status=ChildTaskStatus.NEED_VERIFY, priority=ChildTaskPriority.HIGH, assigned_at=now - timedelta(hours=6), progress=100, notes="Said thank you to teacher"),
+        ChildTask(child=Link(sophia, Child), task=Link(tasks[10], Task), status=ChildTaskStatus.NEED_VERIFY, priority=ChildTaskPriority.MEDIUM, assigned_at=now - timedelta(hours=3), progress=100, notes="Did 20 jumping jacks"),
         
-        ChildTask(child=Link(sophia, Child), task=Link(tasks[16], Task), status=ChildTaskStatus.IN_PROGRESS, priority=ChildTaskPriority.HIGH, assigned_at=now - timedelta(hours=6), due_date=now + timedelta(days=1), progress=50, notes="Said thank you to teacher"),
-        
-        
-        ChildTask(child=Link(sophia, Child), task=Link(tasks[10], Task), status=ChildTaskStatus.ASSIGNED, priority=ChildTaskPriority.MEDIUM, assigned_at=now - timedelta(hours=2), due_date=now + timedelta(days=2)),
         ChildTask(child=Link(sophia, Child), task=Link(tasks[24], Task), status=ChildTaskStatus.ASSIGNED, priority=ChildTaskPriority.LOW, assigned_at=now - timedelta(hours=1), due_date=now + timedelta(days=3)),
     ]
     child_tasks.extend(sophia_tasks)
@@ -720,8 +729,12 @@ async def seed_database():
     alex_tasks = [
         ChildTask(child=Link(alex, Child), task=Link(tasks[21], Task), status=ChildTaskStatus.COMPLETED, assigned_at=now - timedelta(days=4), completed_at=now - timedelta(days=3), progress=100),
         ChildTask(child=Link(alex, Child), task=Link(tasks[22], Task), status=ChildTaskStatus.COMPLETED, assigned_at=now - timedelta(days=3), completed_at=now - timedelta(days=2), progress=100),
-        ChildTask(child=Link(alex, Child), task=Link(tasks[5], Task), status=ChildTaskStatus.IN_PROGRESS, assigned_at=now - timedelta(hours=8), due_date=now + timedelta(days=1), progress=80),
-        ChildTask(child=Link(alex, Child), task=Link(tasks[14], Task), status=ChildTaskStatus.ASSIGNED, assigned_at=now - timedelta(hours=2), due_date=now + timedelta(days=2)),
+        
+        # Tasks waiting for verification
+        ChildTask(child=Link(alex, Child), task=Link(tasks[5], Task), status=ChildTaskStatus.NEED_VERIFY, assigned_at=now - timedelta(hours=8), progress=100, notes="Completed math challenge"),
+        ChildTask(child=Link(alex, Child), task=Link(tasks[14], Task), status=ChildTaskStatus.NEED_VERIFY, assigned_at=now - timedelta(hours=2), progress=100, notes="Built creative structure"),
+        
+        ChildTask(child=Link(alex, Child), task=Link(tasks[25], Task), status=ChildTaskStatus.IN_PROGRESS, assigned_at=now - timedelta(hours=1), due_date=now + timedelta(days=1), progress=60),
     ]
     child_tasks.extend(alex_tasks)
     
@@ -763,6 +776,124 @@ async def seed_database():
     
     await ChildReward.insert_many(child_rewards_list)
     print(f"   ✓ Created {len(child_rewards_list)} owned rewards\n")
+
+    
+    
+    
+    print("🛒 Creating redemption requests...")
+    
+    # Get item rewards (redeemable rewards)
+    item_rewards = [r for r in rewards if r.type == RewardType.ITEM]
+    
+    redemption_requests = [
+        # Pending requests - need parent approval
+        RedemptionRequest(
+            child=Link(emma, Child),
+            reward=Link(item_rewards[0], Reward),  # Favorite Snack
+            cost_coins=30,
+            status="pending",
+            requested_at=now - timedelta(hours=5)
+        ),
+        RedemptionRequest(
+            child=Link(emma, Child),
+            reward=Link(item_rewards[1], Reward),  # 30 Min Extra Screen Time
+            cost_coins=50,
+            status="pending",
+            requested_at=now - timedelta(hours=3)
+        ),
+        RedemptionRequest(
+            child=Link(lucas, Child),
+            reward=Link(item_rewards[0], Reward),  # Favorite Snack
+            cost_coins=30,
+            status="pending",
+            requested_at=now - timedelta(hours=8)
+        ),
+        RedemptionRequest(
+            child=Link(lucas, Child),
+            reward=Link(item_rewards[2], Reward),  # Movie Night Choice
+            cost_coins=80,
+            status="pending",
+            requested_at=now - timedelta(hours=2)
+        ),
+        RedemptionRequest(
+            child=Link(sophia, Child),
+            reward=Link(item_rewards[0], Reward),  # Favorite Snack
+            cost_coins=30,
+            status="pending",
+            requested_at=now - timedelta(hours=1)
+        ),
+        RedemptionRequest(
+            child=Link(alex, Child),
+            reward=Link(item_rewards[1], Reward),  # 30 Min Extra Screen Time
+            cost_coins=50,
+            status="pending",
+            requested_at=now - timedelta(hours=4)
+        ),
+        
+        # Approved requests - already processed
+        RedemptionRequest(
+            child=Link(emma, Child),
+            reward=Link(item_rewards[0], Reward),  # Favorite Snack
+            cost_coins=30,
+            status="approved",
+            requested_at=now - timedelta(days=2, hours=3),
+            processed_at=now - timedelta(days=2, hours=2),
+            processed_by=str(demo_user.id)
+        ),
+        RedemptionRequest(
+            child=Link(lucas, Child),
+            reward=Link(item_rewards[1], Reward),  # 30 Min Extra Screen Time
+            cost_coins=50,
+            status="approved",
+            requested_at=now - timedelta(days=1, hours=5),
+            processed_at=now - timedelta(days=1, hours=4),
+            processed_by=str(demo_user.id)
+        ),
+        RedemptionRequest(
+            child=Link(sophia, Child),
+            reward=Link(item_rewards[0], Reward),  # Favorite Snack
+            cost_coins=30,
+            status="approved",
+            requested_at=now - timedelta(days=1, hours=2),
+            processed_at=now - timedelta(days=1, hours=1),
+            processed_by=str(demo_user.id)
+        ),
+        
+        # Rejected requests - parent declined
+        RedemptionRequest(
+            child=Link(emma, Child),
+            reward=Link(item_rewards[4], Reward),  # New Toy (too expensive)
+            cost_coins=200,
+            status="rejected",
+            requested_at=now - timedelta(days=1, hours=8),
+            processed_at=now - timedelta(days=1, hours=7),
+            processed_by=str(demo_user.id)
+        ),
+        RedemptionRequest(
+            child=Link(lucas, Child),
+            reward=Link(item_rewards[5], Reward),  # Special Outing (too expensive)
+            cost_coins=300,
+            status="rejected",
+            requested_at=now - timedelta(days=2, hours=4),
+            processed_at=now - timedelta(days=2, hours=3),
+            processed_by=str(demo_user.id)
+        ),
+        RedemptionRequest(
+            child=Link(alex, Child),
+            reward=Link(item_rewards[3], Reward),  # Ice Cream Trip
+            cost_coins=100,
+            status="rejected",
+            requested_at=now - timedelta(days=1, hours=10),
+            processed_at=now - timedelta(days=1, hours=9),
+            processed_by=str(parent1.id)
+        ),
+    ]
+    
+    await RedemptionRequest.insert_many(redemption_requests)
+    pending_count = sum(1 for r in redemption_requests if r.status == 'pending')
+    approved_count = sum(1 for r in redemption_requests if r.status == 'approved')
+    rejected_count = sum(1 for r in redemption_requests if r.status == 'rejected')
+    print(f"   ✓ Created {len(redemption_requests)} redemption requests (pending: {pending_count}, approved: {approved_count}, rejected: {rejected_count})\n")
 
     
     
@@ -1140,6 +1271,7 @@ async def seed_database():
    • Interactions: {len(interactions)}
    • Reports: {len(reports_list)}
    • Assessments: {len(assessments) if 'assessments' in locals() else 0}
+   • Redemption Requests: {len(redemption_requests) if 'redemption_requests' in locals() else 0}
 
 🔑 Login Credentials:
    Parent Accounts:

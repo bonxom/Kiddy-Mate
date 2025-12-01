@@ -568,7 +568,7 @@ Generate up to 20 tasks. Focus on emotional development and addressing the insig
                         type=task_type,
                         difficulty=difficulty,
                         suggested_age_range=task_data.get("suggested_age_range", f"{age}-{age+2}"),
-                        reward_coins=int(task_data.get("reward_coins", 50)),
+                        reward_coins=int(task_data.get("reward_coins", 200)),
                         reward_badge_name=task_data.get("reward_badge_name"),
                         unity_type=unity_type
                     )

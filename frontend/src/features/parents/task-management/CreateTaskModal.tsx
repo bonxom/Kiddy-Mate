@@ -226,7 +226,7 @@ const CreateTaskModal = ({ isOpen, onClose, onTaskCreated }: CreateTaskModalProp
             <input
               type="range"
               min="1"
-              max="50"
+              max="500"
               value={formData.reward}
               onChange={(e) =>
                 setFormData({ ...formData, reward: parseInt(e.target.value) })

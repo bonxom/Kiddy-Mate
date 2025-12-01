@@ -357,11 +357,13 @@ async def approve_redemption(
     )
     await child_reward.insert()
     
-    # Update redemption status
-    redemption.status = "approved"
-    redemption.processed_at = datetime.utcnow()
-    redemption.processed_by = str(current_user.id)
-    await redemption.save()
+    # Use set() to update only specific fields without serializing Links
+    # This avoids the "Can not create dbref without id" error
+    await redemption.set({
+        "status": "approved",
+        "processed_at": datetime.utcnow(),
+        "processed_by": str(current_user.id)
+    })
     
     return {
         "message": "Redemption approved successfully",
@@ -403,10 +405,21 @@ async def reject_redemption(
             detail="Forbidden: You do not own this child"
         )
     
-    redemption.status = "rejected"
-    redemption.processed_at = datetime.utcnow()
-    redemption.processed_by = str(current_user.id)
-    await redemption.save()
+    # Fetch reward if needed
+    reward = await fetch_link_or_get_object(redemption.reward, Reward)
+    if not reward:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Reward not found"
+        )
+    
+    # Use set() to update only specific fields without serializing Links
+    # This avoids the "Can not create dbref without id" error
+    await redemption.set({
+        "status": "rejected",
+        "processed_at": datetime.utcnow(),
+        "processed_by": str(current_user.id)
+    })
     
     return {"message": "Redemption rejected"}
 

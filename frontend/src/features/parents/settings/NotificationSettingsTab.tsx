@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Gift, AlertCircle, TrendingDown, FileText, Check, X } from 'lucide-react';
+import { Gift, AlertCircle, TrendingDown, FileText } from 'lucide-react';
+import toast from 'react-hot-toast';
 import Card from '../../../components/ui/Card';
 import Button from '../../../components/ui/Button';
 import type { NotificationSettings } from '../../../types/user.types';
@@ -88,18 +89,6 @@ const NotificationSettingsTab = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [toast, setToast] = useState<{
-    show: boolean;
-    message: string;
-    type: 'success' | 'error';
-  }>({ show: false, message: '', type: 'success' });
-
-  const showToast = (message: string, type: 'success' | 'error') => {
-    setToast({ show: true, message, type });
-    setTimeout(() => {
-      setToast({ show: false, message: '', type: 'success' });
-    }, 3000);
-  };
 
   // Fetch notification settings on mount
   useEffect(() => {
@@ -132,7 +121,7 @@ const NotificationSettingsTab = () => {
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Failed to load settings';
       setError(errorMsg);
-      showToast(errorMsg, 'error');
+      toast.error(errorMsg);
     } finally {
       setLoading(false);
     }
@@ -203,11 +192,11 @@ const NotificationSettingsTab = () => {
       
       await updateNotificationSettings(backendSettings);
       
-      showToast('Notification settings saved', 'success');
+      toast.success('Notification settings saved successfully!');
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Failed to update settings';
       setError(errorMsg);
-      showToast(errorMsg, 'error');
+      toast.error(errorMsg);
     } finally {
       setSaving(false);
     }
@@ -331,25 +320,6 @@ const NotificationSettingsTab = () => {
         </Button>
       </div>
 
-      {/* Toast Notification */}
-      {toast.show && (
-        <div className="fixed bottom-6 right-6 z-50 animate-slide-up">
-          <div
-            className={`px-6 py-4 rounded-lg shadow-lg flex items-center gap-3 ${
-              toast.type === 'success'
-                ? 'bg-green-500 text-white'
-                : 'bg-red-500 text-white'
-            }`}
-          >
-            {toast.type === 'success' ? (
-              <Check className="w-5 h-5" />
-            ) : (
-              <X className="w-5 h-5" />
-            )}
-            <span className="font-medium">{toast.message}</span>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

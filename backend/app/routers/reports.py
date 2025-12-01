@@ -336,7 +336,33 @@ Generate a report with the following structure (JSON only):
 """
     
     # Call LLM
-    llm_response = generate_openai_response(prompt, system_instruction, max_tokens=2000)
+    try:
+        llm_response = generate_openai_response(prompt, system_instruction, max_tokens=2000)
+    except RuntimeError as e:
+        error_msg = str(e)
+        logger.error(f"LLM API error: {error_msg}")
+        # Provide more helpful error message
+        if "not configured" in error_msg.lower():
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="NAVER_API_KEY is not configured. Please set NAVER_API_KEY in .env file and restart the server."
+            )
+        elif "Invalid API key" in error_msg or "401" in error_msg:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Invalid API key. Please check your NAVER_API_KEY in .env file."
+            )
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to generate report: {error_msg}"
+            )
+    except Exception as e:
+        logger.error(f"Unexpected error calling LLM: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to generate report: {str(e)}"
+        )
     
     # Parse JSON response
     try:
@@ -352,7 +378,8 @@ Generate a report with the following structure (JSON only):
         
         report_data = json.loads(response_text)
     except json.JSONDecodeError as e:
-        logger.error(f"Failed to parse LLM response as JSON: {llm_response}")
+        logger.error(f"Failed to parse LLM response as JSON: {e}")
+        logger.error(f"LLM response (first 500 chars): {llm_response[:500] if llm_response else 'None'}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to parse report data: {str(e)}"

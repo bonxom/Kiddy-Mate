@@ -1,7 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useMemo, useEffect } from 'react';
+import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { Check, X, Gift } from 'lucide-react';
+import toast from 'react-hot-toast';
+import { handleApiError } from '../../../utils/errorHandler';
 import Button from '../../../components/ui/Button';
 import Badge from '../../../components/ui/Badge';
+import Loading from '../../../components/ui/Loading';
 import type { RedemptionRequest, RedemptionStatus } from '../../../types/reward.types';
 import { getRedemptionRequests, approveRedemption, rejectRedemption } from '../../../api/services/rewardService';
 
@@ -11,20 +15,26 @@ interface RedemptionRequestsTabProps {
 }
 
 const RedemptionRequestsTab = ({ onPendingCountChange, onRedemptionProcessed }: RedemptionRequestsTabProps) => {
-  const [requests, setRequests] = useState<RedemptionRequest[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [toast, setToast] = useState<{
-    show: boolean;
-    message: string;
-    type: 'success' | 'error';
-  }>({ show: false, message: '', type: 'success' });
+  const queryClient = useQueryClient();
   const [filterStatus, setFilterStatus] = useState<'all' | RedemptionStatus>('all');
 
-  // Fetch redemption requests
-  useEffect(() => {
-    fetchRequests();
-  }, []);
+  // Fetch redemption requests using React Query
+  const {
+    data: requests = [],
+    isLoading: loading,
+    error: queryError,
+  } = useQuery({
+    queryKey: ['redemption-requests'],
+    queryFn: async () => {
+      return await getRedemptionRequests();
+    },
+    staleTime: 0, // Always consider data stale to allow immediate refetch
+    gcTime: 5 * 60 * 1000, // Keep in cache for 5 minutes
+    refetchOnMount: true, // Always refetch when component mounts
+    refetchOnWindowFocus: false, // Don't refetch on window focus to avoid unnecessary calls
+  });
+
+  const error = queryError ? (queryError as Error).message : null;
 
   // Notify parent when pending count changes
   useEffect(() => {
@@ -32,45 +42,101 @@ const RedemptionRequestsTab = ({ onPendingCountChange, onRedemptionProcessed }: 
     onPendingCountChange?.(pendingCount);
   }, [requests, onPendingCountChange]);
 
-  const fetchRequests = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const data = await getRedemptionRequests();
-      setRequests(data);
-    } catch (err: any) {
-      setError(err.message || 'Failed to load redemption requests');
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Approve mutation with optimistic updates
+  const approveMutation = useMutation({
+    mutationFn: async (requestId: string) => {
+      return await approveRedemption(requestId);
+    },
+    onMutate: async (requestId) => {
+      // Cancel outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ['redemption-requests'] });
+      
+      // Snapshot previous value
+      const previousRequests = queryClient.getQueryData<RedemptionRequest[]>(['redemption-requests']);
+      
+      // Optimistically update: change status from 'pending' to 'approved'
+      if (previousRequests) {
+        queryClient.setQueryData<RedemptionRequest[]>(
+          ['redemption-requests'],
+          previousRequests.map((request) => {
+            if (request.id === requestId) {
+              return { ...request, status: 'approved' as const };
+            }
+            return request;
+          })
+        );
+      }
+      
+      return { previousRequests };
+    },
+    onError: (_err, _requestId, context) => {
+      // Rollback on error
+      if (context?.previousRequests) {
+        queryClient.setQueryData(['redemption-requests'], context.previousRequests);
+      }
+    },
+    onSuccess: () => {
+      // Invalidate to ensure consistency
+      queryClient.invalidateQueries({ queryKey: ['redemption-requests'] });
+      onRedemptionProcessed?.(); // Notify parent to refresh shop (stock changed)
+    },
+  });
 
-  const showToast = (message: string, type: 'success' | 'error') => {
-    setToast({ show: true, message, type });
-    setTimeout(() => {
-      setToast({ show: false, message: '', type: 'success' });
-    }, 3000);
-  };
+  // Reject mutation with optimistic updates
+  const rejectMutation = useMutation({
+    mutationFn: async (requestId: string) => {
+      return await rejectRedemption(requestId);
+    },
+    onMutate: async (requestId) => {
+      // Cancel outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ['redemption-requests'] });
+      
+      // Snapshot previous value
+      const previousRequests = queryClient.getQueryData<RedemptionRequest[]>(['redemption-requests']);
+      
+      // Optimistically update: change status from 'pending' to 'rejected'
+      if (previousRequests) {
+        queryClient.setQueryData<RedemptionRequest[]>(
+          ['redemption-requests'],
+          previousRequests.map((request) => {
+            if (request.id === requestId) {
+              return { ...request, status: 'rejected' as const };
+            }
+            return request;
+          })
+        );
+      }
+      
+      return { previousRequests };
+    },
+    onError: (_err, _requestId, context) => {
+      // Rollback on error
+      if (context?.previousRequests) {
+        queryClient.setQueryData(['redemption-requests'], context.previousRequests);
+      }
+    },
+    onSuccess: () => {
+      // Invalidate to ensure consistency
+      queryClient.invalidateQueries({ queryKey: ['redemption-requests'] });
+      onRedemptionProcessed?.(); // Notify parent (though stock unchanged, keeps UI consistent)
+    },
+  });
 
   const handleApprove = async (requestId: string) => {
     try {
-      await approveRedemption(requestId);
-      await fetchRequests(); // Refresh the list
-      onRedemptionProcessed?.(); // Notify parent to refresh shop (stock changed)
-      showToast('Redemption request approved', 'success');
+      await approveMutation.mutateAsync(requestId);
+      toast.success('Redemption request approved successfully!');
     } catch (err: any) {
-      showToast(err.message || 'Failed to approve request', 'error');
+      handleApiError(err, 'Failed to approve request');
     }
   };
 
   const handleReject = async (requestId: string) => {
     try {
-      await rejectRedemption(requestId);
-      await fetchRequests(); // Refresh the list
-      onRedemptionProcessed?.(); // Notify parent (though stock unchanged, keeps UI consistent)
-      showToast('Redemption request rejected', 'success');
+      await rejectMutation.mutateAsync(requestId);
+      toast.success('Redemption request rejected');
     } catch (err: any) {
-      showToast(err.message || 'Failed to reject request', 'error');
+      handleApiError(err, 'Failed to reject request');
     }
   };
 
@@ -88,31 +154,32 @@ const RedemptionRequestsTab = ({ onPendingCountChange, onRedemptionProcessed }: 
   const [hoveredRow, setHoveredRow] = useState<string | null>(null);
 
   // Filter requests
-  const filteredRequests = requests.filter((request) => 
-    filterStatus === 'all' ? true : request.status === filterStatus
-  );
+  const filteredRequests = useMemo(() => {
+    return requests.filter((request) => 
+      filterStatus === 'all' ? true : request.status === filterStatus
+    );
+  }, [requests, filterStatus]);
 
   return (
     <div>
+      {/* Loading State */}
+      {loading && (
+        <div className="flex items-center justify-center py-12">
+          <Loading />
+        </div>
+      )}
+
       {/* Error State */}
-      {error && (
+      {error && !loading && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4">
           <p className="font-semibold">Error loading redemption requests</p>
           <p className="text-sm">{error}</p>
           <button 
-            onClick={fetchRequests}
+            onClick={() => queryClient.refetchQueries({ queryKey: ['redemption-requests'] })}
             className="mt-2 text-sm underline hover:no-underline"
           >
             Try again
           </button>
-        </div>
-      )}
-
-      {/* Loading State */}
-      {loading && (
-        <div className="text-center py-12">
-          <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-primary-200 border-t-primary-600"></div>
-          <p className="text-gray-500 mt-2">Loading redemption requests...</p>
         </div>
       )}
 
@@ -261,26 +328,6 @@ const RedemptionRequestsTab = ({ onPendingCountChange, onRedemptionProcessed }: 
         )}
       </div>
       </>
-      )}
-
-      {/* Toast Notification */}
-      {toast.show && (
-        <div className="fixed bottom-6 right-6 z-50 animate-slide-up">
-          <div
-            className={`px-6 py-4 rounded-lg shadow-lg flex items-center gap-3 ${
-              toast.type === 'success'
-                ? 'bg-green-500 text-white'
-                : 'bg-red-500 text-white'
-            }`}
-          >
-            {toast.type === 'success' ? (
-              <Check className="w-5 h-5" />
-            ) : (
-              <X className="w-5 h-5" />
-            )}
-            <span className="font-medium">{toast.message}</span>
-          </div>
-        </div>
       )}
     </div>
   );

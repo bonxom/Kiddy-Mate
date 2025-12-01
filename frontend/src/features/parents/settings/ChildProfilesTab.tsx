@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Plus, Edit2, Trash2, User, Sparkles, AlertTriangle } from 'lucide-react';
+import toast from 'react-hot-toast';
 import Button from '../../../components/ui/Button';
 import Modal from '../../../components/ui/Modal';
 import ChildFormModal from '../../parents/settings/ChildFormModal';
@@ -18,11 +19,6 @@ const ChildProfilesTab = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [toast, setToast] = useState<{
-    show: boolean;
-    message: string;
-    type: 'success' | 'error';
-  }>({ show: false, message: '', type: 'success' });
   const { refreshChildren } = useChild(); // Get refresh function from ChildProvider
   
   // State quản lý Form Modal (Add/Edit dùng chung)
@@ -31,13 +27,6 @@ const ChildProfilesTab = () => {
   // State quản lý Delete Modal
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedChild, setSelectedChild] = useState<ChildProfile | null>(null);
-
-  const showToast = (message: string, type: 'success' | 'error') => {
-    setToast({ show: true, message, type });
-    setTimeout(() => {
-      setToast({ show: false, message: '', type: 'success' });
-    }, 3000);
-  };
 
   // Fetch children on mount
   useEffect(() => {
@@ -82,7 +71,7 @@ const ChildProfilesTab = () => {
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Failed to load children';
       setError(errorMsg);
-      showToast(errorMsg, 'error');
+      toast.error(errorMsg);
     } finally {
       setLoading(false);
     }
@@ -159,11 +148,11 @@ const ChildProfilesTab = () => {
       if (selectedChild) {
         // Update existing child
         await updateChild(selectedChild.id, backendData);
-        showToast(`${childData.nickname} updated successfully!`, 'success');
+        toast.success(`${childData.nickname} updated successfully!`);
       } else {
         // Create new child
         await createChild(backendData);
-        showToast(`${childData.nickname} added successfully!`, 'success');
+        toast.success(`${childData.nickname} added successfully!`);
       }
       
       // Refresh local list
@@ -174,7 +163,7 @@ const ChildProfilesTab = () => {
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Failed to save child';
       setError(errorMsg);
-      showToast(errorMsg, 'error');
+      toast.error(errorMsg);
     } finally {
       setSaving(false);
     }
@@ -196,16 +185,18 @@ const ChildProfilesTab = () => {
       
       await deleteChild(selectedChild.id);
       
-      showToast(`${selectedChild.nickname} deleted successfully`, 'success');
+      toast.success(`${selectedChild.nickname} deleted successfully`);
       
       // Refresh list
       await fetchChildren();
+      // Refresh children in ChildProvider (for dashboard and other components)
+      await refreshChildren();
       setIsDeleteModalOpen(false);
       setSelectedChild(null);
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Failed to delete child';
       setError(errorMsg);
-      showToast(errorMsg, 'error');
+      toast.error(errorMsg);
     } finally {
       setSaving(false);
     }
@@ -424,21 +415,6 @@ const ChildProfilesTab = () => {
             </div>
           </div>
         </Modal>
-      )}
-
-      {/* Toast Notification */}
-      {toast.show && (
-        <div className="fixed bottom-6 right-6 z-50 animate-slide-up">
-          <div
-            className={`px-6 py-4 rounded-lg shadow-lg flex items-center gap-3 ${
-              toast.type === 'success'
-                ? 'bg-green-500 text-white'
-                : 'bg-red-500 text-white'
-            }`}
-          >
-            <span className="font-medium">{toast.message}</span>
-          </div>
-        </div>
       )}
     </div>
   );
