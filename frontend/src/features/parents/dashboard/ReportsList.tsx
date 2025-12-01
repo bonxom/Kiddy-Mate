@@ -1,7 +1,8 @@
+import { useState, useRef, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getReports, type Report } from '../../../api/services/reportService';
 import { useChild } from '../../../providers/ChildProvider';
-import { FileText, Calendar, ChevronRight } from 'lucide-react';
+import { FileText, Calendar, ChevronRight, ChevronDown } from 'lucide-react';
 import { Loading } from '../../../components/ui';
 
 interface ReportsListProps {
@@ -11,6 +12,8 @@ interface ReportsListProps {
 
 const ReportsList = ({ onReportGenerated, onViewReport }: ReportsListProps) => {
   const { selectedChildId } = useChild();
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [showScrollIndicator, setShowScrollIndicator] = useState(false);
 
   const {
     data: reports,
@@ -21,6 +24,36 @@ const ReportsList = ({ onReportGenerated, onViewReport }: ReportsListProps) => {
     enabled: !!selectedChildId,
     staleTime: 30000,
   });
+
+  // Sort reports by generated_at (newest first)
+  const sortedReports = reports 
+    ? [...reports].sort((a, b) => {
+        const dateA = new Date(a.generated_at).getTime();
+        const dateB = new Date(b.generated_at).getTime();
+        return dateB - dateA; // Descending order (newest first)
+      })
+    : [];
+
+  // Check if scrollable and show indicator
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    const checkScrollable = () => {
+      const hasScroll = container.scrollHeight > container.clientHeight;
+      const isScrolledToBottom = container.scrollTop + container.clientHeight >= container.scrollHeight - 10;
+      setShowScrollIndicator(hasScroll && !isScrolledToBottom);
+    };
+
+    checkScrollable();
+    container.addEventListener('scroll', checkScrollable);
+    window.addEventListener('resize', checkScrollable);
+
+    return () => {
+      container.removeEventListener('scroll', checkScrollable);
+      window.removeEventListener('resize', checkScrollable);
+    };
+  }, [sortedReports]);
 
   // Refresh when report is generated
   if (onReportGenerated) {
@@ -58,9 +91,9 @@ const ReportsList = ({ onReportGenerated, onViewReport }: ReportsListProps) => {
             <FileText className="w-4 h-4 text-primary-500" />
             Reports
           </h3>
-          {reports && reports.length > 0 && (
+          {sortedReports && sortedReports.length > 0 && (
             <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
-              {reports.length}
+              {sortedReports.length}
             </span>
           )}
         </div>
@@ -69,7 +102,7 @@ const ReportsList = ({ onReportGenerated, onViewReport }: ReportsListProps) => {
           <div className="py-4">
             <Loading size="sm" />
           </div>
-        ) : !reports || reports.length === 0 ? (
+        ) : !sortedReports || sortedReports.length === 0 ? (
           <div className="py-6 text-center">
             <FileText className="w-8 h-8 text-gray-300 mx-auto mb-2" />
             <p className="text-sm text-gray-500">No reports yet</p>
@@ -78,34 +111,49 @@ const ReportsList = ({ onReportGenerated, onViewReport }: ReportsListProps) => {
             </p>
           </div>
         ) : (
-          <div className="space-y-2 max-h-64 overflow-y-auto scrollbar-thin">
-            {reports.map((report) => (
-              <button
-                key={report.id}
-                onClick={() => handleViewReport(report)}
-                className="w-full text-left p-3 rounded-lg border border-gray-200 hover:border-primary-300 hover:bg-primary-50 transition-all duration-200 group"
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <Calendar className="w-3.5 h-3.5 text-gray-400 shrink-0" />
-                      <span className="text-xs text-gray-500">
-                        {formatDate(report.generated_at)}
-                      </span>
-                    </div>
-                    <p className="text-sm font-medium text-gray-900 line-clamp-2 group-hover:text-primary-600 transition-colors">
-                      {report.summary_text?.substring(0, 60) || 'Report'}...
-                    </p>
-                    {report.insights?.tasks_completed !== undefined && (
-                      <div className="mt-1 flex items-center gap-2 text-xs text-gray-500">
-                        <span>✓ {report.insights.tasks_completed} tasks completed</span>
+          <div className="relative">
+            <div 
+              ref={scrollContainerRef}
+              className="space-y-2 max-h-64 overflow-y-auto [&::-webkit-scrollbar]:hidden"
+              style={{ 
+                scrollbarWidth: 'none', 
+                msOverflowStyle: 'none'
+              }}
+            >
+              {sortedReports.map((report) => (
+                <button
+                  key={report.id}
+                  onClick={() => handleViewReport(report)}
+                  className="w-full text-left p-3 rounded-lg border border-gray-200 hover:border-primary-300 hover:bg-primary-50 transition-all duration-200 group"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Calendar className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                        <span className="text-xs text-gray-500">
+                          {formatDate(report.generated_at)}
+                        </span>
                       </div>
-                    )}
+                      <p className="text-sm font-medium text-gray-900 line-clamp-2 group-hover:text-primary-600 transition-colors">
+                        {report.summary_text?.substring(0, 60) || 'Report'}...
+                      </p>
+                      {report.insights?.tasks_completed !== undefined && (
+                        <div className="mt-1 flex items-center gap-2 text-xs text-gray-500">
+                          <span>✓ {report.insights.tasks_completed} tasks completed</span>
+                        </div>
+                      )}
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-gray-400 group-hover:text-primary-500 transition-colors shrink-0" />
                   </div>
-                  <ChevronRight className="w-4 h-4 text-gray-400 group-hover:text-primary-500 transition-colors shrink-0" />
-                </div>
-              </button>
-            ))}
+                </button>
+              ))}
+            </div>
+            {/* Scroll Indicator */}
+            {showScrollIndicator && (
+              <div className="absolute bottom-0 left-0 right-0 h-12 bg-linear-to-t from-white via-white/80 to-transparent pointer-events-none flex items-end justify-center pb-2 transition-opacity duration-300">
+                <ChevronDown className="w-4 h-4 text-gray-400 animate-bounce" />
+              </div>
+            )}
           </div>
         )}
       </div>

@@ -48,17 +48,45 @@ const ActivityTimeline = ({ data, onRefresh }: ActivityTimelineProps) => {
   const handleVerifyClick = async (childTaskId: string, e: React.MouseEvent) => {
     e.stopPropagation();
     if (!selectedChildId) {
-      toast.error('Please select a child first');
+      toast.error('Vui lòng chọn một trẻ trước');
+      return;
+    }
+    
+    if (!childTaskId) {
+      toast.error('Task ID không hợp lệ. Vui lòng làm mới trang và thử lại.');
       return;
     }
     
     try {
       await verifyTask(selectedChildId, childTaskId);
-      toast.success('Task verified and rewards awarded! 🎉');
+      toast.success('Task đã được xác thực và phần thưởng đã được trao! 🎉');
       // Refresh dashboard if callback provided
       onRefresh?.();
-    } catch (err) {
-      handleApiError(err, 'Failed to verify task');
+    } catch (err: any) {
+      console.error('Verify task error:', err);
+      
+      // Extract error message from various error formats
+      let errorMessage = 'Không thể xác thực task';
+      if (err?.response?.data?.detail) {
+        errorMessage = err.response.data.detail;
+      } else if (err?.message) {
+        errorMessage = err.message;
+      } else if (typeof err === 'string') {
+        errorMessage = err;
+      }
+      
+      // Handle specific error cases
+      if (errorMessage.includes('not found') || errorMessage.includes('404')) {
+        toast.error('Không tìm thấy task. Vui lòng làm mới trang và thử lại.');
+      } else if (errorMessage.includes('403') || errorMessage.includes('Forbidden') || errorMessage.includes('do not own')) {
+        toast.error('Bạn không có quyền xác thực task này.');
+      } else if (errorMessage.includes('must be waiting for verification') || errorMessage.includes('status')) {
+        toast.error('Task không ở trạng thái phù hợp để xác thực. Vui lòng làm mới trang.');
+      } else if (errorMessage.includes('400') || errorMessage.includes('Bad Request')) {
+        toast.error('Yêu cầu không hợp lệ. Vui lòng kiểm tra trạng thái task và thử lại.');
+      } else {
+        handleApiError(err, 'Không thể xác thực task');
+      }
     }
   };
 

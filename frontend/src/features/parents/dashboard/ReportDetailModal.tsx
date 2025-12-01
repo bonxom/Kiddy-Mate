@@ -1,5 +1,6 @@
+import { useState, useRef, useEffect } from 'react';
 import Modal from '../../../components/ui/Modal';
-import { FileText } from 'lucide-react';
+import { FileText, ChevronDown } from 'lucide-react';
 import type { Report } from '../../../api/services/reportService';
 
 interface ReportDetailModalProps {
@@ -22,6 +23,34 @@ const formatDate = (dateString: string) => {
 };
 
 const ReportDetailModal = ({ isOpen, onClose, report }: ReportDetailModalProps) => {
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [showScrollIndicator, setShowScrollIndicator] = useState(false);
+
+  // Check if scrollable and show indicator
+  useEffect(() => {
+    if (!isOpen) return;
+    
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    const checkScrollable = () => {
+      const hasScroll = container.scrollHeight > container.clientHeight;
+      const isScrolledToBottom = container.scrollTop + container.clientHeight >= container.scrollHeight - 20;
+      setShowScrollIndicator(hasScroll && !isScrolledToBottom);
+    };
+
+    // Check after a short delay to ensure content is rendered
+    const timeoutId = setTimeout(checkScrollable, 100);
+    container.addEventListener('scroll', checkScrollable);
+    window.addEventListener('resize', checkScrollable);
+
+    return () => {
+      clearTimeout(timeoutId);
+      container.removeEventListener('scroll', checkScrollable);
+      window.removeEventListener('resize', checkScrollable);
+    };
+  }, [isOpen, report]);
+
   if (!report) return null;
 
   return (
@@ -31,9 +60,17 @@ const ReportDetailModal = ({ isOpen, onClose, report }: ReportDetailModalProps) 
       title="Report Details"
       size="xl"
     >
-      <div className="space-y-6 max-h-[80vh] overflow-y-auto">
+      <div className="relative">
+        <div 
+          ref={scrollContainerRef}
+          className="space-y-6 max-h-[80vh] overflow-y-auto [&::-webkit-scrollbar]:hidden pr-2"
+          style={{ 
+            scrollbarWidth: 'none', 
+            msOverflowStyle: 'none'
+          }}
+        >
         {/* Header with Period Info */}
-        <div className="bg-gradient-to-r from-primary-50 to-accent-50 rounded-xl p-4 border border-primary-100">
+        <div className="bg-linear-to-r from-primary-50 to-accent-50 rounded-xl p-4 border border-primary-100">
           <div className="flex items-center justify-between flex-wrap gap-3">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-primary-500 rounded-lg flex items-center justify-center">
@@ -239,6 +276,13 @@ const ReportDetailModal = ({ isOpen, onClose, report }: ReportDetailModalProps) 
                 </div>
               )}
             </div>
+          </div>
+        )}
+        </div>
+        {/* Scroll Indicator */}
+        {showScrollIndicator && (
+          <div className="absolute bottom-0 left-0 right-0 h-16 bg-linear-to-t from-white via-white/90 to-transparent pointer-events-none flex items-end justify-center pb-3 transition-opacity duration-300">
+            <ChevronDown className="w-5 h-5 text-gray-400 animate-bounce" />
           </div>
         )}
       </div>

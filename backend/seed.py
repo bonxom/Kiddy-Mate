@@ -860,79 +860,174 @@ async def seed_database():
     
     interactions = [
         
+        # Emma's interactions - diverse emotions
         InteractionLog(
             child=Link(emma, Child),
             user_input="Hi! How are you today?",
             avatar_response="Hello Emma! I'm doing great! I see you completed your reading task today. That's wonderful! 📚",
-            detected_emotion="happy",
+            detected_emotion="Happy",
             timestamp=now - timedelta(days=2, hours=5)
         ),
         InteractionLog(
             child=Link(emma, Child),
             user_input="I'm feeling creative today!",
             avatar_response="That's amazing! Your creativity is one of your superpowers! Maybe you could try the creative writing task? ✨",
-            detected_emotion="excited",
+            detected_emotion="Excited",
             timestamp=now - timedelta(days=2, hours=4)
         ),
         InteractionLog(
             child=Link(emma, Child),
             user_input="Can you help me with my math homework?",
             avatar_response="Of course! Let's break it down step by step. What's the problem you're working on?",
-            detected_emotion="curious",
+            detected_emotion="Curious",
             timestamp=now - timedelta(days=1, hours=6)
+        ),
+        InteractionLog(
+            child=Link(emma, Child),
+            user_input="I finished my story!",
+            avatar_response="That's fantastic! I'm so proud of you for completing your creative writing task! 🌟",
+            detected_emotion="Proud",
+            timestamp=now - timedelta(days=1, hours=3)
+        ),
+        InteractionLog(
+            child=Link(emma, Child),
+            user_input="Math is so hard for me",
+            avatar_response="I understand math can be challenging. But remember, you're getting better every day! Let's practice together.",
+            detected_emotion="Frustrated",
+            timestamp=now - timedelta(days=1, hours=2)
+        ),
+        InteractionLog(
+            child=Link(emma, Child),
+            user_input="I helped my friend today!",
+            avatar_response="That's so kind of you! Helping others makes you feel good, doesn't it? You're such a caring person! 💕",
+            detected_emotion="Happy",
+            timestamp=now - timedelta(hours=8)
+        ),
+        InteractionLog(
+            child=Link(emma, Child),
+            user_input="What should I do next?",
+            avatar_response="You have a few tasks waiting! How about trying the pattern puzzle? It's fun and will help with your math skills!",
+            detected_emotion="Curious",
+            timestamp=now - timedelta(hours=4)
         ),
         
         
+        # Lucas's interactions
         InteractionLog(
             child=Link(lucas, Child),
             user_input="I built a robot today!",
             avatar_response="Wow Lucas! That sounds incredible! You're so good at building things. Tell me more about your robot! 🤖",
-            detected_emotion="proud",
+            detected_emotion="Proud",
             timestamp=now - timedelta(days=3, hours=4)
         ),
         InteractionLog(
             child=Link(lucas, Child),
             user_input="I don't want to do my homework",
             avatar_response="I understand it can feel boring sometimes. How about we make it fun? We can turn it into a game! What subject is it?",
-            detected_emotion="frustrated",
+            detected_emotion="Frustrated",
             timestamp=now - timedelta(days=1, hours=8)
         ),
         InteractionLog(
             child=Link(lucas, Child),
             user_input="Thank you for helping me!",
             avatar_response="You're welcome, Lucas! I'm always here to help you. You did great work today! 🌟",
-            detected_emotion="grateful",
+            detected_emotion="Happy",
             timestamp=now - timedelta(hours=5)
+        ),
+        InteractionLog(
+            child=Link(lucas, Child),
+            user_input="I solved the puzzle!",
+            avatar_response="Excellent work! Your problem-solving skills are amazing! You should be very proud! 🎉",
+            detected_emotion="Proud",
+            timestamp=now - timedelta(days=2, hours=6)
+        ),
+        InteractionLog(
+            child=Link(lucas, Child),
+            user_input="I'm not good at talking to other kids",
+            avatar_response="That's okay! Making friends takes practice. Would you like some tips on how to start conversations?",
+            detected_emotion="Worried",
+            timestamp=now - timedelta(days=1, hours=4)
+        ),
+        InteractionLog(
+            child=Link(lucas, Child),
+            user_input="Can we do more logic puzzles?",
+            avatar_response="Absolutely! I love that you enjoy logic puzzles. They're great for your brain! Let me find some for you.",
+            detected_emotion="Curious",
+            timestamp=now - timedelta(hours=3)
+        ),
+        InteractionLog(
+            child=Link(lucas, Child),
+            user_input="I finished my math homework",
+            avatar_response="Great job! You worked really hard on that. How do you feel about it now?",
+            detected_emotion="Neutral",
+            timestamp=now - timedelta(hours=2)
         ),
         
         
+        # Sophia's interactions
         InteractionLog(
             child=Link(sophia, Child),
             user_input="I want to play!",
             avatar_response="Yay! Let's play together! Which game would you like to try? We have so many fun games! 🎮",
-            detected_emotion="excited",
+            detected_emotion="Excited",
             timestamp=now - timedelta(days=2, hours=3)
         ),
         InteractionLog(
             child=Link(sophia, Child),
             user_input="I made my bed all by myself!",
             avatar_response="That's so awesome, Sophia! You're such a big helper! I'm so proud of you! ⭐",
-            detected_emotion="proud",
+            detected_emotion="Proud",
             timestamp=now - timedelta(days=1, hours=10)
+        ),
+        InteractionLog(
+            child=Link(sophia, Child),
+            user_input="I danced today!",
+            avatar_response="That sounds so fun! Dancing is a great way to express yourself and stay active! 💃",
+            detected_emotion="Excited",
+            timestamp=now - timedelta(days=1, hours=7)
+        ),
+        InteractionLog(
+            child=Link(sophia, Child),
+            user_input="I said thank you to my teacher!",
+            avatar_response="That's wonderful! Being polite and grateful is so important. You're learning great social skills! 🌟",
+            detected_emotion="Happy",
+            timestamp=now - timedelta(hours=6)
+        ),
+        InteractionLog(
+            child=Link(sophia, Child),
+            user_input="Can we play outside?",
+            avatar_response="That sounds like a great idea! Outdoor play is so much fun and good for you!",
+            detected_emotion="Excited",
+            timestamp=now - timedelta(hours=1)
         ),
         
         
+        # Alex's interactions
         InteractionLog(
             child=Link(alex, Child),
             user_input="What tasks should I do today?",
             avatar_response="Let me check your list, Alex! You have reading and math practice. Which one would you like to start with?",
-            detected_emotion="neutral",
+            detected_emotion="Neutral",
             timestamp=now - timedelta(days=1, hours=9)
+        ),
+        InteractionLog(
+            child=Link(alex, Child),
+            user_input="I finished reading my book!",
+            avatar_response="That's great! Reading helps you learn so much. What was your favorite part?",
+            detected_emotion="Happy",
+            timestamp=now - timedelta(days=1, hours=5)
+        ),
+        InteractionLog(
+            child=Link(alex, Child),
+            user_input="Math is interesting",
+            avatar_response="I'm glad you think so! Math can be really fun when you understand it. Keep up the great work!",
+            detected_emotion="Curious",
+            timestamp=now - timedelta(days=1, hours=2)
         ),
     ]
     
     await InteractionLog.insert_many(interactions)
-    print(f"   ✓ Created {len(interactions)} interaction logs\n")
+    print(f"   ✓ Created {len(interactions)} interaction logs with emotion detection\n")
 
     
     
@@ -946,7 +1041,7 @@ async def seed_database():
             period_start=datetime(2025, 11, 1),
             period_end=datetime(2025, 11, 15),
             generated_at=datetime(2025, 11, 16),
-            summary_text="Emma has shown excellent progress this period! She completed 11 tasks across multiple categories, demonstrating strong skills in creativity and emotional intelligence. Her completion rate of 85% is outstanding. She's particularly excelling in creative tasks and showing great improvement in logic puzzles.",
+            summary_text="Emma has shown excellent progress this period! She completed 11 tasks across multiple categories, demonstrating strong skills in creativity and emotional intelligence. Her completion rate of 85% is outstanding. She's particularly excelling in creative tasks and showing great improvement in logic puzzles. Her emotional state reflects a positive and engaged learner, with moments of curiosity and occasional frustration when facing challenging tasks, which is completely normal and shows her growth mindset.",
             insights={
                 "tasks_completed": 11,
                 "tasks_verified": 9,
@@ -955,13 +1050,15 @@ async def seed_database():
                 "most_active_category": "Creativity",
                 "strengths": ["creativity", "emotional awareness", "communication", "consistency"],
                 "areas_for_improvement": ["math skills", "time management"],
-                "emotion_trends": {"happy": 45, "excited": 30, "curious": 15, "frustrated": 10}
+                "emotion_trends": {"Happy": 35, "Excited": 25, "Curious": 20, "Proud": 15, "Frustrated": 5},
+                "most_common_emotion": "Happy",
+                "emotional_analysis": "Emma displays a predominantly positive emotional state throughout this period. Her high completion rate and engagement in creative tasks suggest she feels confident and motivated. The presence of 'Happy' and 'Excited' emotions (60% combined) indicates she enjoys her learning journey. Occasional 'Frustrated' moments (5%) are natural when facing math challenges, but her persistence shows emotional resilience. Her 'Curious' and 'Proud' emotions demonstrate healthy self-awareness and a growth mindset."
             },
             suggestions={
                 "focus": "Continue nurturing creativity while building confidence in math",
                 "recommended_tasks": ["Math Challenge", "Logic Riddle", "Pattern Puzzle"],
                 "games": "Try Logic Master game to improve problem-solving skills",
-                "parenting_tips": "Praise effort in challenging subjects, celebrate creative achievements"
+                "parenting_tips": "Praise effort in challenging subjects, celebrate creative achievements. When she shows frustration with math, acknowledge her feelings and break tasks into smaller steps."
             }
         ),
         
@@ -971,7 +1068,7 @@ async def seed_database():
             period_start=datetime(2025, 11, 1),
             period_end=datetime(2025, 11, 15),
             generated_at=datetime(2025, 11, 16),
-            summary_text="Lucas continues to excel in logic and problem-solving tasks. He completed 8 tasks with a 75% completion rate. His focus and analytical skills are his greatest strengths. However, we notice he could benefit from more social interaction tasks to build confidence.",
+            summary_text="Lucas continues to excel in logic and problem-solving tasks. He completed 8 tasks with a 75% completion rate. His focus and analytical skills are his greatest strengths. However, we notice he could benefit from more social interaction tasks to build confidence. His emotional patterns show pride in his achievements, especially in logic puzzles, but also reveal some worry about social interactions, which is an area for gentle support and encouragement.",
             insights={
                 "tasks_completed": 8,
                 "tasks_verified": 7,
@@ -980,13 +1077,15 @@ async def seed_database():
                 "most_active_category": "Logic",
                 "strengths": ["logic", "problem-solving", "focus", "analytical thinking"],
                 "areas_for_improvement": ["social skills", "physical activities", "expressing emotions"],
-                "emotion_trends": {"curious": 40, "proud": 25, "neutral": 20, "frustrated": 15}
+                "emotion_trends": {"Proud": 30, "Curious": 25, "Happy": 20, "Neutral": 15, "Frustrated": 5, "Worried": 5},
+                "most_common_emotion": "Proud",
+                "emotional_analysis": "Lucas shows a balanced emotional profile with strong positive emotions around his achievements. His 'Proud' emotion (30%) is most common, reflecting his satisfaction with logic and problem-solving tasks. 'Curious' (25%) indicates his natural interest in learning and exploration. The presence of 'Worried' (5%) suggests some anxiety around social situations, which is common for analytical children. His overall emotional state is stable and positive, with room to grow in social confidence through targeted activities."
             },
             suggestions={
                 "focus": "Encourage social tasks and emotional expression activities",
                 "recommended_tasks": ["Help a Friend", "Share Your Toys", "Name Your Feelings"],
                 "games": "Social Connect game to practice social scenarios",
-                "parenting_tips": "Create opportunities for peer interaction, validate emotions"
+                "parenting_tips": "Create opportunities for peer interaction, validate emotions. Celebrate his logic achievements while gently encouraging social activities. Help him understand that it's okay to feel worried sometimes."
             }
         ),
         
@@ -996,7 +1095,7 @@ async def seed_database():
             period_start=datetime(2025, 11, 1),
             period_end=datetime(2025, 11, 15),
             generated_at=datetime(2025, 11, 16),
-            summary_text="Sophia is off to a great start! She's showing enthusiasm and energy in all tasks. Completed 5 tasks with 100% verification rate. Her social skills and confidence shine through. As she's just starting, we're focusing on building routines and celebrating every achievement.",
+            summary_text="Sophia is off to a great start! She's showing enthusiasm and energy in all tasks. Completed 5 tasks with 100% verification rate. Her social skills and confidence shine through. As she's just starting, we're focusing on building routines and celebrating every achievement. Her emotional state is overwhelmingly positive, with high levels of excitement and happiness, which reflects her energetic and confident personality.",
             insights={
                 "tasks_completed": 5,
                 "tasks_verified": 5,
@@ -1005,13 +1104,15 @@ async def seed_database():
                 "most_active_category": "Independence",
                 "strengths": ["confidence", "social skills", "energy", "enthusiasm"],
                 "areas_for_improvement": ["patience", "quiet activities", "focus"],
-                "emotion_trends": {"excited": 50, "happy": 35, "proud": 15}
+                "emotion_trends": {"Excited": 50, "Happy": 30, "Proud": 20},
+                "most_common_emotion": "Excited",
+                "emotional_analysis": "Sophia displays an exceptionally positive and energetic emotional profile. Her dominant emotion is 'Excited' (50%), which perfectly matches her energetic personality and enthusiasm for new activities. Combined with 'Happy' (30%) and 'Proud' (20%), she shows 100% positive emotions, indicating a very confident and motivated learner. This emotional state suggests she feels successful and enjoys the learning process. Her high completion rate and positive emotions indicate she's ready for slightly more challenging tasks while maintaining her enthusiasm."
             },
             suggestions={
                 "focus": "Build foundational routines and gradually introduce quiet activities",
                 "recommended_tasks": ["Read for 20 Minutes", "Calm Down Practice", "Build with Blocks"],
                 "games": "Memory Challenge to improve focus and patience",
-                "parenting_tips": "Celebrate early wins, establish consistent routines"
+                "parenting_tips": "Celebrate early wins, establish consistent routines. Channel her excitement into structured activities. Introduce quiet time gradually to help with focus and patience."
             }
         ),
     ]

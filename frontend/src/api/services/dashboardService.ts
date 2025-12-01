@@ -270,11 +270,58 @@ export const getSkillRadar = async (
 };
 
 /**
+ * Get emotion analytics from report
+ * Used for Emotion Pie Chart when showing report-based analytics
+ */
+export interface EmotionAnalyticsResponse {
+  emotions: EmotionData[];
+  most_common_emotion?: string;
+  emotion_trends: Record<string, number>;
+  emotional_analysis?: string;
+  period_start?: string;
+  period_end?: string;
+  report_id?: string;
+}
+
+export const getEmotionAnalytics = async (
+  childId: string,
+  reportId?: string
+): Promise<EmotionData[]> => {
+  try {
+    const params = reportId ? { report_id: reportId } : {};
+    const response = await axiosClient.get<EmotionAnalyticsResponse>(
+      `/dashboard/${childId}/emotion-analytics`,
+      { params }
+    );
+    
+    // Return emotions array from response
+    return response.data.emotions || [];
+  } catch (error) {
+    console.error('Failed to fetch emotion analytics:', error);
+    // Return empty array on error
+    return [];
+  }
+};
+
+/**
  * Get emotion distribution data
  * Used for Emotion Pie Chart
+ * 
+ * @param childId - Child ID
+ * @param source - Data source: 'interaction' (from interaction logs) or 'report' (from report analytics)
+ * @param reportId - Optional report ID if source is 'report'
  */
-export const getEmotions = async (childId: string): Promise<EmotionData[]> => {
+export const getEmotions = async (
+  childId: string,
+  source: 'interaction' | 'report' = 'interaction',
+  reportId?: string
+): Promise<EmotionData[]> => {
   try {
+    if (source === 'report') {
+      return await getEmotionAnalytics(childId, reportId);
+    }
+    
+    // Default: from interaction logs
     const emotions = await getEmotionData(childId);
     
     // Return empty array if no emotions logged yet (newly registered children)
@@ -294,15 +341,41 @@ export const getEmotions = async (childId: string): Promise<EmotionData[]> => {
  * Get complete dashboard data (all components)
  * Optimized with parallel API calls
  * Uses Promise.allSettled for graceful degradation - if one API fails, others still work
+ * 
+ * Emotion data: Tries to get from report analytics first, falls back to interaction logs
  */
 export const getDashboardData = async (childId: string): Promise<DashboardData> => {
+  // Helper to get emotions: try report analytics first, fallback to interaction logs
+  const getEmotionsWithFallback = async (): Promise<EmotionData[]> => {
+    try {
+      // Try to get from report analytics (most recent report)
+      const reportEmotions = await getEmotionAnalytics(childId);
+      if (reportEmotions && reportEmotions.length > 0) {
+        console.log(`Using emotion data from report analytics: ${reportEmotions.length} emotions`);
+        return reportEmotions;
+      }
+    } catch (error) {
+      console.warn('Failed to get emotion analytics from report, falling back to interaction logs:', error);
+    }
+    
+    // Fallback to interaction logs
+    try {
+      const interactionEmotions = await getEmotions(childId, 'interaction');
+      console.log(`Using emotion data from interaction logs: ${interactionEmotions.length} emotions`);
+      return interactionEmotions;
+    } catch (error) {
+      console.error('Failed to get emotions from interaction logs:', error);
+      return [];
+    }
+  };
+
   const results = await Promise.allSettled([
     getStatsCards(childId),
     getCompletionTrend(childId, 7),
     getCategoryProgress(childId),
     getActivityTimeline(childId, 10),
     getSkillRadar(childId),
-    getEmotions(childId),
+    getEmotionsWithFallback(),
   ]);
 
   // Extract values with fallbacks for failed promises
@@ -390,6 +463,7 @@ export default {
   getActivityTimeline,
   getSkillRadar,
   getEmotions,
+  getEmotionAnalytics,
   getDashboardData,
   analyzeEmotionReportAndGenerateTasks,
 };

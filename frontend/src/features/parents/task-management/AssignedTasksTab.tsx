@@ -276,17 +276,60 @@ const AssignedTasksTab = ({ onCountChange }: AssignedTasksTabProps) => {
       const childTaskId = task.id;
       const childId = task.childId; // Get childId from task data
       
+      // Validate required data
+      if (!childTaskId) {
+        toast.error('Task ID is missing. Please refresh the page and try again.');
+        return;
+      }
+      
+      if (!childId) {
+        toast.error('Child ID is missing. Please refresh the page and try again.');
+        // Try to find childId from allTasks
+        const taskWithChild = allTasks.find(({ task: t }) => t.id === childTaskId);
+        if (taskWithChild?.childId) {
+          await verifyTask(childTaskId, taskWithChild.childId);
+          toast.success('Task verified successfully! Rewards have been awarded. 🎉');
+          return;
+        } else {
+          queryClient.invalidateQueries({ queryKey: ['assigned-tasks'] });
+          return;
+        }
+      }
+      
+      // Check if task is in correct status for verification
+      if (task.status !== 'need_verify') {
+        toast.error(`Task cannot be verified. Current status: ${task.status}. Task must be in "need_verify" status.`);
+        return;
+      }
+      
       await verifyTask(childTaskId, childId);
       toast.success('Task verified successfully! Rewards have been awarded. 🎉');
       // Tasks will auto-refresh via the hook
     } catch (err: any) {
       console.error('Verify task error:', err);
-      const errorMessage = err?.message || 'Failed to verify task';
       
-      // If task not found, suggest refreshing
-      if (errorMessage.includes('not found')) {
+      // Extract error message from various error formats
+      let errorMessage = 'Failed to verify task';
+      if (err?.response?.data?.detail) {
+        errorMessage = err.response.data.detail;
+      } else if (err?.message) {
+        errorMessage = err.message;
+      } else if (typeof err === 'string') {
+        errorMessage = err;
+      }
+      
+      // Handle specific error cases
+      if (errorMessage.includes('not found') || errorMessage.includes('404')) {
         toast.error('Task not found. Please refresh the page and try again.');
-        // Optionally trigger a refetch
+        queryClient.invalidateQueries({ queryKey: ['assigned-tasks'] });
+      } else if (errorMessage.includes('403') || errorMessage.includes('Forbidden') || errorMessage.includes('do not own')) {
+        toast.error('You do not have permission to verify this task.');
+        queryClient.invalidateQueries({ queryKey: ['assigned-tasks'] });
+      } else if (errorMessage.includes('must be waiting for verification') || errorMessage.includes('status')) {
+        toast.error('Task is not in the correct status for verification. Please refresh the page.');
+        queryClient.invalidateQueries({ queryKey: ['assigned-tasks'] });
+      } else if (errorMessage.includes('400') || errorMessage.includes('Bad Request')) {
+        toast.error('Invalid request. Please check the task status and try again.');
         queryClient.invalidateQueries({ queryKey: ['assigned-tasks'] });
       } else {
         handleApiError(err, 'Failed to verify task');

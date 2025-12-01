@@ -10,7 +10,7 @@ from app.dependencies import verify_child_ownership, get_child_tasks_by_child, f
 from app.services.llm import generate_openai_response
 from app.models.user_models import User
 from app.schemas.schemas import ChildTaskWithDetails, TaskPublic
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Any
 from pydantic import BaseModel
 from datetime import datetime, timedelta
 import json
@@ -147,6 +147,18 @@ async def get_category_progress(
 class AnalyzeEmotionReportRequest(BaseModel):
     report_id: Optional[str] = None
 
+class GetEmotionAnalyticsRequest(BaseModel):
+    report_id: Optional[str] = None  # Nếu None, dùng report mới nhất
+
+class EmotionAnalyticsResponse(BaseModel):
+    emotions: List[Dict[str, Any]]  # [{name: "Happy", value: 10}, ...]
+    most_common_emotion: Optional[str] = None
+    emotion_trends: Dict[str, int] = {}
+    emotional_analysis: Optional[str] = None
+    period_start: Optional[datetime] = None
+    period_end: Optional[datetime] = None
+    report_id: Optional[str] = None
+
 @router.get("/{child_id}/reports/debug", response_model=Dict)
 async def debug_child_reports(
     child_id: str,
@@ -212,6 +224,124 @@ async def debug_child_reports(
     }
     
     return result
+
+@router.get("/{child_id}/emotion-analytics", response_model=EmotionAnalyticsResponse)
+async def get_emotion_analytics(
+    child_id: str,
+    report_id: Optional[str] = None,
+    child: Child = Depends(verify_child_ownership),
+    current_user: User = Depends(verify_parent_token)
+):
+    """
+    Get emotion analytics from a report for visualization in EmotionPieChart.
+    If report_id is provided, uses that specific report. Otherwise, uses the most recent report.
+    
+    Returns emotion distribution data in format suitable for pie chart:
+    - emotions: List of {name: str, value: int} for pie chart
+    - most_common_emotion: Most frequently detected emotion
+    - emotion_trends: Full emotion distribution dictionary
+    - emotional_analysis: Text analysis of emotional patterns
+    """
+    try:
+        # Get report (most recent if report_id not provided)
+        report = None
+        if report_id:
+            report = await Report.get(report_id)
+            if not report:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Report not found."
+                )
+            # Verify report belongs to child
+            report_child_id = extract_id_from_link(report.child)
+            if report_child_id != str(child.id):
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Report does not belong to this child."
+                )
+        else:
+            # Get most recent report for this child
+            child_id_str = str(child.id)
+            logger.info(f"Looking for most recent report for child_id: {child_id_str}")
+            
+            # Try Beanie query first
+            try:
+                from beanie.operators import In
+                child_id_obj = child.id
+                child_reports = await Report.find(Report.child.id == child_id_obj).to_list()
+                logger.info(f"Found {len(child_reports)} reports using Beanie query")
+            except Exception as e:
+                logger.warning(f"Beanie query failed, falling back to manual filter: {e}")
+                child_reports = []
+            
+            # Fallback: fetch all and filter manually
+            if not child_reports:
+                all_reports = await Report.find_all().to_list()
+                child_reports = []
+                for r in all_reports:
+                    r_child_id = extract_id_from_link(r.child) if hasattr(r, 'child') else None
+                    if r_child_id == child_id_str:
+                        child_reports.append(r)
+                logger.info(f"Found {len(child_reports)} reports using manual filter")
+            
+            if not child_reports:
+                # No reports found - return empty analytics
+                logger.info(f"No reports found for child {child_id_str}. Returning empty analytics.")
+                return EmotionAnalyticsResponse(
+                    emotions=[],
+                    most_common_emotion=None,
+                    emotion_trends={},
+                    emotional_analysis=None,
+                    period_start=None,
+                    period_end=None,
+                    report_id=None
+                )
+            else:
+                # Sort by generated_at descending and get most recent
+                child_reports.sort(key=lambda x: x.generated_at, reverse=True)
+                report = child_reports[0]
+                logger.info(f"Using most recent report: {report.id}, generated at: {report.generated_at}")
+        
+        # Extract emotion data from report
+        insights = report.insights or {}
+        emotion_trends = insights.get("emotion_trends", {})
+        most_common_emotion = insights.get("most_common_emotion", None)
+        emotional_analysis = insights.get("emotional_analysis", None)
+        
+        # Convert emotion_trends dict to list format for pie chart
+        # Format: [{name: "Happy", value: 10}, {name: "Sad", value: 5}, ...]
+        emotions_list = []
+        if emotion_trends and isinstance(emotion_trends, dict):
+            for emotion_name, count in emotion_trends.items():
+                if isinstance(count, (int, float)) and count > 0:
+                    emotions_list.append({
+                        "name": emotion_name.capitalize(),
+                        "value": int(count)
+                    })
+        
+        # Sort by value descending for better visualization
+        emotions_list.sort(key=lambda x: x["value"], reverse=True)
+        
+        logger.info(f"Returning emotion analytics: {len(emotions_list)} emotions, most common: {most_common_emotion}")
+        
+        return EmotionAnalyticsResponse(
+            emotions=emotions_list,
+            most_common_emotion=most_common_emotion,
+            emotion_trends=emotion_trends,
+            emotional_analysis=emotional_analysis,
+            period_start=report.period_start,
+            period_end=report.period_end,
+            report_id=str(report.id)
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting emotion analytics: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get emotion analytics: {str(e)}"
+        )
 
 @router.post("/{child_id}/analyze-emotion-report", response_model=List[ChildTaskWithDetails])
 async def analyze_emotion_report_and_generate_tasks(

@@ -2,9 +2,10 @@ from fastapi import APIRouter, HTTPException, status, Depends
 from beanie import Link
 from app.models.report_models import Report
 from app.models.childtask_models import ChildTask, ChildTaskStatus
+from app.models.task_models import Task
 from app.models.interactionlog_models import InteractionLog
 from app.schemas.schemas import ReportPublic
-from app.dependencies import verify_child_ownership, extract_id_from_link, get_child_tasks_by_child
+from app.dependencies import verify_child_ownership, extract_id_from_link, get_child_tasks_by_child, fetch_link_or_get_object
 from app.models.child_models import Child
 from app.services.llm import generate_openai_response
 from app.models.user_models import User
@@ -159,6 +160,36 @@ async def _generate_report_internal(child: Child) -> Report:
             emotion = log.detected_emotion or "Neutral"
             emotion_counts[emotion] = emotion_counts.get(emotion, 0) + 1
     
+    # Analyze task patterns for emotion inference
+    # Group tasks by category and status to infer emotional state
+    task_category_breakdown = {}
+    for task in all_child_tasks:
+        if task.assigned_at and period_start <= task.assigned_at <= period_end:
+            # Get task category
+            task_obj = await fetch_link_or_get_object(task.task, Task) if task.task else None
+            category = task_obj.category.value if task_obj else (task.custom_category.value if task.custom_category else "Other")
+            
+            if category not in task_category_breakdown:
+                task_category_breakdown[category] = {
+                    "completed": 0,
+                    "in_progress": 0,
+                    "given_up": 0,
+                    "total": 0
+                }
+            
+            task_category_breakdown[category]["total"] += 1
+            if task.status == ChildTaskStatus.COMPLETED:
+                task_category_breakdown[category]["completed"] += 1
+            elif task.status in [ChildTaskStatus.ASSIGNED, ChildTaskStatus.IN_PROGRESS]:
+                task_category_breakdown[category]["in_progress"] += 1
+            elif task.status == ChildTaskStatus.GIVEUP:
+                task_category_breakdown[category]["given_up"] += 1
+    
+    # Calculate completion rate
+    total_tasks_in_period = sum(stats["total"] for stats in task_category_breakdown.values())
+    completed_tasks_in_period = sum(stats["completed"] for stats in task_category_breakdown.values())
+    completion_rate = (completed_tasks_in_period / total_tasks_in_period * 100) if total_tasks_in_period > 0 else 0
+    
     # Calculate age
     age = datetime.utcnow().year - child.birth_date.year
     if datetime.utcnow().month < child.birth_date.month or (
@@ -196,11 +227,43 @@ async def _generate_report_internal(child: Child) -> Report:
     
     # Use LLM to generate report
     system_instruction = (
-        "You are an expert child development analyst. "
+        "You are an expert child development analyst specializing in emotional intelligence and behavioral patterns. "
         "Analyze the provided child data and generate a comprehensive report with insights and suggestions. "
-        "Focus on emotional patterns, task completion patterns, and areas for improvement. "
+        "IMPORTANT: Even if there are no recorded emotions from interactions, you MUST infer emotional state from: "
+        "1. Task completion patterns (high completion = positive emotions, giveups = frustration) "
+        "2. Task categories (Social/Creativity tasks suggest positive engagement, Academic difficulty may indicate stress) "
+        "3. Completion rate trends (improving = confidence, declining = discouragement) "
+        "4. Child's personality, interests, and strengths "
+        "Always provide emotion_trends with at least 2-3 emotions inferred from task patterns, even if no direct emotion data exists. "
         "Return ONLY valid JSON, no markdown, no extra text."
     )
+    
+    # Build task details for emotion inference (only completed tasks in period)
+    task_details = []
+    for task in tasks_completed[:10]:  # Show up to 10 completed tasks
+        task_obj = await fetch_link_or_get_object(task.task, Task) if task.task else None
+        if task_obj:
+            task_details.append({
+                "title": task_obj.title,
+                "category": task_obj.category.value,
+                "difficulty": task_obj.difficulty,
+                "completed_at": task.completed_at.isoformat() if task.completed_at else None
+            })
+    
+    # If no tasks in period, use all tasks for context
+    if total_tasks_in_period == 0:
+        # Use all tasks for broader context
+        all_tasks_for_context = [ct for ct in all_child_tasks if ct.status == ChildTaskStatus.COMPLETED]
+        for task in all_tasks_for_context[:5]:  # Show up to 5 most recent completed tasks
+            task_obj = await fetch_link_or_get_object(task.task, Task) if task.task else None
+            if task_obj:
+                task_details.append({
+                    "title": task_obj.title,
+                    "category": task_obj.category.value,
+                    "difficulty": task_obj.difficulty,
+                    "completed_at": task.completed_at.isoformat() if task.completed_at else None,
+                    "note": "Completed outside this period"
+                })
     
     prompt = f"""
 Analyze the following child data and generate a comprehensive report:
@@ -216,34 +279,58 @@ CHILD INFORMATION:
 PERIOD: {period_start.strftime('%Y-%m-%d')} to {period_end.strftime('%Y-%m-%d')}
 
 TASK STATISTICS:
-- Completed: {len(tasks_completed)}
+- Completed: {len(tasks_completed)} (Completion Rate: {completion_rate:.1f}%)
 - In Progress: {len(tasks_in_progress)}
 - Given Up: {len(tasks_given_up)}
 
-EMOTION DISTRIBUTION:
-{json.dumps(emotion_counts, ensure_ascii=False, indent=2)}
+TASK BREAKDOWN BY CATEGORY:
+{json.dumps(task_category_breakdown, ensure_ascii=False, indent=2)}
+
+RECENT COMPLETED TASKS (for emotion inference):
+{json.dumps(task_details, ensure_ascii=False, indent=2)}
+
+RECORDED EMOTIONS FROM INTERACTIONS:
+{json.dumps(emotion_counts, ensure_ascii=False, indent=2) if emotion_counts else "No recorded emotions from interactions in this period."}
 
 RECENT INTERACTIONS (last 10):
-{json.dumps(interaction_logs[-10:] if len(interaction_logs) > 10 else interaction_logs, ensure_ascii=False, indent=2)}
+{json.dumps(interaction_logs[-10:] if len(interaction_logs) > 10 else interaction_logs, ensure_ascii=False, indent=2) if interaction_logs else "No interactions recorded in this period."}
+
+EMOTION INFERENCE GUIDELINES:
+1. If recorded emotions exist: Use them as primary source, but also consider task patterns for context
+2. If NO recorded emotions: Infer emotions from task patterns:
+   - High completion rate (>70%) + mostly Social/Creativity tasks → Happy, Excited, Confident
+   - High completion rate + Academic/Logic tasks → Proud, Satisfied, Determined
+   - Low completion rate (<50%) or many giveups → Frustrated, Discouraged, but also check if tasks are too difficult
+   - Improving completion rate over time → Growing confidence, Positive
+   - Many in-progress tasks → Engaged, Curious, Motivated
+   - Mix of categories completed → Balanced, Well-rounded, Content
+3. Consider child's personality: Active child completing Physical tasks → Energetic, Happy
+4. Consider age-appropriateness: Age-appropriate tasks completed → Confident, Successful
+5. ALWAYS provide at least 2-3 emotions with estimated percentages, even if inferred
 
 Generate a report with the following structure (JSON only):
 {{
-  "summary_text": "A comprehensive summary of the child's progress and emotional state (2-3 paragraphs)",
+  "summary_text": "A comprehensive summary of the child's progress and emotional state (2-3 paragraphs). If no direct emotion data, infer from task patterns.",
   "insights": {{
     "tasks_completed": {len(tasks_completed)},
     "tasks_verified": {len([t for t in tasks_completed if t.completed_at])},
-    "emotion_trends": {json.dumps(emotion_counts, ensure_ascii=False)},
-    "most_common_emotion": "The most frequently detected emotion",
-    "emotional_analysis": "Detailed analysis of emotional patterns and what they indicate",
-    "task_performance": "Analysis of task completion patterns",
-    "strengths": ["List of observed strengths"],
+    "emotion_trends": {{
+      "MUST provide a dictionary with at least 2-3 emotions and their estimated counts/percentages. "
+      "If no recorded emotions, infer from task completion patterns. "
+      "Example: {{'Happy': 40, 'Confident': 30, 'Engaged': 20}} or {{'Frustrated': 30, 'Determined': 25, 'Neutral': 20}} "
+      "based on task patterns. Use percentages that add up to roughly 100."
+    }},
+    "most_common_emotion": "The most frequently detected emotion OR the most likely inferred emotion from task patterns. NEVER return 'N/A' or 'None'.",
+    "emotional_analysis": "Detailed analysis of emotional patterns. If no recorded emotions, analyze inferred emotions from task completion patterns, categories, and completion rates. Explain what the task patterns suggest about the child's emotional state. NEVER say 'lack of recorded emotions' - instead, explain what the task data indicates about their feelings.",
+    "task_performance": "Analysis of task completion patterns, including which categories show strength and which need support",
+    "strengths": ["List of observed strengths based on task completion and patterns"],
     "areas_for_improvement": ["List of areas that need attention"]
   }},
   "suggestions": {{
     "focus": "Main focus area for next period",
     "recommended_activities": ["List of recommended activities"],
     "parenting_tips": ["List of parenting tips based on the analysis"],
-    "emotional_support": "Specific suggestions for emotional support"
+    "emotional_support": "Specific suggestions for emotional support based on inferred or recorded emotions"
   }}
 }}
 """
@@ -271,6 +358,94 @@ Generate a report with the following structure (JSON only):
             detail=f"Failed to parse report data: {str(e)}"
         )
     
+    # Ensure insights exist
+    insights = report_data.get("insights", {})
+    
+    # Fallback: If no emotion_trends or empty, infer from task patterns
+    emotion_trends = insights.get("emotion_trends", {})
+    if not emotion_trends or (isinstance(emotion_trends, dict) and len(emotion_trends) == 0):
+        logger.info(f"No emotion_trends from LLM, inferring from task patterns for child {child.name}")
+        # Infer emotions from task completion patterns
+        inferred_emotions = {}
+        
+        if completion_rate >= 70:
+            # High completion rate suggests positive emotions
+            if task_category_breakdown.get("Social", {}).get("completed", 0) > 0:
+                inferred_emotions["Happy"] = 40
+                inferred_emotions["Confident"] = 30
+            elif task_category_breakdown.get("Creativity", {}).get("completed", 0) > 0:
+                inferred_emotions["Excited"] = 35
+                inferred_emotions["Engaged"] = 30
+            else:
+                inferred_emotions["Satisfied"] = 35
+                inferred_emotions["Proud"] = 25
+            inferred_emotions["Motivated"] = 20
+        elif completion_rate >= 50:
+            # Moderate completion rate
+            inferred_emotions["Determined"] = 30
+            inferred_emotions["Neutral"] = 25
+            if len(tasks_given_up) > 0:
+                inferred_emotions["Frustrated"] = 20
+            else:
+                inferred_emotions["Hopeful"] = 20
+            inferred_emotions["Persistent"] = 15
+        else:
+            # Low completion rate
+            if len(tasks_given_up) > len(tasks_completed):
+                inferred_emotions["Frustrated"] = 35
+                inferred_emotions["Discouraged"] = 25
+            else:
+                inferred_emotions["Challenged"] = 30
+                inferred_emotions["Determined"] = 25
+            inferred_emotions["Neutral"] = 20
+            inferred_emotions["Hopeful"] = 15
+        
+        # Normalize to percentages (roughly)
+        total = sum(inferred_emotions.values())
+        if total > 0:
+            emotion_trends = {k: int((v / total) * 100) for k, v in inferred_emotions.items()}
+        else:
+            # Ultimate fallback: neutral state
+            emotion_trends = {"Neutral": 50, "Calm": 30, "Content": 20}
+        
+        logger.info(f"Inferred emotion_trends: {emotion_trends}")
+        insights["emotion_trends"] = emotion_trends
+    
+    # Ensure most_common_emotion exists
+    if not insights.get("most_common_emotion") or insights.get("most_common_emotion") in ["N/A", "None", "null"]:
+        if emotion_trends and isinstance(emotion_trends, dict):
+            most_common = max(emotion_trends.items(), key=lambda x: x[1])[0] if emotion_trends else "Neutral"
+            insights["most_common_emotion"] = most_common
+        else:
+            insights["most_common_emotion"] = "Neutral"
+    
+    # Ensure emotional_analysis doesn't say "lack of recorded emotions"
+    emotional_analysis = insights.get("emotional_analysis", "")
+    if "lack of recorded emotions" in emotional_analysis.lower() or "cannot be performed" in emotional_analysis.lower():
+        # Replace with task-based analysis
+        if completion_rate >= 70:
+            insights["emotional_analysis"] = (
+                f"Based on task completion patterns, {child.name} shows strong positive engagement. "
+                f"With a {completion_rate:.1f}% completion rate, the child demonstrates {insights.get('most_common_emotion', 'positive')} emotions "
+                f"and consistent motivation. The variety of completed tasks across different categories suggests "
+                f"a well-rounded emotional state and healthy curiosity."
+            )
+        elif completion_rate >= 50:
+            insights["emotional_analysis"] = (
+                f"Task completion patterns indicate {child.name} is working through challenges with determination. "
+                f"The {completion_rate:.1f}% completion rate shows persistence, though some tasks may be more challenging. "
+                f"The child appears {insights.get('most_common_emotion', 'focused')} and committed to improvement."
+            )
+        else:
+            insights["emotional_analysis"] = (
+                f"Task patterns suggest {child.name} may be facing some challenges, with a {completion_rate:.1f}% completion rate. "
+                f"This could indicate the need for more age-appropriate tasks or additional support. "
+                f"The child shows {insights.get('most_common_emotion', 'resilience')} in continuing to attempt tasks."
+            )
+    
+    # Update insights with fallback values
+    report_data["insights"] = insights
+    
     # Create report
     new_report = Report(
         child=Link(child, Child),
@@ -278,7 +453,7 @@ Generate a report with the following structure (JSON only):
         period_end=period_end,
         generated_at=datetime.utcnow(),
         summary_text=report_data.get("summary_text", ""),
-        insights=report_data.get("insights", {}),
+        insights=insights,
         suggestions=report_data.get("suggestions", {})
     )
     await new_report.insert()
