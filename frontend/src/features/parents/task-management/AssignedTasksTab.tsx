@@ -40,7 +40,7 @@ interface AssignedTasksTabProps {
 }
 
 const AssignedTasksTab = ({ onCountChange }: AssignedTasksTabProps) => {
-  const { children } = useChildContext();
+  const { children, loading: childrenLoading } = useChildContext();
   const queryClient = useQueryClient();
 
   // Fetch tasks from all children using React Query
@@ -130,9 +130,36 @@ const AssignedTasksTab = ({ onCountChange }: AssignedTasksTabProps) => {
     mutationFn: async ({ childTaskId, childId }: { childTaskId: string; childId: string }) => {
       await unassignTaskFromAPI(childId, childTaskId);
     },
+    onMutate: async ({ childTaskId }) => {
+      // Cancel outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ['assigned-tasks'] });
+      
+      // Snapshot previous value
+      const previousTasks = queryClient.getQueryData<typeof allTasks>(['assigned-tasks', children.map(c => c.id).sort().join(',')]);
+      
+      // Optimistically remove task from list
+      if (previousTasks) {
+        queryClient.setQueryData<typeof allTasks>(
+          ['assigned-tasks', children.map(c => c.id).sort().join(',')],
+          previousTasks.filter(({ task }) => task.id !== childTaskId)
+        );
+      }
+      
+      return { previousTasks };
+    },
+    onError: (_err, _variables, context) => {
+      // Rollback on error
+      if (context?.previousTasks) {
+        queryClient.setQueryData(
+          ['assigned-tasks', children.map(c => c.id).sort().join(',')],
+          context.previousTasks
+        );
+      }
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['assigned-tasks'] });
+      // Emit event and invalidate to ensure consistency
       TaskEvents.emit(TaskEvents.TASK_UNASSIGNED);
+      queryClient.invalidateQueries({ queryKey: ['assigned-tasks'] });
     },
   });
 
@@ -151,7 +178,42 @@ const AssignedTasksTab = ({ onCountChange }: AssignedTasksTabProps) => {
     mutationFn: async ({ childTaskId, childId }: { childTaskId: string; childId: string }) => {
       await rejectTaskVerificationFromAPI(childId, childTaskId);
     },
+    onMutate: async ({ childTaskId }) => {
+      // Cancel outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ['assigned-tasks'] });
+      
+      // Snapshot previous value
+      const previousTasks = queryClient.getQueryData<typeof allTasks>(['assigned-tasks', children.map(c => c.id).sort().join(',')]);
+      
+      // Optimistically update: change status from 'need_verify' to 'in_progress'
+      if (previousTasks) {
+        queryClient.setQueryData<typeof allTasks>(
+          ['assigned-tasks', children.map(c => c.id).sort().join(',')],
+          previousTasks.map(({ task, childId: cId }) => {
+            if (task.id === childTaskId) {
+              return {
+                task: { ...task, status: 'in_progress' as const },
+                childId: cId
+              };
+            }
+            return { task, childId: cId };
+          })
+        );
+      }
+      
+      return { previousTasks };
+    },
+    onError: (_err, _variables, context) => {
+      // Rollback on error
+      if (context?.previousTasks) {
+        queryClient.setQueryData(
+          ['assigned-tasks', children.map(c => c.id).sort().join(',')],
+          context.previousTasks
+        );
+      }
+    },
     onSuccess: () => {
+      // Refetch to ensure consistency
       queryClient.invalidateQueries({ queryKey: ['assigned-tasks'] });
     },
   });
@@ -276,6 +338,16 @@ const AssignedTasksTab = ({ onCountChange }: AssignedTasksTabProps) => {
       const childTaskId = task.id;
       const childId = task.childId; // Get childId from task data
       
+      // Debug logging
+      console.log('Verify task clicked:', {
+        childTaskId,
+        childId,
+        taskStatus: task.status,
+        taskTitle: task.task,
+        allTasksCount: allTasks.length,
+        matchingTask: allTasks.find(({ task: t }) => t.id === childTaskId)
+      });
+      
       // Validate required data
       if (!childTaskId) {
         toast.error('Task ID is missing. Please refresh the page and try again.');
@@ -286,22 +358,25 @@ const AssignedTasksTab = ({ onCountChange }: AssignedTasksTabProps) => {
         toast.error('Child ID is missing. Please refresh the page and try again.');
         // Try to find childId from allTasks
         const taskWithChild = allTasks.find(({ task: t }) => t.id === childTaskId);
+        console.log('Finding childId from allTasks:', { taskWithChild, childTaskId });
         if (taskWithChild?.childId) {
           await verifyTask(childTaskId, taskWithChild.childId);
           toast.success('Task verified successfully! Rewards have been awarded. 🎉');
           return;
         } else {
+          console.error('Could not find childId for task:', childTaskId);
           queryClient.invalidateQueries({ queryKey: ['assigned-tasks'] });
           return;
         }
       }
       
       // Check if task is in correct status for verification
-      if (task.status !== 'need_verify') {
-        toast.error(`Task cannot be verified. Current status: ${task.status}. Task must be in "need_verify" status.`);
+      if (task.status !== 'need-verify') {
+        toast.error(`Task cannot be verified. Current status: ${task.status}. Task must be in "need-verify" status.`);
         return;
       }
       
+      console.log('Calling verifyTask API:', { childId, childTaskId });
       await verifyTask(childTaskId, childId);
       toast.success('Task verified successfully! Rewards have been awarded. 🎉');
       // Tasks will auto-refresh via the hook
@@ -423,8 +498,8 @@ const AssignedTasksTab = ({ onCountChange }: AssignedTasksTabProps) => {
         </div>
       )}
 
-      {/* No Children */}
-      {children.length === 0 && !loading && (
+      {/* No Children - Only show when children are fully loaded and empty */}
+      {!childrenLoading && children.length === 0 && !loading && (
         <div className="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded-lg mb-4">
           <p className="text-sm">No children found. Please add a child first.</p>
         </div>

@@ -183,6 +183,9 @@ export const assignTask = async (
     due_date?: string;
     priority?: ChildTaskPriority;
     notes?: string;
+    custom_title?: string;
+    custom_reward_coins?: number;
+    custom_category?: TaskCategory;
   }
 ): Promise<ChildTaskWithDetails> => {
   const response = await axiosClient.post<ChildTaskWithDetails>(

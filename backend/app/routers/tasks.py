@@ -73,6 +73,9 @@ class AssignTaskRequest(BaseModel):
     due_date: Optional[str] = None  # Accept date string in YYYY-MM-DD format
     priority: Optional[ChildTaskPriority] = None
     notes: Optional[str] = None
+    custom_title: Optional[str] = None
+    custom_reward_coins: Optional[int] = None
+    custom_category: Optional[str] = None
 
 # Request schema for creating and assigning task in one step
 class CreateAndAssignTaskRequest(BaseModel):
@@ -387,7 +390,16 @@ async def assign_task_to_child(
 
     # Create new child task assignment (priority already validated above)
     try:
-        logger.info(f"Creating ChildTask with: child_id={child_id}, task_id={task_id}, priority={priority}, due_date={request.due_date}")
+        logger.info(f"Creating ChildTask with: child_id={child_id}, task_id={task_id}, priority={priority}, due_date={request.due_date}, custom_title={request.custom_title}, custom_reward_coins={request.custom_reward_coins}, custom_category={request.custom_category}")
+        
+        # Parse custom_category if provided
+        custom_category_enum = None
+        if request.custom_category:
+            try:
+                custom_category_enum = TaskCategory(request.custom_category)
+            except ValueError:
+                logger.warning(f"Invalid custom_category: {request.custom_category}, ignoring")
+        
         new_child_task = ChildTask(
             child=child,  # type: ignore
             task=task,  # type: ignore
@@ -395,7 +407,10 @@ async def assign_task_to_child(
             assigned_at=datetime.utcnow(),
             due_date=parse_date_string(request.due_date),
             priority=priority,
-            notes=request.notes
+            notes=request.notes,
+            custom_title=request.custom_title,
+            custom_reward_coins=request.custom_reward_coins,
+            custom_category=custom_category_enum
         )
         await new_child_task.insert()
         logger.info(f"Successfully assigned task {task_id} to child {child_id}, child_task_id={new_child_task.id}")
@@ -578,17 +593,30 @@ async def verify_task(
     """Verify/Approve a completed task - parent confirms child's work and awards rewards.
     PARENT ONLY: Only parents can verify and approve tasks."""
     try:
-        child_task = await ChildTask.get(child_task_id)
+        all_child_tasks = await get_child_tasks_by_child(child)
+        
+        # Search for task by ID
+        child_task = None
+        for ct in all_child_tasks:
+            if str(ct.id) == child_task_id:
+                child_task = ct
+                break
+        
+        if not child_task:
+            task_ids = [str(ct.id) for ct in all_child_tasks]
+            logger.error(f"Task ID {child_task_id} not found in child's {len(all_child_tasks)} tasks. Available IDs: {task_ids[:10]}")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Child task not found with ID: {child_task_id}. Please check the task ID and ensure it belongs to child {child_id}."
+            )
+    except HTTPException:
+        # Re-raise HTTPException
+        raise
     except Exception as e:
+        logger.error(f"Error finding child task: {e}", exc_info=True)
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Invalid child task ID format: {child_task_id}"
-        )
-    
-    if not child_task:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Child task not found with ID: {child_task_id}"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error finding task: {str(e)}"
         )
 
     
@@ -609,26 +637,21 @@ async def verify_task(
     child_task.completed_at = datetime.utcnow()
 
     # Award coins and badges - handle both Link and embedded task_data
+    # Use the same reliable method as other endpoints
     if child_task.task:
-        # Task from library
-        task_link = child_task.task
-        task_id_or_ref = getattr(task_link, "id", None) or getattr(task_link, "ref", None)
-        task_id_str = str(getattr(task_id_or_ref, "id", task_id_or_ref)) if task_id_or_ref is not None else None
-        if not task_id_str:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Task not found."
-            )
-        task_source = await Task.get(task_id_str)
+        # Task from library - fetch using the same method as get_child_tasks
+        task_source = await fetch_link_or_get_object(child_task.task, Task)
         if not task_source:
+            logger.error(f"Failed to fetch task from link for child_task {child_task_id}")
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="Task not found."
+                detail="Task not found in library."
             )
     elif child_task.task_data:
         # Custom embedded task
         task_source = child_task.task_data
     else:
+        logger.error(f"No task or task_data found for child_task {child_task_id}")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Task data not found."
@@ -662,7 +685,7 @@ async def verify_task(
     # Skills will be recalculated based on task completion history
     from app.routers.dashboard import update_child_skills
     asyncio.create_task(update_child_skills(child))
-    logger.info(f"🚀 Triggered background skills update for {child.name} after task verification")
+    logger.info(f"Triggered background skills update for {child.name} after task verification")
     
     return {"message": "Task verified successfully! Rewards have been awarded."}
 
@@ -1173,3 +1196,4 @@ async def get_completed_tasks(
         results = results[:limit]
     
     return results
+

@@ -11,6 +11,7 @@ import { assignTask } from '../../../api/services/taskService';
 import { useChildContext } from '../../../providers/ChildProvider';
 import { TaskEvents } from '../../../utils/events';
 import { getCategoryConfig, TASK_CATEGORY_LABELS, ICON_SIZES } from '../../../constants/taskConfig';
+import { mapToBackendCategory } from '../../../utils/taskMappers';
 
 interface AssignTaskModalProps {
   isOpen: boolean;
@@ -42,11 +43,15 @@ const AssignTaskModal = ({ isOpen, onClose, task, onSuccess }: AssignTaskModalPr
 
     setIsSubmitting(true);
     try {
-      // Assign task to child with due_date and priority
+      // Assign task to child with due_date, priority, and custom fields
+      // Only send custom fields if they differ from the original task values
       const result = await assignTask(formData.childId, task.id, {
         due_date: formData.dueDate || undefined,
         priority: formData.priority,
-        notes: undefined
+        notes: undefined,
+        custom_title: formData.taskName !== task.task ? formData.taskName : undefined,
+        custom_reward_coins: formData.reward !== task.suggestedReward ? formData.reward : undefined,
+        custom_category: formData.category !== task.category ? mapToBackendCategory(formData.category) : undefined
       });
 
       // Check if result is valid
@@ -55,18 +60,22 @@ const AssignTaskModal = ({ isOpen, onClose, task, onSuccess }: AssignTaskModalPr
         // Still proceed as task might have been assigned
       }
 
-      // Optimized: Only invalidate necessary queries, let React Query handle refetching
-      // Don't await refetch - let it happen in background for better UX
-      queryClient.invalidateQueries({ queryKey: ['assigned-tasks'] });
-      queryClient.invalidateQueries({ queryKey: ['task-library', formData.childId] });
-      queryClient.invalidateQueries({ queryKey: ['dashboard', formData.childId] });
+      // Invalidate and refetch queries to ensure fresh data
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['assigned-tasks'] }),
+        queryClient.invalidateQueries({ queryKey: ['task-library', formData.childId] }),
+        queryClient.invalidateQueries({ queryKey: ['dashboard', formData.childId] }),
+      ]);
+      
+      // Refetch assigned tasks immediately to show updated data
+      await queryClient.refetchQueries({ queryKey: ['assigned-tasks'] });
 
       // Emit events to notify components to refresh (they will handle their own refetching)
       TaskEvents.emit(TaskEvents.TASK_ASSIGNED, { childId: formData.childId });
       
       // Call success callback if provided (this will trigger tab switch)
       if (onSuccess) {
-        onSuccess();
+        await onSuccess();
       }
 
       onClose();

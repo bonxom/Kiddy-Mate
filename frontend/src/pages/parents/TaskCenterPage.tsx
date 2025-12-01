@@ -1,12 +1,13 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Plus, ListTodo, Library } from 'lucide-react';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQueryClient, useQuery } from '@tanstack/react-query';
 import Button from '../../components/ui/Button';
 import Badge from '../../components/ui/Badge';
 import AssignedTasksTab from '../../features/parents/task-management/AssignedTasksTab';
 import TaskLibraryTab from '../../features/parents/task-management/TaskLibraryTab';
 import CreateTaskModal from '../../features/parents/task-management/CreateTaskModal';
-import { ChildProvider } from '../../providers/ChildProvider';
+import { ChildProvider, useChild } from '../../providers/ChildProvider';
+import { getChildTasks } from '../../api/services/taskService';
 
 type TabType = 'assigned' | 'library';
 
@@ -16,6 +17,7 @@ const TaskCenterContent = () => {
   const [assignedCount, setAssignedCount] = useState(0);
   const [libraryCount, setLibraryCount] = useState(0);
   const queryClient = useQueryClient();
+  const { children, selectedChildId } = useChild();
 
   const handleTaskCreated = () => {
     // Switch to assigned tab and invalidate queries to refresh
@@ -27,11 +29,88 @@ const TaskCenterContent = () => {
   const handleTabHover = (tab: TabType) => {
     // Prefetch data when hovering over tab for faster switching
     if (tab === 'assigned') {
-      queryClient.prefetchQuery({ queryKey: ['assigned-tasks'] });
+      queryClient.prefetchQuery({ 
+        queryKey: ['assigned-tasks', children.map(c => c.id).sort().join(',')],
+        queryFn: async () => {
+          if (children.length === 0) return [];
+          const tasksPromises = children.map(async (child) => {
+            try {
+              const tasks = await getChildTasks(child.id);
+              return tasks.map(task => ({ task, childId: child.id }));
+            } catch (err) {
+              console.error(`Failed to fetch tasks for child ${child.id}:`, err);
+              return [];
+            }
+          });
+          const allTasksResults = await Promise.all(tasksPromises);
+          return allTasksResults.flat();
+        },
+      });
     } else {
-      queryClient.prefetchQuery({ queryKey: ['task-library'] });
+      if (selectedChildId) {
+        queryClient.prefetchQuery({ 
+          queryKey: ['task-library', selectedChildId],
+          queryFn: async () => {
+            return await getChildTasks(selectedChildId, { status: 'unassigned' });
+          },
+        });
+      }
     }
   };
+
+  // Prefetch library data when assigned tasks finish loading
+  const { data: assignedTasksData, isLoading: assignedTasksLoading } = useQuery({
+    queryKey: ['assigned-tasks', children.map(c => c.id).sort().join(',')],
+    queryFn: async () => {
+      if (children.length === 0) return [];
+      const tasksPromises = children.map(async (child) => {
+        try {
+          const tasks = await getChildTasks(child.id);
+          return tasks.map(task => ({ task, childId: child.id }));
+        } catch (err) {
+          console.error(`Failed to fetch tasks for child ${child.id}:`, err);
+          return [];
+        }
+      });
+      const allTasksResults = await Promise.all(tasksPromises);
+      return allTasksResults.flat();
+    },
+    enabled: children.length > 0,
+    staleTime: 0,
+    gcTime: 5 * 60 * 1000,
+  });
+
+  // Prefetch library data when assigned tasks finish loading
+  useEffect(() => {
+    if (!assignedTasksLoading && assignedTasksData !== undefined && selectedChildId) {
+      // Prefetch library data in background
+      queryClient.prefetchQuery({ 
+        queryKey: ['task-library', selectedChildId],
+        queryFn: async () => {
+          return await getChildTasks(selectedChildId, { status: 'unassigned' });
+        },
+      });
+    }
+  }, [assignedTasksLoading, assignedTasksData, selectedChildId, queryClient]);
+
+  // Calculate library count even when not on library tab
+  const { data: libraryTasksData } = useQuery({
+    queryKey: ['task-library', selectedChildId],
+    queryFn: async () => {
+      if (!selectedChildId) return [];
+      return await getChildTasks(selectedChildId, { status: 'unassigned' });
+    },
+    enabled: !!selectedChildId,
+    staleTime: 0,
+    gcTime: 5 * 60 * 1000,
+  });
+
+  // Update library count from prefetched data
+  useEffect(() => {
+    if (libraryTasksData !== undefined) {
+      setLibraryCount(libraryTasksData.length);
+    }
+  }, [libraryTasksData]);
 
   const tabs = [
     {

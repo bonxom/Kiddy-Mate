@@ -159,72 +159,6 @@ class EmotionAnalyticsResponse(BaseModel):
     period_end: Optional[datetime] = None
     report_id: Optional[str] = None
 
-@router.get("/{child_id}/reports/debug", response_model=Dict)
-async def debug_child_reports(
-    child_id: str,
-    child: Child = Depends(verify_child_ownership),
-    current_user: User = Depends(verify_parent_token)
-):
-    """
-    Debug endpoint to list all reports for a child.
-    Shows both Beanie query results and manual filter results for comparison.
-    """
-    child_id_str = str(child.id)
-    logger.info(f"Debug: Fetching reports for child_id: {child_id_str}")
-    
-    # Try Beanie query - use child ID instead of full object
-    beanie_reports = []
-    beanie_error = None
-    try:
-        child_id_obj = child.id
-        beanie_reports = await Report.find(Report.child.id == child_id_obj).to_list()
-        logger.info(f"Beanie query found {len(beanie_reports)} reports")
-    except Exception as e:
-        beanie_error = str(e)
-        logger.error(f"Beanie query failed: {e}")
-    
-    # Manual filter
-    all_reports = await Report.find_all().to_list()
-    manual_reports = []
-    for r in all_reports:
-        r_child_id = extract_id_from_link(r.child) if hasattr(r, 'child') else None
-        if r_child_id == child_id_str:
-            manual_reports.append(r)
-    
-    # Format results
-    def format_report(r: Report) -> Dict:
-        return {
-            "id": str(r.id),
-            "child_id": extract_id_from_link(r.child) if hasattr(r, 'child') else None,
-            "generated_at": r.generated_at.isoformat() if r.generated_at else None,
-            "period_start": r.period_start.isoformat() if r.period_start else None,
-            "period_end": r.period_end.isoformat() if r.period_end else None,
-        }
-    
-    result = {
-        "child_id": child_id_str,
-        "total_reports_in_db": len(all_reports),
-        "beanie_query": {
-            "count": len(beanie_reports),
-            "error": beanie_error,
-            "reports": [format_report(r) for r in beanie_reports]
-        },
-        "manual_filter": {
-            "count": len(manual_reports),
-            "reports": [format_report(r) for r in manual_reports]
-        },
-        "all_reports_sample": [
-            {
-                "id": str(r.id),
-                "child_id": extract_id_from_link(r.child) if hasattr(r, 'child') else None,
-                "generated_at": r.generated_at.isoformat() if r.generated_at else None,
-            }
-            for r in all_reports[:10]
-        ]
-    }
-    
-    return result
-
 @router.get("/{child_id}/emotion-analytics", response_model=EmotionAnalyticsResponse)
 async def get_emotion_analytics(
     child_id: str,
@@ -1013,7 +947,7 @@ async def update_child_skills(child: Child) -> bool:
         return True
         
     except Exception as e:
-        logger.error(f"❌ Failed to update skills for {child.name}: {e}", exc_info=True)
+        logger.error(f"Failed to update skills for {child.name}: {e}", exc_info=True)
         return False
 
 @router.post("/{child_id}/update-skills", response_model=Dict)
@@ -1070,12 +1004,12 @@ async def update_skills_for_all_children():
                 else:
                     skipped_count += 1
             except Exception as e:
-                logger.error(f"❌ Error updating skills for {child.name}: {e}")
+                logger.error(f"Error updating skills for {child.name}: {e}")
                 error_count += 1
                 continue
         
         logger.info(f"✅ Skills update completed: {updated_count} updated, {skipped_count} skipped, {error_count} errors")
         
     except Exception as e:
-        logger.error(f"❌ Critical error in skills update: {e}", exc_info=True)
+        logger.error(f"Critical error in skills update: {e}", exc_info=True)
         raise
