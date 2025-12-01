@@ -133,20 +133,26 @@ const RewardCenterPage = () => {
 
           {/* Tab Content */}
           <div className="p-6">
-            <div className="animate-fade-in" style={{ animationDelay: '0.1s' }}>
-              {activeTab === 'shop' ? (
+            {/* Shop Management Tab - Keep mounted but hidden when inactive */}
+            <div className={activeTab === 'shop' ? 'block' : 'hidden'}>
+              <div className="animate-fade-in" style={{ animationDelay: '0.1s' }}>
                 <ShopManagementTab 
                   isCreateModalOpen={isCreateModalOpen}
                   setIsCreateModalOpen={setIsCreateModalOpen}
                   onRewardsCountChange={handleRewardsCountChange}
                   refreshTrigger={refreshShopTrigger}
                 />
-              ) : (
+              </div>
+            </div>
+            
+            {/* Redemption Requests Tab - Keep mounted but hidden when inactive */}
+            <div className={activeTab === 'redemption' ? 'block' : 'hidden'}>
+              <div className="animate-fade-in" style={{ animationDelay: '0.1s' }}>
                 <RedemptionRequestsTab 
                   onPendingCountChange={handlePendingRequestsCountChange}
                   onRedemptionProcessed={handleRedemptionProcessed}
                 />
-              )}
+              </div>
             </div>
           </div>
         </div>

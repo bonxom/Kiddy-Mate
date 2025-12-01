@@ -28,9 +28,9 @@ const RedemptionRequestsTab = ({ onPendingCountChange, onRedemptionProcessed }: 
     queryFn: async () => {
       return await getRedemptionRequests();
     },
-    staleTime: 0, // Always consider data stale to allow immediate refetch
+    staleTime: 30 * 1000, // Consider data fresh for 30 seconds
     gcTime: 5 * 60 * 1000, // Keep in cache for 5 minutes
-    refetchOnMount: true, // Always refetch when component mounts
+    refetchOnMount: false, // Don't refetch if data is fresh (component stays mounted)
     refetchOnWindowFocus: false, // Don't refetch on window focus to avoid unnecessary calls
   });
 
@@ -209,7 +209,13 @@ const RedemptionRequestsTab = ({ onPendingCountChange, onRedemptionProcessed }: 
       </div>
 
       {/* Table */}
-      <div className="overflow-x-auto border border-gray-200 rounded-2xl shadow-soft">
+      <div 
+        className="overflow-x-auto border border-gray-200 rounded-2xl shadow-soft [&::-webkit-scrollbar]:hidden"
+        style={{
+          scrollbarWidth: 'none',
+          msOverflowStyle: 'none',
+        }}
+      >
         <style>{`
           @keyframes fadeIn {
             from { opacity: 0; transform: translateY(10px); }
