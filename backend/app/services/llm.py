@@ -25,9 +25,9 @@ def generate_openai_response(prompt: str, system_instruction: Optional[str] = No
     Returns:
         Generated text response
     """
-    api_key = settings.OPENAI_API_KEY
+    api_key = settings.NAVER_API_KEY
     if not api_key:
-        raise RuntimeError("OPENAI_API_KEY is not configured in environment variables")
+        raise RuntimeError("NAVER_API_KEY is not configured in environment variables")
     
     instruction = system_instruction or DEFAULT_SYSTEM_INSTRUCTION
     
@@ -64,7 +64,7 @@ def generate_openai_response(prompt: str, system_instruction: Optional[str] = No
     except Exception as e:
         error_msg = str(e)
         if "401" in error_msg or "Invalid API key" in error_msg:
-            raise RuntimeError(f"Invalid OpenAI API key. Please check your OPENAI_API_KEY in .env file.") from e
+            raise RuntimeError(f"Invalid OpenAI API key. Please check your NAVER_API_KEY in .env file.") from e
         elif "429" in error_msg or "quota" in error_msg.lower() or "rate limit" in error_msg.lower():
             raise RuntimeError(f"OpenAI API quota/rate limit exceeded. Please check your billing/quota settings.") from e
         else:
@@ -104,9 +104,9 @@ def analyze_assessment_with_chatgpt(
     Returns:
         Dictionary with overall_traits, explanations, and recommended_focus
     """
-    api_key = settings.OPENAI_API_KEY
+    api_key = settings.NAVER_API_KEY
     if not api_key:
-        raise RuntimeError("OPENAI_API_KEY is not configured in environment variables")
+        raise RuntimeError("NAVER_API_KEY is not configured in environment variables")
     
     # Build the prompt for OpenAI
     prompt = _build_assessment_prompt(child_info, assessment_answers, questions_data)
@@ -141,7 +141,7 @@ def analyze_assessment_with_chatgpt(
     except Exception as e:
         error_msg = str(e)
         if "401" in error_msg or "Invalid API key" in error_msg:
-            raise RuntimeError(f"Invalid OpenAI API key. Please check your OPENAI_API_KEY in .env file.") from e
+            raise RuntimeError(f"Invalid OpenAI API key. Please check your NAVER_API_KEY in .env file.") from e
         elif "429" in error_msg or "quota" in error_msg.lower() or "rate limit" in error_msg.lower():
             raise RuntimeError(f"OpenAI API quota/rate limit exceeded. Please check your billing/quota settings.") from e
         else:

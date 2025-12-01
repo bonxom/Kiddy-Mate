@@ -97,8 +97,8 @@ async def create_child(
         
         # Check if OpenAI API key is configured
         from app.config import settings
-        if not settings.OPENAI_API_KEY:
-            logging.warning(f"⚠️ OPENAI_API_KEY not configured. Using fallback calculation for {child.name}")
+        if not settings.NAVER_API_KEY:
+            logging.warning(f"⚠️ NAVER_API_KEY not configured. Using fallback calculation for {child.name}")
             initial_traits.update(_calculate_fallback_traits(assessment_answers))
         else:
             try:

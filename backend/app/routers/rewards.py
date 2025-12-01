@@ -3,7 +3,7 @@ from beanie import Link
 from app.models.reward_models import Reward, RewardType, ChildReward, RedemptionRequest
 from app.models.child_models import Child
 from app.models.user_models import User
-from app.dependencies import verify_child_ownership, get_current_user, verify_reward_ownership, get_user_children, extract_id_from_link
+from app.dependencies import verify_child_ownership, get_current_user, verify_reward_ownership, get_user_children, extract_id_from_link, fetch_link_or_get_object
 from typing import List, Optional
 from datetime import datetime
 from pydantic import BaseModel
@@ -255,18 +255,26 @@ async def get_redemption_requests(
     # Filter requests to only include those from user's children
     results = []
     for req in all_requests:
-        child = await req.child.fetch()
-        child_id = str(child.id)  # type: ignore
+        # Safely fetch child from Link
+        child = await fetch_link_or_get_object(req.child, Child)
+        if not child:
+            continue  # Skip if child not found
+        
+        child_id = str(child.id)
         
         # Only include if child belongs to current user
         if child_id in user_children_ids:
-            reward = await req.reward.fetch()
+            # Safely fetch reward from Link
+            reward = await fetch_link_or_get_object(req.reward, Reward)
+            if not reward:
+                continue  # Skip if reward not found
+            
             results.append({
                 "id": str(req.id),
-                "child": child.name,  # type: ignore
-                "childId": child_id,  # type: ignore
-                "rewardName": reward.name,  # type: ignore
-                "rewardId": str(reward.id),  # type: ignore
+                "child": child.name,
+                "childId": child_id,
+                "rewardName": reward.name,
+                "rewardId": str(reward.id),
                 "dateCreated": req.requested_at.strftime("%Y-%m-%d"),
                 "cost": req.cost_coins,
                 "status": req.status,
@@ -293,8 +301,20 @@ async def approve_redemption(
             detail=f"Request already {redemption.status}"
         )
     
-    child = await redemption.child.fetch()
-    reward = await redemption.reward.fetch()
+    # Safely fetch child and reward from Links
+    child = await fetch_link_or_get_object(redemption.child, Child)
+    if not child:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Child not found"
+        )
+    
+    reward = await fetch_link_or_get_object(redemption.reward, Reward)
+    if not reward:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Reward not found"
+        )
     
     # Verify child belongs to current user
     child_parent_id = extract_id_from_link(child.parent)  # type: ignore
@@ -368,7 +388,13 @@ async def reject_redemption(
         )
     
     # Verify child belongs to current user
-    child = await redemption.child.fetch()
+    child = await fetch_link_or_get_object(redemption.child, Child)
+    if not child:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Child not found"
+        )
+    
     child_parent_id = extract_id_from_link(child.parent)  # type: ignore
     current_user_id = str(current_user.id)
     if not child_parent_id or child_parent_id != current_user_id:

@@ -209,9 +209,9 @@ async def complete_onboarding(
         
         # Check if OpenAI API key is configured
         from app.config import settings
-        if not settings.OPENAI_API_KEY:
-            logging.warning(f"⚠️ OPENAI_API_KEY not configured. Using fallback calculation for {child_data.full_name}")
-            logging.warning("   Please set OPENAI_API_KEY in .env file to enable OpenAI analysis")
+        if not settings.NAVER_API_KEY:
+            logging.warning(f"⚠️ NAVER_API_KEY not configured. Using fallback calculation for {child_data.full_name}")
+            logging.warning("   Please set NAVER_API_KEY in .env file to enable OpenAI analysis")
             initial_traits.update(_calculate_fallback_traits(assessment_answers))
         else:
             try:
