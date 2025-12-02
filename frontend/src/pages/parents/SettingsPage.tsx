@@ -88,10 +88,25 @@ const SettingsPage = () => {
 
           {/* Tab Content */}
           <div className="p-6">
-            <div className="animate-fade-in" style={{ animationDelay: '0.1s' }}>
-              {activeTab === 'account' && <AccountSettingsTab />}
-              {activeTab === 'children' && <ChildProfilesTab />}
-              {activeTab === 'notifications' && <NotificationSettingsTab />}
+            {/* Account Settings Tab - Keep mounted but hidden when inactive */}
+            <div className={activeTab === 'account' ? 'block' : 'hidden'}>
+              <div className="animate-fade-in" style={{ animationDelay: '0.1s' }}>
+                <AccountSettingsTab />
+              </div>
+            </div>
+            
+            {/* Children Profiles Tab - Keep mounted but hidden when inactive */}
+            <div className={activeTab === 'children' ? 'block' : 'hidden'}>
+              <div className="animate-fade-in" style={{ animationDelay: '0.1s' }}>
+                <ChildProfilesTab />
+              </div>
+            </div>
+            
+            {/* Notification Settings Tab - Keep mounted but hidden when inactive */}
+            <div className={activeTab === 'notifications' ? 'block' : 'hidden'}>
+              <div className="animate-fade-in" style={{ animationDelay: '0.1s' }}>
+                <NotificationSettingsTab />
+              </div>
             </div>
           </div>
         </div>

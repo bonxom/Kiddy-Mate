@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 import ChildInfoStep from '../../onboarding/ChildInfoStep';
 import AssessmentStep from '../../onboarding/AssessmentStep';
+import EditChildForm from './EditChildForm';
 import type { ChildBasicInfo, ChildAssessment } from '../../../types/auth.types';
 import type { ChildProfile } from '../../../types/user.types';
 
@@ -10,10 +11,11 @@ interface ChildFormModalProps {
   isOpen: boolean;
   onClose: () => void;
   initialData?: ChildProfile | null;
-  onSave: (data: ChildProfile) => void;
+  onSave: (data: ChildProfile | Partial<ChildProfile>) => void;
+  mode?: 'add' | 'edit'; // Explicitly specify mode
 }
 
-const ChildFormModal = ({ isOpen, onClose, initialData, onSave }: ChildFormModalProps) => {
+const ChildFormModal = ({ isOpen, onClose, initialData, onSave, mode = 'add' }: ChildFormModalProps) => {
   const [step, setStep] = useState<'info' | 'assessment'>('info');
   const [basicInfo, setBasicInfo] = useState<ChildBasicInfo>({
     fullName: '', 
@@ -25,6 +27,9 @@ const ChildFormModal = ({ isOpen, onClose, initialData, onSave }: ChildFormModal
     favoriteTopics: []
   });
   const [assessment, setAssessment] = useState<ChildAssessment>({ answers: [] });
+
+  // Determine if we're in edit mode
+  const isEditMode = mode === 'edit' || (initialData !== null && initialData !== undefined);
 
   useEffect(() => {
     if (initialData) {
@@ -54,6 +59,20 @@ const ChildFormModal = ({ isOpen, onClose, initialData, onSave }: ChildFormModal
   }, [initialData, isOpen]);
 
   if (!isOpen) return null;
+
+  // Handler for edit form
+  const handleEditSave = (updates: Partial<ChildProfile>) => {
+    if (!initialData) return;
+    
+    // Merge updates with existing data
+    const updatedProfile: ChildProfile = {
+      ...initialData,
+      ...updates,
+    };
+    
+    onSave(updatedProfile);
+    onClose();
+  };
 
   const handleInfoComplete = (data: ChildBasicInfo) => {
     setBasicInfo(data);
@@ -94,41 +113,60 @@ const ChildFormModal = ({ isOpen, onClose, initialData, onSave }: ChildFormModal
         }
       `}</style>
 
-      <div className="bg-white rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto scrollbar-hide shadow-2xl relative">
+      <div className="bg-white rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto scrollbar-hide shadow-2xl relative border border-gray-100">
         {/* Header Modal */}
-        <div className="sticky top-0 bg-white/95 backdrop-blur p-4 border-b border-gray-100 flex justify-between items-center z-10">
-          <h2 className="text-xl font-bold text-gray-800">
-            {initialData ? `Edit Profile: ${initialData.nickname}` : 'Add New Child Profile'}
-          </h2>
+        <div className="sticky top-0 bg-white/95 backdrop-blur p-6 border-b border-gray-200 flex justify-between items-center z-10" style={{ background: 'linear-gradient(to right, rgba(255, 255, 255, 0.98), rgba(249, 250, 251, 0.98))' }}>
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900">
+              {initialData ? `Edit Profile: ${initialData.nickname}` : 'Add New Child Profile'}
+            </h2>
+            <p className="text-sm text-gray-500 mt-1">
+              {initialData ? 'Update your child\'s information' : 'Create a new learning path for your child'}
+            </p>
+          </div>
           <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
             <X className="w-6 h-6 text-gray-500" />
           </button>
         </div>
 
         {/* Body */}
-        <div className="p-6">
-          {step === 'info' ? (
-            <div className="[&>div]:shadow-none [&>div]:border-0"> 
-              <ChildInfoStep 
-                childNumber={1} 
-                totalChildren={1} 
-                initialData={basicInfo} 
-                onComplete={handleInfoComplete}
-                onBack={onClose}
+        <div className="p-6 bg-gray-50/30">
+          {isEditMode ? (
+            // Edit mode - simple form for basic info only
+            initialData && (
+              <EditChildForm
+                initialData={initialData}
+                onSave={handleEditSave}
+                onCancel={onClose}
               />
-            </div>
+            )
           ) : (
-            <div className="[&>div]:shadow-none [&>div]:border-0">
-              <AssessmentStep 
-                childNumber={1} 
-                totalChildren={1} 
-                childName={basicInfo.nickname || basicInfo.fullName}
-                dateOfBirth={basicInfo.dateOfBirth}
-                initialData={assessment}
-                onComplete={handleAssessmentComplete}
-                onBack={() => setStep('info')}
-              />
-            </div>
+            // Add mode - full onboarding flow
+            <>
+              {step === 'info' ? (
+                <div className="[&>div]:shadow-none [&>div]:border-0"> 
+                  <ChildInfoStep 
+                    childNumber={1} 
+                    totalChildren={1} 
+                    initialData={basicInfo} 
+                    onComplete={handleInfoComplete}
+                    onBack={onClose}
+                  />
+                </div>
+              ) : (
+                <div className="[&>div]:shadow-none [&>div]:border-0">
+                  <AssessmentStep 
+                    childNumber={1} 
+                    totalChildren={1} 
+                    childName={basicInfo.nickname || basicInfo.fullName}
+                    dateOfBirth={basicInfo.dateOfBirth}
+                    initialData={assessment}
+                    onComplete={handleAssessmentComplete}
+                    onBack={() => setStep('info')}
+                  />
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>

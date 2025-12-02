@@ -90,69 +90,94 @@ const ChildProfilesTab = () => {
   };
 
   // Xử lý LƯU (được gọi từ ChildFormModal khi ấn Save)
-  const handleSaveChild = async (childData: ChildProfile) => {
+  const handleSaveChild = async (childData: ChildProfile | Partial<ChildProfile>) => {
     try {
       setSaving(true);
       setError(null);
       
-      // Map frontend format to backend format
-      const backendData: any = {
-        name: childData.fullName,
-        birth_date: childData.dateOfBirth,
-        nickname: childData.nickname,
-        gender: childData.gender,
-        avatar_url: childData.avatar,
-        personality: childData.personality,
-        interests: childData.interests,
-        strengths: childData.strengths,
-        challenges: childData.challenges,
-        initial_traits: {},
-      };
-      
-      // If creating new child and has assessment data, include it for LLM analysis
-      if (!selectedChild && childData.assessment && childData.assessment.answers.length > 0) {
-        // Combine all assessment questions (same as onboarding)
-        const allQuestions = [...assessmentQuestionsPrimary, ...assessmentQuestionsSecondary];
+      if (selectedChild) {
+        // EDIT MODE - Only update provided fields (partial update)
+        const backendData: any = {};
         
-        // Convert assessment answers to backend format (same as onboarding)
-        const getCategoryAnswers = (category: string) => {
-          const answers = childData.assessment!.answers
-            .filter(a => {
-              const question = allQuestions.find(q => q.id === a.questionId);
-              return question?.category === category;
-            })
-            .reduce((acc, a) => {
-              if (a.rating != null) {
-                acc[a.questionId] = String(a.rating);
-              }
-              return acc;
-            }, {} as Record<string, string>);
-          return answers;
-        };
+        // Map only the fields that exist in childData
+        if ('fullName' in childData && childData.fullName) {
+          backendData.name = childData.fullName;
+        }
+        if ('nickname' in childData && childData.nickname) {
+          backendData.nickname = childData.nickname;
+        }
+        if ('interests' in childData && childData.interests) {
+          backendData.interests = childData.interests;
+        }
         
-        backendData.assessment = {
-          discipline_autonomy: getCategoryAnswers('discipline'),
-          emotional_intelligence: getCategoryAnswers('emotional'),
-          social_interaction: getCategoryAnswers('social'),
-        };
-        
-        // Include username and password if provided (for child account creation)
-        if (childData.username) {
+        // Handle credential updates (username/password)
+        if ('username' in childData && childData.username) {
           backendData.username = childData.username;
         }
-        if (childData.password) {
+        if ('password' in childData && childData.password) {
           backendData.password = childData.password;
         }
-      }
-      
-      if (selectedChild) {
+        
         // Update existing child
         await updateChild(selectedChild.id, backendData);
-        toast.success(`${childData.nickname} updated successfully!`);
+        toast.success(`${childData.nickname || selectedChild.nickname} updated successfully!`);
       } else {
+        // ADD MODE - Full child creation with assessment
+        const fullChildData = childData as ChildProfile;
+        
+        // Map frontend format to backend format
+        const backendData: any = {
+          name: fullChildData.fullName,
+          birth_date: fullChildData.dateOfBirth,
+          nickname: fullChildData.nickname,
+          gender: fullChildData.gender,
+          avatar_url: fullChildData.avatar,
+          personality: fullChildData.personality || [],
+          interests: fullChildData.interests || [],
+          strengths: fullChildData.strengths || [],
+          challenges: fullChildData.challenges || [],
+          initial_traits: {},
+        };
+        
+        // If has assessment data, include it for LLM analysis
+        if (fullChildData.assessment && fullChildData.assessment.answers.length > 0) {
+          // Combine all assessment questions (same as onboarding)
+          const allQuestions = [...assessmentQuestionsPrimary, ...assessmentQuestionsSecondary];
+          
+          // Convert assessment answers to backend format (same as onboarding)
+          const getCategoryAnswers = (category: string) => {
+            const answers = fullChildData.assessment!.answers
+              .filter(a => {
+                const question = allQuestions.find(q => q.id === a.questionId);
+                return question?.category === category;
+              })
+              .reduce((acc, a) => {
+                if (a.rating != null) {
+                  acc[a.questionId] = String(a.rating);
+                }
+                return acc;
+              }, {} as Record<string, string>);
+            return answers;
+          };
+          
+          backendData.assessment = {
+            discipline_autonomy: getCategoryAnswers('discipline'),
+            emotional_intelligence: getCategoryAnswers('emotional'),
+            social_interaction: getCategoryAnswers('social'),
+          };
+        }
+        
+        // Include username and password if provided (for child account creation)
+        if (fullChildData.username) {
+          backendData.username = fullChildData.username;
+        }
+        if (fullChildData.password) {
+          backendData.password = fullChildData.password;
+        }
+        
         // Create new child
         await createChild(backendData);
-        toast.success(`${childData.nickname} added successfully!`);
+        toast.success(`${fullChildData.nickname} added successfully!`);
       }
       
       // Refresh local list
@@ -217,35 +242,39 @@ const ChildProfilesTab = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-gray-500 text-sm">Loading children profiles...</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div>
+    <div className="space-y-6">
       {/* Error Alert */}
       {error && (
-        <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
+        <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 shadow-soft">
           {error}
         </div>
       )}
 
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h2 className="text-xl font-semibold text-gray-900">
-            Manage and Update Children's Profiles
+          <h2 className="text-2xl font-bold text-gray-900 mb-1">
+            Manage Children's Profiles
           </h2>
-          <p className="text-sm text-gray-500 mt-1">
+          <p className="text-gray-600 text-sm">
             Update personality & interests as they grow
           </p>
         </div>
         <Button
           onClick={handleAddClick}
-          className="flex items-center gap-2 bg-linear-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-md hover:shadow-lg transition-all"
+          icon={<Plus className="w-5 h-5" />}
+          size="md"
+          className="whitespace-nowrap shadow-md hover:shadow-lg"
         >
-          <Plus className="w-5 h-5" />
           Add Child Profile
         </Button>
       </div>
@@ -262,7 +291,7 @@ const ChildProfilesTab = () => {
         {children.map((child, index) => (
           <div
             key={child.id}
-            className="bg-white rounded-2xl shadow-soft overflow-hidden hover:shadow-strong hover:-translate-y-1 transition-all duration-300 border border-gray-100 group"
+            className="bg-white rounded-2xl shadow-soft overflow-hidden hover:shadow-strong hover:-translate-y-1 transition-all duration-300 border border-gray-100 group cursor-pointer"
             style={{ animation: `fadeIn 0.3s ease-in-out ${index * 0.1}s both` }}
           >
             {/* Avatar Section with Gradient */}
@@ -325,23 +354,25 @@ const ChildProfilesTab = () => {
 
               {/* Actions */}
               <div className="flex gap-2 pt-2">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => handleEditClick(child)}
-                  className="flex-1 flex items-center justify-center gap-1 hover:bg-purple-50 hover:border-purple-200 hover:text-purple-700"
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleEditClick(child);
+                  }}
+                  className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 text-sm font-semibold rounded-xl border-2 border-purple-300 text-purple-600 bg-white hover:bg-purple-50 hover:border-purple-400 hover:text-purple-700 transition-all duration-200 active:scale-95 shadow-soft hover:shadow-medium"
                 >
                   <Edit2 className="w-3.5 h-3.5" />
                   Edit
-                </Button>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => handleDeleteClick(child)}
-                  className="flex items-center justify-center text-gray-400 hover:text-red-600 hover:bg-red-50"
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDeleteClick(child);
+                  }}
+                  className="flex items-center justify-center px-3 py-1.5 text-sm font-semibold rounded-xl text-gray-400 hover:text-red-600 hover:bg-red-50 transition-all duration-200 active:scale-95 border border-transparent hover:border-red-200"
                 >
                   <Trash2 className="w-4 h-4" />
-                </Button>
+                </button>
               </div>
             </div>
           </div>
@@ -350,23 +381,32 @@ const ChildProfilesTab = () => {
         {/* Add New Card (Empty State Placeholder Style) */}
         <button 
           onClick={handleAddClick}
-          className="min-h-[300px] rounded-2xl border-2 border-dashed border-gray-300 shadow-soft flex flex-col items-center justify-center p-6 hover:border-purple-400 hover:bg-purple-50/30 hover:shadow-medium transition-all duration-300 group cursor-pointer active:scale-95"
+          className="min-h-[300px] rounded-2xl border-2 border-dashed border-gray-300 shadow-soft flex flex-col items-center justify-center p-6 hover:border-purple-400 hover:bg-gradient-to-br hover:from-purple-50 hover:to-blue-50 hover:shadow-medium transition-all duration-300 group cursor-pointer active:scale-95"
         >
-          <div className="w-16 h-16 rounded-full bg-gray-100 group-hover:bg-purple-100 flex items-center justify-center mb-4 transition-colors">
-            <Plus className="w-8 h-8 text-gray-400 group-hover:text-purple-600" />
+          <div className="w-16 h-16 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 group-hover:from-purple-100 group-hover:to-blue-100 flex items-center justify-center mb-4 transition-all duration-300 shadow-soft group-hover:shadow-md">
+            <Plus className="w-8 h-8 text-gray-400 group-hover:text-purple-600 transition-colors" />
           </div>
-          <p className="font-semibold text-gray-600 group-hover:text-purple-700">Add Another Child</p>
-          <p className="text-xs text-gray-400 mt-1">Create a new learning path</p>
+          <p className="font-semibold text-gray-600 group-hover:text-purple-700 transition-colors">Add Another Child</p>
+          <p className="text-xs text-gray-400 mt-1 group-hover:text-gray-500 transition-colors">Create a new learning path</p>
         </button>
       </div>
 
       {children.length === 0 && (
-        <div className="text-center py-12 text-gray-500">
-          <Sparkles className="w-16 h-16 mx-auto mb-4 text-gray-300" />
-          <p className="text-lg font-medium">No child profiles yet</p>
-          <p className="text-sm mt-2">
+        <div className="text-center py-16 bg-gray-50 rounded-2xl border-2 border-dashed border-gray-300">
+          <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gray-100 mb-4">
+            <Sparkles className="w-10 h-10 text-gray-400" />
+          </div>
+          <p className="text-lg font-semibold text-gray-700 mb-1">No child profiles yet</p>
+          <p className="text-sm text-gray-500 mb-4">
             Click "Add Child Profile" to start the journey!
           </p>
+          <Button
+            onClick={handleAddClick}
+            icon={<Plus className="w-5 h-5" />}
+            size="sm"
+          >
+            Add Your First Child
+          </Button>
         </div>
       )}
 

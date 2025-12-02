@@ -206,23 +206,29 @@ const NotificationSettingsTab = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-gray-500 text-sm">Loading notification settings...</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6 max-w-3xl">
+    <div className="space-y-6">
       {/* Error Alert */}
       {error && (
-        <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 shadow-soft">
+        <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 shadow-soft">
           {error}
         </div>
       )}
 
       {/* Title */}
       <div>
-        <h2 className="text-xl font-semibold text-gray-900">Notification Management</h2>
+        <h2 className="text-2xl font-bold text-gray-900 mb-1">
+          Notification Management
+        </h2>
+        <p className="text-gray-600 text-sm">Configure how and when you receive notifications</p>
       </div>
 
       {/* Email Notifications */}
@@ -314,7 +320,7 @@ const NotificationSettingsTab = () => {
       </Card>
 
       {/* Save Button */}
-      <div className="flex justify-end">
+      <div className="flex justify-end pt-4 border-t border-gray-200">
         <Button onClick={handleSave} disabled={saving}>
           {saving ? 'Saving...' : 'Save Settings'}
         </Button>

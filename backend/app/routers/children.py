@@ -206,7 +206,34 @@ async def update_child(
     if updated_child.challenges is not None:
         child.challenges = updated_child.challenges
     
+    # Handle username update
+    if updated_child.username is not None:
+        username = updated_child.username.strip()
+        if username:
+            # Check if username is already taken by another child
+            existing_child = await Child.find_one(Child.username == username)
+            if existing_child and str(existing_child.id) != child_id:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Username '{username}' is already taken. Please choose another username."
+                )
+            child.username = username
+        else:
+            # Empty username means remove it
+            child.username = None
+    
+    # Handle password update
+    if updated_child.password is not None:
+        password = updated_child.password.strip()
+        if password:
+            child.password_hash = hash_password(password)
+            logging.info(f"🔐 Password updated for child: {child.name}")
+        else:
+            # Empty password means remove it
+            child.password_hash = None
+    
     await child.save()
+    logging.info(f"✅ Child profile updated: {child.name} (ID: {child_id})")
     return _to_child_public(child)
 
 @router.post("/{child_id}/select", response_model=dict)

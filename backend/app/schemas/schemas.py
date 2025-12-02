@@ -53,6 +53,8 @@ class ChildUpdate(BaseModel):
     interests: Optional[list[str]] = None
     strengths: Optional[list[str]] = None
     challenges: Optional[list[str]] = None
+    username: Optional[str] = None  # For updating child login credentials
+    password: Optional[str] = None  # Plain password, will be hashed
 
 class ChildInDB(ChildBase):
     id: str

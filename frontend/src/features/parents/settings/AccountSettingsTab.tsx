@@ -195,7 +195,10 @@ const AccountSettingsTab = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-gray-500 text-sm">Loading profile...</p>
+        </div>
       </div>
     );
   }
@@ -203,13 +206,17 @@ const AccountSettingsTab = () => {
   if (!profile) {
     return (
       <div className="flex items-center justify-center h-64">
-        <p className="text-gray-500">Failed to load profile. Please refresh the page.</p>
+        <div className="text-center p-6 bg-red-50 border border-red-200 rounded-xl">
+          <AlertTriangle className="w-12 h-12 text-red-500 mx-auto mb-3" />
+          <p className="text-gray-700 font-medium mb-1">Failed to load profile</p>
+          <p className="text-gray-500 text-sm">Please refresh the page or try again later</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6 max-w-6xl">
+    <div className="space-y-6">
       {/* Error Alert */}
       {error && (
         <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 shadow-soft">
@@ -230,15 +237,16 @@ const AccountSettingsTab = () => {
 
       {/* Title */}
       <div>
-        <h2 className="text-xl font-semibold text-gray-900">
+        <h2 className="text-2xl font-bold text-gray-900 mb-1">
           Parent Account Information
         </h2>
+        <p className="text-gray-600 text-sm">Manage your personal information and security settings</p>
       </div>
 
       {/* Two Column Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Column 1: Personal Information */}
-        <Card title="Personal Information" padding="md">
+        <Card title="Personal Information" padding="md" className="border-l-4 border-l-blue-500">
           <div className="space-y-4">
             <Input
               label="Display Name"
@@ -279,7 +287,7 @@ const AccountSettingsTab = () => {
         </Card>
 
         {/* Column 2: Security */}
-        <Card title="Security" subtitle="Change Password" padding="md">
+        <Card title="Security" subtitle="Change Password" padding="md" className="border-l-4 border-l-purple-500">
           <form onSubmit={handleUpdatePassword} className="space-y-4">
             <Input
               label="Current Password"
@@ -344,7 +352,7 @@ const AccountSettingsTab = () => {
       </div>
 
       {/* Block 3: Danger Zone */}
-      <Card padding="md" className="border-2 border-red-200 bg-red-50/30 shadow-soft">
+      <Card padding="md" className="border-2 border-red-200 bg-red-50/30 shadow-soft border-l-4 border-l-red-500">
         <div className="space-y-4">
           <div className="p-4 bg-red-50 border border-red-200 rounded-xl">
             <h3 className="text-lg font-semibold text-red-600 mb-2 flex items-center gap-2">
