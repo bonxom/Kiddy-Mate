@@ -134,3 +134,26 @@ async def get_interaction_logs(
         ]
     
     return {"emotions": emotions}
+
+@router.get("/{child_id}/interact/history", response_model=List[Dict[str, Any]])
+async def get_interaction_history(
+    child_id: str,
+    limit: Optional[int] = 20,
+    child: Child = Depends(verify_child_ownership)
+):
+    """
+    Get full interaction history (chat logs) for a child.
+    Returns list of interactions with user_input, avatar_response, timestamp, and detected_emotion.
+    """
+    logs = await InteractionLog.find({"child.$id": child.id}).sort(-InteractionLog.timestamp).limit(limit or 20).to_list()
+    
+    return [
+        {
+            "id": str(log.id),
+            "timestamp": log.timestamp.isoformat(),
+            "user_input": log.user_input,
+            "avatar_response": log.avatar_response,
+            "detected_emotion": log.detected_emotion or "Neutral"
+        }
+        for log in logs
+    ]

@@ -1041,6 +1041,104 @@ async def seed_database():
             detected_emotion="Curious",
             timestamp=now - timedelta(hours=4)
         ),
+        InteractionLog(
+            child=Link(emma, Child),
+            user_input="I got a new sticker today!",
+            avatar_response="That's wonderful! Stickers are so fun to collect. What kind of sticker was it?",
+            detected_emotion="Happy",
+            timestamp=now - timedelta(hours=3, minutes=30)
+        ),
+        InteractionLog(
+            child=Link(emma, Child),
+            user_input="Can you tell me a story?",
+            avatar_response="Of course! Once upon a time, there was a brave little girl who loved to explore... Would you like me to continue?",
+            detected_emotion="Curious",
+            timestamp=now - timedelta(hours=2, minutes=45)
+        ),
+        InteractionLog(
+            child=Link(emma, Child),
+            user_input="I'm worried about my test tomorrow",
+            avatar_response="It's normal to feel worried before a test. You've been studying hard, and I believe in you! Want to practice together?",
+            detected_emotion="Worried",
+            timestamp=now - timedelta(hours=2, minutes=15)
+        ),
+        InteractionLog(
+            child=Link(emma, Child),
+            user_input="I drew a picture of you!",
+            avatar_response="Aww, that's so sweet! I'd love to see it. Drawing is such a wonderful way to express yourself! 🎨",
+            detected_emotion="Proud",
+            timestamp=now - timedelta(hours=1, minutes=50)
+        ),
+        InteractionLog(
+            child=Link(emma, Child),
+            user_input="What's your favorite color?",
+            avatar_response="I love all colors, but I'm particularly fond of blue and purple! What about you? What's your favorite?",
+            detected_emotion="Curious",
+            timestamp=now - timedelta(hours=1, minutes=20)
+        ),
+        InteractionLog(
+            child=Link(emma, Child),
+            user_input="I'm so excited for the weekend!",
+            avatar_response="Weekends are the best! What fun things are you planning to do? I'm excited for you too! 🎉",
+            detected_emotion="Excited",
+            timestamp=now - timedelta(hours=45, minutes=30)
+        ),
+        InteractionLog(
+            child=Link(emma, Child),
+            user_input="My friend was mean to me today",
+            avatar_response="I'm sorry that happened. That must have felt hurtful. Would you like to talk about it? Sometimes friends have bad days too.",
+            detected_emotion="Sad",
+            timestamp=now - timedelta(hours=30, minutes=15)
+        ),
+        InteractionLog(
+            child=Link(emma, Child),
+            user_input="I learned a new word today!",
+            avatar_response="That's fantastic! Learning new words is like collecting treasures for your mind. What word did you learn?",
+            detected_emotion="Proud",
+            timestamp=now - timedelta(hours=20, minutes=10)
+        ),
+        InteractionLog(
+            child=Link(emma, Child),
+            user_input="Can we count together?",
+            avatar_response="Absolutely! Let's count: 1, 2, 3... How high can we go? This is great practice for your math skills!",
+            detected_emotion="Happy",
+            timestamp=now - timedelta(hours=15, minutes=5)
+        ),
+        InteractionLog(
+            child=Link(emma, Child),
+            user_input="I'm scared of the dark",
+            avatar_response="It's okay to feel scared sometimes. Many children feel that way. Would you like some tips to help you feel braver?",
+            detected_emotion="Scared",
+            timestamp=now - timedelta(hours=10, minutes=40)
+        ),
+        InteractionLog(
+            child=Link(emma, Child),
+            user_input="I want to be a teacher when I grow up!",
+            avatar_response="What a wonderful dream! Teachers help others learn and grow. I think you'd be an amazing teacher! 🌟",
+            detected_emotion="Excited",
+            timestamp=now - timedelta(hours=5, minutes=25)
+        ),
+        InteractionLog(
+            child=Link(emma, Child),
+            user_input="I'm angry because I lost my toy",
+            avatar_response="I understand you're feeling angry. Losing something important can be really frustrating. Let's think about where you last saw it.",
+            detected_emotion="Angry",
+            timestamp=now - timedelta(hours=3, minutes=50)
+        ),
+        InteractionLog(
+            child=Link(emma, Child),
+            user_input="Thank you for being my friend",
+            avatar_response="You're so welcome! I'm honored to be your friend. You're such a kind and wonderful person! 💕",
+            detected_emotion="Happy",
+            timestamp=now - timedelta(minutes=45)
+        ),
+        InteractionLog(
+            child=Link(emma, Child),
+            user_input="What do robots eat?",
+            avatar_response="Haha, that's a funny question! Robots don't eat food like we do - they need electricity to work. But I love your curiosity!",
+            detected_emotion="Curious",
+            timestamp=now - timedelta(minutes=20)
+        ),
         
         
         # Lucas's interactions
@@ -1093,6 +1191,104 @@ async def seed_database():
             detected_emotion="Neutral",
             timestamp=now - timedelta(hours=2)
         ),
+        InteractionLog(
+            child=Link(lucas, Child),
+            user_input="I want to build a computer",
+            avatar_response="Wow, that's an ambitious project! Building computers is really cool. What kind of computer do you want to build?",
+            detected_emotion="Excited",
+            timestamp=now - timedelta(hours=1, minutes=40)
+        ),
+        InteractionLog(
+            child=Link(lucas, Child),
+            user_input="Why is the sky blue?",
+            avatar_response="Great question! The sky looks blue because of how sunlight scatters in the atmosphere. Want to learn more about it?",
+            detected_emotion="Curious",
+            timestamp=now - timedelta(hours=1, minutes=10)
+        ),
+        InteractionLog(
+            child=Link(lucas, Child),
+            user_input="I'm frustrated with this puzzle",
+            avatar_response="It's okay to feel frustrated. Puzzles can be tricky! Let's take a break and come back to it with fresh eyes.",
+            detected_emotion="Frustrated",
+            timestamp=now - timedelta(hours=50, minutes=30)
+        ),
+        InteractionLog(
+            child=Link(lucas, Child),
+            user_input="I won the science fair!",
+            avatar_response="Congratulations! That's an amazing achievement! You must be so proud of yourself. Tell me about your project! 🏆",
+            detected_emotion="Proud",
+            timestamp=now - timedelta(hours=40, minutes=20)
+        ),
+        InteractionLog(
+            child=Link(lucas, Child),
+            user_input="Can you explain how robots work?",
+            avatar_response="Robots are machines that can follow instructions and do tasks. They use sensors, motors, and computer programs. Want to learn more?",
+            detected_emotion="Curious",
+            timestamp=now - timedelta(hours=35, minutes=15)
+        ),
+        InteractionLog(
+            child=Link(lucas, Child),
+            user_input="I'm worried about making mistakes",
+            avatar_response="Everyone makes mistakes - that's how we learn! Even the smartest people make mistakes. What matters is that we try again.",
+            detected_emotion="Worried",
+            timestamp=now - timedelta(hours=25, minutes=45)
+        ),
+        InteractionLog(
+            child=Link(lucas, Child),
+            user_input="I built a tower with blocks",
+            avatar_response="That sounds awesome! Building things helps develop your problem-solving skills. How tall did you make it?",
+            detected_emotion="Proud",
+            timestamp=now - timedelta(hours=18, minutes=30)
+        ),
+        InteractionLog(
+            child=Link(lucas, Child),
+            user_input="Math is my favorite subject",
+            avatar_response="That's wonderful! Math is like solving puzzles and mysteries. I'm glad you enjoy it! Keep up the great work!",
+            detected_emotion="Happy",
+            timestamp=now - timedelta(hours=12, minutes=20)
+        ),
+        InteractionLog(
+            child=Link(lucas, Child),
+            user_input="I don't understand this problem",
+            avatar_response="That's okay! Let's work through it together step by step. What part is confusing you?",
+            detected_emotion="Frustrated",
+            timestamp=now - timedelta(hours=8, minutes=10)
+        ),
+        InteractionLog(
+            child=Link(lucas, Child),
+            user_input="Can we do more science experiments?",
+            avatar_response="Absolutely! Science experiments are so much fun! They help us understand how the world works. What would you like to try?",
+            detected_emotion="Excited",
+            timestamp=now - timedelta(hours=6, minutes=35)
+        ),
+        InteractionLog(
+            child=Link(lucas, Child),
+            user_input="I'm scared of thunderstorms",
+            avatar_response="Thunderstorms can be loud and scary, but they're actually just nature's way of balancing things. You're safe inside!",
+            detected_emotion="Scared",
+            timestamp=now - timedelta(hours=4, minutes=50)
+        ),
+        InteractionLog(
+            child=Link(lucas, Child),
+            user_input="I want to be a scientist",
+            avatar_response="That's an amazing goal! Scientists discover new things and help make the world better. I think you'd be great at it! 🔬",
+            detected_emotion="Excited",
+            timestamp=now - timedelta(hours=2, minutes=25)
+        ),
+        InteractionLog(
+            child=Link(lucas, Child),
+            user_input="I'm angry because I can't solve this",
+            avatar_response="I understand you're feeling angry. Sometimes when things are hard, we need to take a break. Want to try a different approach?",
+            detected_emotion="Angry",
+            timestamp=now - timedelta(hours=1, minutes=15)
+        ),
+        InteractionLog(
+            child=Link(lucas, Child),
+            user_input="Thank you for helping me learn",
+            avatar_response="You're very welcome! I love helping you learn. You're doing such a great job! Keep asking questions! 🌟",
+            detected_emotion="Happy",
+            timestamp=now - timedelta(minutes=30)
+        ),
         
         
         # Sophia's interactions
@@ -1131,6 +1327,104 @@ async def seed_database():
             detected_emotion="Excited",
             timestamp=now - timedelta(hours=1)
         ),
+        InteractionLog(
+            child=Link(sophia, Child),
+            user_input="I made a new friend at school!",
+            avatar_response="That's wonderful! Making new friends is so exciting! What's your new friend's name?",
+            detected_emotion="Excited",
+            timestamp=now - timedelta(hours=55, minutes=20)
+        ),
+        InteractionLog(
+            child=Link(sophia, Child),
+            user_input="I can do a cartwheel now!",
+            avatar_response="Wow! That's amazing! Cartwheels are so fun. You must have practiced really hard! 🎉",
+            detected_emotion="Proud",
+            timestamp=now - timedelta(hours=48, minutes=10)
+        ),
+        InteractionLog(
+            child=Link(sophia, Child),
+            user_input="Why do we have to go to bed early?",
+            avatar_response="Sleep helps our bodies and brains grow strong! When we sleep well, we have more energy to play and learn!",
+            detected_emotion="Curious",
+            timestamp=now - timedelta(hours=42, minutes=30)
+        ),
+        InteractionLog(
+            child=Link(sophia, Child),
+            user_input="I'm so happy today!",
+            avatar_response="I'm so glad you're happy! Your happiness makes me happy too! What made you feel so good today? 😊",
+            detected_emotion="Happy",
+            timestamp=now - timedelta(hours=36, minutes=15)
+        ),
+        InteractionLog(
+            child=Link(sophia, Child),
+            user_input="Can we sing a song together?",
+            avatar_response="I'd love to sing with you! Music is so joyful. What song would you like to sing? 🎵",
+            detected_emotion="Excited",
+            timestamp=now - timedelta(hours=28, minutes=45)
+        ),
+        InteractionLog(
+            child=Link(sophia, Child),
+            user_input="I'm worried about my dance recital",
+            avatar_response="It's normal to feel worried before performing! But you've practiced so much, and I know you'll do great!",
+            detected_emotion="Worried",
+            timestamp=now - timedelta(hours=22, minutes=20)
+        ),
+        InteractionLog(
+            child=Link(sophia, Child),
+            user_input="I helped mommy cook dinner!",
+            avatar_response="That's so helpful! Cooking together is such a fun way to spend time. What did you help make? 👨‍🍳",
+            detected_emotion="Proud",
+            timestamp=now - timedelta(hours=16, minutes=50)
+        ),
+        InteractionLog(
+            child=Link(sophia, Child),
+            user_input="I want to be a ballerina!",
+            avatar_response="What a beautiful dream! Ballerinas are so graceful and strong. Keep practicing your dance moves! 💃",
+            detected_emotion="Excited",
+            timestamp=now - timedelta(hours=11, minutes=35)
+        ),
+        InteractionLog(
+            child=Link(sophia, Child),
+            user_input="I'm sad because my friend moved away",
+            avatar_response="I'm sorry your friend moved away. That must feel really sad. You can still be friends even when far apart!",
+            detected_emotion="Sad",
+            timestamp=now - timedelta(hours=7, minutes=25)
+        ),
+        InteractionLog(
+            child=Link(sophia, Child),
+            user_input="Can we play hide and seek?",
+            avatar_response="Hide and seek is so much fun! Ready or not, here I come! Where's a good hiding spot? 🎮",
+            detected_emotion="Excited",
+            timestamp=now - timedelta(hours=4, minutes=10)
+        ),
+        InteractionLog(
+            child=Link(sophia, Child),
+            user_input="I'm scared of big dogs",
+            avatar_response="It's okay to feel scared. Some dogs are big, but most are friendly when we're calm. Would you like tips on meeting dogs?",
+            detected_emotion="Scared",
+            timestamp=now - timedelta(hours=2, minutes=40)
+        ),
+        InteractionLog(
+            child=Link(sophia, Child),
+            user_input="I shared my snack with a friend",
+            avatar_response="That's so kind of you! Sharing shows you're a great friend. How did it make you feel? 💕",
+            detected_emotion="Happy",
+            timestamp=now - timedelta(minutes=55)
+        ),
+        InteractionLog(
+            child=Link(sophia, Child),
+            user_input="I'm angry because I can't find my toy",
+            avatar_response="I understand you're feeling angry. Let's take a deep breath and think about where you last played with it.",
+            detected_emotion="Angry",
+            timestamp=now - timedelta(minutes=25)
+        ),
+        InteractionLog(
+            child=Link(sophia, Child),
+            user_input="What's your favorite game?",
+            avatar_response="I love all games, but I especially enjoy games that help us learn and have fun together! What's yours?",
+            detected_emotion="Curious",
+            timestamp=now - timedelta(minutes=10)
+        ),
         
         
         # Alex's interactions
@@ -1154,6 +1448,118 @@ async def seed_database():
             avatar_response="I'm glad you think so! Math can be really fun when you understand it. Keep up the great work!",
             detected_emotion="Curious",
             timestamp=now - timedelta(days=1, hours=2)
+        ),
+        InteractionLog(
+            child=Link(alex, Child),
+            user_input="I learned how to code today!",
+            avatar_response="That's fantastic! Coding is like giving instructions to computers. What did you create? 💻",
+            detected_emotion="Proud",
+            timestamp=now - timedelta(hours=22, minutes=30)
+        ),
+        InteractionLog(
+            child=Link(alex, Child),
+            user_input="Can you help me with my project?",
+            avatar_response="Of course! I'd be happy to help. What kind of project are you working on?",
+            detected_emotion="Curious",
+            timestamp=now - timedelta(hours=19, minutes=15)
+        ),
+        InteractionLog(
+            child=Link(alex, Child),
+            user_input="I'm excited about the school trip!",
+            avatar_response="School trips are so much fun! Where are you going? I bet you'll learn lots of interesting things! 🎒",
+            detected_emotion="Excited",
+            timestamp=now - timedelta(hours=15, minutes=45)
+        ),
+        InteractionLog(
+            child=Link(alex, Child),
+            user_input="I'm worried I won't do well on the test",
+            avatar_response="It's normal to feel worried, but you've been studying hard! Remember, doing your best is what matters most.",
+            detected_emotion="Worried",
+            timestamp=now - timedelta(hours=12, minutes=20)
+        ),
+        InteractionLog(
+            child=Link(alex, Child),
+            user_input="I finished all my homework!",
+            avatar_response="Excellent work! Finishing all your homework shows great responsibility. You should be proud! 🌟",
+            detected_emotion="Proud",
+            timestamp=now - timedelta(hours=9, minutes=50)
+        ),
+        InteractionLog(
+            child=Link(alex, Child),
+            user_input="Why do we need to learn history?",
+            avatar_response="Great question! History helps us understand how the world became what it is today. It's like a story of our past!",
+            detected_emotion="Curious",
+            timestamp=now - timedelta(hours=6, minutes=35)
+        ),
+        InteractionLog(
+            child=Link(alex, Child),
+            user_input="I'm frustrated with this coding problem",
+            avatar_response="Coding can be tricky sometimes! When we get stuck, it helps to break the problem into smaller parts. Want to try?",
+            detected_emotion="Frustrated",
+            timestamp=now - timedelta(hours=4, minutes=10)
+        ),
+        InteractionLog(
+            child=Link(alex, Child),
+            user_input="I want to build a video game",
+            avatar_response="That's an awesome goal! Building games combines creativity and logic. What kind of game would you make? 🎮",
+            detected_emotion="Excited",
+            timestamp=now - timedelta(hours=2, minutes=55)
+        ),
+        InteractionLog(
+            child=Link(alex, Child),
+            user_input="I'm sad because I lost my game",
+            avatar_response="I'm sorry you lost. Losing can feel disappointing, but remember - every game is a chance to learn and improve!",
+            detected_emotion="Sad",
+            timestamp=now - timedelta(hours=1, minutes=30)
+        ),
+        InteractionLog(
+            child=Link(alex, Child),
+            user_input="Can you explain how computers work?",
+            avatar_response="Computers are amazing! They use electricity to process information and follow instructions. Want to learn more?",
+            detected_emotion="Curious",
+            timestamp=now - timedelta(hours=50, minutes=20)
+        ),
+        InteractionLog(
+            child=Link(alex, Child),
+            user_input="I'm scared of making mistakes",
+            avatar_response="Everyone makes mistakes - that's how we learn! Even the best programmers make mistakes. What matters is trying again!",
+            detected_emotion="Scared",
+            timestamp=now - timedelta(hours=38, minutes=15)
+        ),
+        InteractionLog(
+            child=Link(alex, Child),
+            user_input="I'm angry because my code doesn't work",
+            avatar_response="I understand you're feeling angry. Debugging code can be frustrating. Let's look at it together step by step.",
+            detected_emotion="Angry",
+            timestamp=now - timedelta(hours=25, minutes=40)
+        ),
+        InteractionLog(
+            child=Link(alex, Child),
+            user_input="I helped my friend with homework",
+            avatar_response="That's so kind of you! Helping others is a wonderful thing to do. How did it make you feel?",
+            detected_emotion="Happy",
+            timestamp=now - timedelta(hours=14, minutes=25)
+        ),
+        InteractionLog(
+            child=Link(alex, Child),
+            user_input="What's the biggest number?",
+            avatar_response="That's a fun question! Numbers go on forever - there's no biggest number! Want to explore really big numbers?",
+            detected_emotion="Curious",
+            timestamp=now - timedelta(hours=8, minutes=5)
+        ),
+        InteractionLog(
+            child=Link(alex, Child),
+            user_input="I want to be a programmer",
+            avatar_response="That's a fantastic goal! Programmers create amazing things with code. Keep learning and practicing! 💻",
+            detected_emotion="Excited",
+            timestamp=now - timedelta(minutes=40)
+        ),
+        InteractionLog(
+            child=Link(alex, Child),
+            user_input="Thank you for teaching me",
+            avatar_response="You're so welcome! I love helping you learn. You're doing such a great job asking questions! 🌟",
+            detected_emotion="Happy",
+            timestamp=now - timedelta(minutes=15)
         ),
     ]
     

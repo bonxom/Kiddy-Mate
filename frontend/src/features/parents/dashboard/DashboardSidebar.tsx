@@ -10,6 +10,7 @@ import { analyzeEmotionReportAndGenerateTasks } from '../../../api/services/dash
 import Button from '../../../components/ui/Button';
 import { useQueryClient } from '@tanstack/react-query';
 import ReportsList from './ReportsList';
+import ChatHistory from './ChatHistory';
 import toast from 'react-hot-toast';
 
 interface DashboardSidebarProps {
@@ -159,6 +160,9 @@ const DashboardSidebar = ({ skillData, onViewReport }: DashboardSidebarProps) =>
 
       {/* Reports List */}
       <ReportsList onViewReport={onViewReport} />
+
+      {/* Chat History */}
+      <ChatHistory />
 
       {/* Calendar Block */}
       <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-4 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300">

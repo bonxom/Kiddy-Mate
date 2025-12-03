@@ -23,6 +23,14 @@ export interface ChatResponse {
   avatar_response: string;
 }
 
+export interface ChatHistoryItem {
+  id: string;
+  timestamp: string;
+  user_input: string;
+  avatar_response: string;
+  detected_emotion: string;
+}
+
 /**
  * Send chat message to avatar
  */
@@ -50,7 +58,23 @@ export const getEmotionData = async (
   return response.data.emotions;
 };
 
+/**
+ * Get full chat history (interaction logs) for a child
+ * Returns list of conversations with user input, avatar response, timestamp, and emotion
+ */
+export const getChatHistory = async (
+  childId: string,
+  limit: number = 20
+): Promise<ChatHistoryItem[]> => {
+  const response = await axiosClient.get<ChatHistoryItem[]>(
+    `/children/${childId}/interact/history`,
+    { params: { limit } }
+  );
+  return response.data;
+};
+
 export default {
   sendChat,
   getEmotionData,
+  getChatHistory,
 };
