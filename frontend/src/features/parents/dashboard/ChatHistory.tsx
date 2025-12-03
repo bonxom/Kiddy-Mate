@@ -24,12 +24,28 @@ const ChatHistory = () => {
   const [showScrollIndicator, setShowScrollIndicator] = useState(false);
 
   // Fetch chat history from API
-  const { data: chatHistory, isLoading } = useQuery({
+  const { data: chatHistory, isLoading, error } = useQuery({
     queryKey: ['chat-history', selectedChildId],
-    queryFn: () => getChatHistory(selectedChildId!, 20),
+    queryFn: async () => {
+      const data = await getChatHistory(selectedChildId!, 20);
+      console.log('ChatHistory - Fetched data:', data);
+      console.log('ChatHistory - Data length:', data?.length);
+      return data;
+    },
     enabled: !!selectedChildId && isExpanded,
     staleTime: 30000, // Cache for 30 seconds
   });
+
+  // Debug logging
+  useEffect(() => {
+    if (isExpanded && selectedChildId) {
+      console.log('ChatHistory - Expanded:', isExpanded);
+      console.log('ChatHistory - Selected Child ID:', selectedChildId);
+      console.log('ChatHistory - Data:', chatHistory);
+      console.log('ChatHistory - Is Loading:', isLoading);
+      console.log('ChatHistory - Error:', error);
+    }
+  }, [isExpanded, selectedChildId, chatHistory, isLoading, error]);
 
   // Check if scrollable and show indicator
   useEffect(() => {

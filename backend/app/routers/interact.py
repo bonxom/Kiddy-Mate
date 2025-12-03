@@ -145,9 +145,28 @@ async def get_interaction_history(
     Get full interaction history (chat logs) for a child.
     Returns list of interactions with user_input, avatar_response, timestamp, and detected_emotion.
     """
-    logs = await InteractionLog.find({"child.$id": child.id}).sort(-InteractionLog.timestamp).limit(limit or 20).to_list()
+    from app.dependencies import extract_id_from_link
     
-    return [
+    logger.info(f"Fetching interaction history for child_id: {child_id}, child.id: {child.id}")
+    
+    # Fetch all logs and filter by child ID (more reliable than query with Link)
+    all_logs = await InteractionLog.find_all().to_list()
+    child_id_str = str(child.id)
+    
+    # Filter logs for this child
+    child_logs = []
+    for log in all_logs:
+        log_child_id = extract_id_from_link(log.child) if hasattr(log, 'child') else None
+        if log_child_id == child_id_str:
+            child_logs.append(log)
+    
+    # Sort by timestamp descending and limit
+    child_logs.sort(key=lambda x: x.timestamp, reverse=True)
+    child_logs = child_logs[:limit or 20]
+    
+    logger.info(f"Found {len(child_logs)} interaction logs for child {child_id} (from {len(all_logs)} total logs)")
+    
+    result = [
         {
             "id": str(log.id),
             "timestamp": log.timestamp.isoformat(),
@@ -155,5 +174,8 @@ async def get_interaction_history(
             "avatar_response": log.avatar_response,
             "detected_emotion": log.detected_emotion or "Neutral"
         }
-        for log in logs
+        for log in child_logs
     ]
+    
+    logger.info(f"Returning {len(result)} interaction logs")
+    return result
