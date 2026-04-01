@@ -30,6 +30,49 @@ class RewardUpdate(BaseModel):
 class RedemptionRequestCreate(BaseModel):
     reward_id: str
 
+
+def _serialize_reward_payload(reward: Reward) -> dict:
+    return {
+        "id": str(reward.id),
+        "name": reward.name,
+        "description": reward.description,
+        "type": reward.type,
+        "image_url": reward.image_url,
+        "cost_coins": reward.cost_coins,
+        "stock_quantity": reward.stock_quantity,
+        "is_active": reward.is_active,
+        # Backward-compatible aliases used by older frontend code.
+        "url_thumbnail": reward.image_url,
+        "cost": reward.cost_coins,
+        "remain": reward.stock_quantity,
+    }
+
+
+def _serialize_redemption_request_payload(
+    redemption_request: RedemptionRequest,
+    *,
+    child: Child,
+    reward: Reward,
+) -> dict:
+    requested_at = redemption_request.requested_at.strftime("%Y-%m-%d")
+    return {
+        "id": str(redemption_request.id),
+        "child_name": child.name,
+        "child_id": str(child.id),
+        "reward_name": reward.name,
+        "reward_id": str(reward.id),
+        "requested_at": requested_at,
+        "cost_coins": redemption_request.cost_coins,
+        "status": redemption_request.status,
+        # Backward-compatible aliases.
+        "child": child.name,
+        "childId": str(child.id),
+        "rewardName": reward.name,
+        "rewardId": str(reward.id),
+        "dateCreated": requested_at,
+        "cost": redemption_request.cost_coins,
+    }
+
 async def get_all_rewards(
     is_active: Optional[bool] = None,
     type: Optional[RewardType] = None,
@@ -57,19 +100,7 @@ async def get_all_rewards(
             if created_by_id == current_user_id:
                 filtered_rewards.append(r)
     
-    return [
-        {
-            "id": str(r.id),
-            "name": r.name,
-            "description": r.description,
-            "type": r.type,
-            "url_thumbnail": r.image_url,  
-            "cost": r.cost_coins,           
-            "remain": r.stock_quantity,     
-            "is_active": r.is_active,
-        }
-        for r in filtered_rewards
-    ]
+    return [_serialize_reward_payload(reward) for reward in filtered_rewards]
 
 async def create_reward(
     reward_data: RewardCreate,
@@ -88,16 +119,7 @@ async def create_reward(
     )
     await reward.insert()
     
-    return {
-        "id": str(reward.id),
-        "name": reward.name,
-        "description": reward.description,
-        "type": reward.type,
-        "url_thumbnail": reward.image_url,
-        "cost": reward.cost_coins,
-        "remain": reward.stock_quantity,
-        "is_active": reward.is_active,
-    }
+    return _serialize_reward_payload(reward)
 
 async def update_reward(
     reward_id: str,
@@ -125,16 +147,7 @@ async def update_reward(
     
     await reward.save()
     
-    return {
-        "id": str(reward.id),
-        "name": reward.name,
-        "description": reward.description,
-        "type": reward.type,
-        "url_thumbnail": reward.image_url,
-        "cost": reward.cost_coins,
-        "remain": reward.stock_quantity,
-        "is_active": reward.is_active,
-    }
+    return _serialize_reward_payload(reward)
 
 async def delete_reward(
     reward_id: str,
@@ -159,9 +172,11 @@ async def update_reward_quantity(
     reward.stock_quantity = max(0, reward.stock_quantity + delta)
     await reward.save()
     
+    payload = _serialize_reward_payload(reward)
     return {
-        "id": str(reward.id),
-        "remain": reward.stock_quantity,
+        "id": payload["id"],
+        "stock_quantity": payload["stock_quantity"],
+        "remain": payload["remain"],
     }
 
 async def request_redemption(
@@ -260,16 +275,13 @@ async def get_redemption_requests(
             if not reward:
                 continue  # Skip if reward not found
             
-            results.append({
-                "id": str(req.id),
-                "child": child.name,
-                "childId": child_id,
-                "rewardName": reward.name,
-                "rewardId": str(reward.id),
-                "dateCreated": req.requested_at.strftime("%Y-%m-%d"),
-                "cost": req.cost_coins,
-                "status": req.status,
-            })
+            results.append(
+                _serialize_redemption_request_payload(
+                    req,
+                    child=child,
+                    reward=reward,
+                )
+            )
     
     return results
 
