@@ -4,6 +4,7 @@
  */
 
 import axiosClient from '../client/axiosClient';
+import { parentApi } from '../parentApi';
 
 export interface AssessmentAnswers {
   [key: string]: number | string | null; // Backend returns string, frontend converts to number
@@ -39,7 +40,7 @@ export const getAssessments = async (
   childId: string
 ): Promise<ChildAssessment[]> => {
   const response = await axiosClient.get<ChildAssessment[]>(
-    `/children/${childId}/assessments`
+    parentApi.assessments.list(childId)
   );
   return response.data;
 };
@@ -62,7 +63,7 @@ export const getAssessment = async (
   assessmentId: string
 ): Promise<ChildAssessment> => {
   const response = await axiosClient.get<ChildAssessment>(
-    `/children/${childId}/assessments/${assessmentId}`
+    parentApi.assessments.detail(childId, assessmentId)
   );
   return response.data;
 };
@@ -75,7 +76,7 @@ export const createAssessment = async (
   data: CreateAssessmentRequest
 ): Promise<ChildAssessment> => {
   const response = await axiosClient.post<ChildAssessment>(
-    `/children/${childId}/assessments`,
+    parentApi.assessments.create(childId),
     data
   );
   return response.data;
@@ -90,7 +91,7 @@ export const updateAssessment = async (
   data: UpdateAssessmentRequest
 ): Promise<ChildAssessment> => {
   const response = await axiosClient.put<ChildAssessment>(
-    `/children/${childId}/assessments/${assessmentId}`,
+    parentApi.assessments.update(childId, assessmentId),
     data
   );
   return response.data;

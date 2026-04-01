@@ -4,6 +4,7 @@
  */
 
 import axiosClient from '../client/axiosClient';
+import { parentApi } from '../parentApi';
 
 export interface Report {
   id: string;
@@ -19,7 +20,7 @@ export interface Report {
  * Get all reports for a child
  */
 export const getReports = async (childId: string): Promise<Report[]> => {
-  const response = await axiosClient.get<Report[]>(`/reports/${childId}`);
+  const response = await axiosClient.get<Report[]>(parentApi.reports.list(childId));
   return response.data;
 };
 
@@ -30,7 +31,7 @@ export const getReport = async (
   childId: string,
   reportId: string
 ): Promise<Report> => {
-  const response = await axiosClient.get<Report>(`/reports/${childId}/${reportId}`);
+  const response = await axiosClient.get<Report>(parentApi.reports.detail(childId, reportId));
   return response.data;
 };
 
@@ -47,7 +48,7 @@ export const getLatestReport = async (childId: string): Promise<Report | null> =
  * Collects data from tasks, interactions, and emotions, then uses LLM to analyze and create insights
  */
 export const generateReport = async (childId: string): Promise<Report> => {
-  const response = await axiosClient.post<Report>(`/reports/${childId}/generate`);
+  const response = await axiosClient.post<Report>(parentApi.reports.generate(childId));
   return response.data;
 };
 

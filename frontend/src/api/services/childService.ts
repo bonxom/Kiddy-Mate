@@ -4,6 +4,7 @@
  */
 
 import axiosClient from '../client/axiosClient';
+import { parentApi } from '../parentApi';
 
 export interface Child {
   id: string;
@@ -45,7 +46,7 @@ export interface CreateChildRequest {
  * Get all children for current parent
  */
 export const getChildren = async (): Promise<Child[]> => {
-  const response = await axiosClient.get<Child[]>('/children');
+  const response = await axiosClient.get<Child[]>(parentApi.children.list);
   return response.data;
 };
 
@@ -53,7 +54,7 @@ export const getChildren = async (): Promise<Child[]> => {
  * Get single child by ID
  */
 export const getChild = async (childId: string): Promise<Child> => {
-  const response = await axiosClient.get<Child>(`/children/${childId}`);
+  const response = await axiosClient.get<Child>(parentApi.children.detail(childId));
   return response.data;
 };
 
@@ -61,7 +62,7 @@ export const getChild = async (childId: string): Promise<Child> => {
  * Create new child profile
  */
 export const createChild = async (data: CreateChildRequest): Promise<Child> => {
-  const response = await axiosClient.post<Child>('/children', data);
+  const response = await axiosClient.post<Child>(parentApi.children.create, data);
   return response.data;
 };
 
@@ -72,7 +73,7 @@ export const updateChild = async (
   childId: string,
   data: CreateChildRequest
 ): Promise<Child> => {
-  const response = await axiosClient.put<Child>(`/children/${childId}`, data);
+  const response = await axiosClient.put<Child>(parentApi.children.update(childId), data);
   return response.data;
 };
 
@@ -80,7 +81,7 @@ export const updateChild = async (
  * Delete child
  */
 export const deleteChild = async (childId: string): Promise<{ message: string }> => {
-  const response = await axiosClient.delete<{ message: string }>(`/children/${childId}`);
+  const response = await axiosClient.delete<{ message: string }>(parentApi.children.delete(childId));
   return response.data;
 };
 
@@ -89,7 +90,7 @@ export const deleteChild = async (childId: string): Promise<{ message: string }>
  */
 export const selectChild = async (childId: string): Promise<{ message: string }> => {
   const response = await axiosClient.post<{ message: string }>(
-    `/children/${childId}/select`
+    parentApi.children.select(childId)
   );
   return response.data;
 };

@@ -1,4 +1,5 @@
 import axiosClient from '../client/axiosClient';
+import { parentApi } from '../parentApi';
 
 // ==================== TYPES ====================
 
@@ -45,7 +46,7 @@ export const completeOnboarding = async (
   data: OnboardingRequest
 ): Promise<OnboardingResponse> => {
   const response = await axiosClient.post<OnboardingResponse>(
-    '/onboarding/complete',
+    parentApi.onboarding.complete,
     data
   );
   return response.data;

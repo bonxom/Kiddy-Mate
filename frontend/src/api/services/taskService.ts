@@ -4,6 +4,7 @@
  */
 
 import axiosClient from '../client/axiosClient';
+import { parentApi } from '../parentApi';
 
 // Updated to match backend TaskCategory enum (8 categories)
 export type TaskCategory =
@@ -113,7 +114,7 @@ export interface GetChildTasksParams {
  * Get all available tasks in library
  */
 export const getAllTasks = async (): Promise<Task[]> => {
-  const response = await axiosClient.get<Task[]>('/tasks');
+  const response = await axiosClient.get<Task[]>(parentApi.taskLibrary.list);
   return response.data;
 };
 
@@ -121,7 +122,7 @@ export const getAllTasks = async (): Promise<Task[]> => {
  * Create custom task
  */
 export const createTask = async (task: TaskCreate): Promise<Task> => {
-  const response = await axiosClient.post<Task>('/tasks', task);
+  const response = await axiosClient.post<Task>(parentApi.taskLibrary.create, task);
   return response.data;
 };
 
@@ -129,7 +130,7 @@ export const createTask = async (task: TaskCreate): Promise<Task> => {
  * Update task details
  */
 export const updateTask = async (taskId: string, task: TaskUpdate): Promise<Task> => {
-  const response = await axiosClient.put<Task>(`/tasks/${taskId}`, task);
+  const response = await axiosClient.put<Task>(parentApi.taskLibrary.update(taskId), task);
   return response.data;
 };
 
@@ -137,7 +138,7 @@ export const updateTask = async (taskId: string, task: TaskUpdate): Promise<Task
  * Delete task from library (cascade delete assigned tasks)
  */
 export const deleteTask = async (taskId: string): Promise<{ message: string }> => {
-  const response = await axiosClient.delete<{ message: string }>(`/tasks/${taskId}`);
+  const response = await axiosClient.delete<{ message: string }>(parentApi.taskLibrary.delete(taskId));
   return response.data;
 };
 
@@ -149,9 +150,7 @@ export const deleteTask = async (taskId: string): Promise<{ message: string }> =
  * Get suggested tasks for child (max 5, excludes already assigned)
  */
 export const getSuggestedTasks = async (childId: string): Promise<Task[]> => {
-  const response = await axiosClient.get<Task[]>(
-    `/children/${childId}/tasks/suggested`
-  );
+  const response = await axiosClient.get<Task[]>(parentApi.childTasks.suggested(childId));
   return response.data;
 };
 
@@ -167,7 +166,7 @@ export const getChildTasks = async (
   params?: GetChildTasksParams
 ): Promise<ChildTaskWithDetails[]> => {
   const response = await axiosClient.get<ChildTaskWithDetails[]>(
-    `/children/${childId}/tasks`,
+    parentApi.childTasks.list(childId),
     { params }
   );
   return response.data;
@@ -189,7 +188,7 @@ export const assignTask = async (
   }
 ): Promise<ChildTaskWithDetails> => {
   const response = await axiosClient.post<ChildTaskWithDetails>(
-    `/children/${childId}/tasks/${taskId}/assign`,
+    parentApi.childTasks.assign(childId, taskId),
     params || {}
   );
   return response.data;
@@ -203,7 +202,7 @@ export const createAndAssignTask = async (
   request: CreateAndAssignTaskRequest
 ): Promise<ChildTaskWithDetails> => {
   const response = await axiosClient.post<ChildTaskWithDetails>(
-    `/children/${childId}/tasks/create-and-assign`,
+    parentApi.childTasks.createAndAssign(childId),
     request
   );
   return response.data;
@@ -218,7 +217,7 @@ export const updateAssignedTask = async (
   updates: ChildTaskUpdate
 ): Promise<ChildTaskWithDetails> => {
   const response = await axiosClient.put<ChildTaskWithDetails>(
-    `/children/${childId}/tasks/${childTaskId}`,
+    parentApi.childTasks.update(childId, childTaskId),
     updates
   );
   return response.data;
@@ -232,7 +231,7 @@ export const unassignTask = async (
   childTaskId: string
 ): Promise<{ message: string }> => {
   const response = await axiosClient.delete<{ message: string }>(
-    `/children/${childId}/tasks/${childTaskId}`
+    parentApi.childTasks.delete(childId, childTaskId)
   );
   return response.data;
 };
@@ -249,7 +248,7 @@ export const completeTask = async (
   childTaskId: string
 ): Promise<{ message: string }> => {
   const response = await axiosClient.post<{ message: string }>(
-    `/children/${childId}/tasks/${childTaskId}/complete`
+    parentApi.childTasks.complete(childId, childTaskId)
   );
   return response.data;
 };
@@ -262,7 +261,7 @@ export const verifyTask = async (
   childTaskId: string
 ): Promise<{ message: string }> => {
   const response = await axiosClient.post<{ message: string }>(
-    `/children/${childId}/tasks/${childTaskId}/verify`
+    parentApi.childTasks.verify(childId, childTaskId)
   );
   return response.data;
 };
@@ -275,7 +274,7 @@ export const rejectTaskVerification = async (
   childTaskId: string
 ): Promise<{ message: string }> => {
   const response = await axiosClient.post<{ message: string }>(
-    `/children/${childId}/tasks/${childTaskId}/reject`
+    parentApi.childTasks.reject(childId, childTaskId)
   );
   return response.data;
 };
@@ -288,7 +287,7 @@ export const checkTaskStatus = async (
   taskId: string
 ): Promise<{ status: ChildTaskStatus }> => {
   const response = await axiosClient.get<{ status: ChildTaskStatus }>(
-    `/children/${childId}/tasks/${taskId}/status`
+    parentApi.childTasks.status(childId, taskId)
   );
   return response.data;
 };
@@ -301,7 +300,7 @@ export const giveupTask = async (
   taskId: string
 ): Promise<{ message: string; status: string }> => {
   const response = await axiosClient.post<{ message: string; status: string }>(
-    `/children/${childId}/tasks/${taskId}/giveup`
+    parentApi.childTasks.giveup(childId, taskId)
   );
   return response.data;
 };
@@ -314,7 +313,7 @@ export const getUnassignedTasks = async (
   category?: TaskCategory
 ): Promise<ChildTaskWithDetails[]> => {
   const response = await axiosClient.post<ChildTaskWithDetails[]>(
-    `/children/${childId}/tasks/unassigned`,
+    parentApi.childTasks.unassigned(childId),
     {},
     { params: category ? { category } : undefined }
   );
@@ -329,7 +328,7 @@ export const getGiveupTasks = async (
   category?: TaskCategory
 ): Promise<ChildTaskWithDetails[]> => {
   const response = await axiosClient.post<ChildTaskWithDetails[]>(
-    `/children/${childId}/tasks/giveup`,
+    parentApi.childTasks.giveupList(childId),
     {},
     { params: category ? { category } : undefined }
   );
@@ -344,7 +343,7 @@ export const getCompletedTasks = async (
   limit?: number
 ): Promise<ChildTaskWithDetails[]> => {
   const response = await axiosClient.get<ChildTaskWithDetails[]>(
-    `/children/${childId}/tasks/completed`,
+    parentApi.childTasks.completed(childId),
     { params: limit ? { limit } : undefined }
   );
   return response.data;

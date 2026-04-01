@@ -1,4 +1,5 @@
 import axiosClient from '../client/axiosClient';
+import { childApi } from '../childApi';
 
 // ==================== TYPES ====================
 
@@ -24,7 +25,7 @@ export const loginChild = async (
   credentials: ChildLoginCredentials
 ): Promise<ChildLoginResponse> => {
   const response = await axiosClient.post<ChildLoginResponse>(
-    '/auth/child/login',
+    childApi.auth.login,
     credentials
   );
   return response.data;

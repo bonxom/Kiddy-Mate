@@ -2,6 +2,7 @@ from beanie import Document, Link
 from datetime import datetime
 from typing import Optional, Dict, List
 from pydantic import Field
+from app.core.time import utc_now
 from app.models.user_models import User
 
 class Child(Document):
@@ -33,7 +34,7 @@ class ChildDevelopmentAssessment(Document):
     discipline_autonomy: Dict[str, Optional[str]]
     emotional_intelligence: Dict[str, Optional[str]]
     social_interaction: Dict[str, Optional[str]]
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=utc_now)
 
     class Settings:
         name = "child_development_assessments"

@@ -4,6 +4,7 @@
  */
 
 import axiosClient from '../client/axiosClient';
+import { parentApi } from '../parentApi';
 
 export interface EmotionData {
   name: string;
@@ -39,7 +40,7 @@ export const sendChat = async (
   userInput: string
 ): Promise<ChatResponse> => {
   const response = await axiosClient.post<ChatResponse>(
-    `/children/${childId}/interact/chat`,
+    parentApi.interactions.chat(childId),
     { user_input: userInput }
   );
   return response.data;
@@ -53,7 +54,7 @@ export const getEmotionData = async (
   childId: string
 ): Promise<EmotionData[]> => {
   const response = await axiosClient.get<InteractionLogsResponse>(
-    `/children/${childId}/interact/logs`
+    parentApi.interactions.logs(childId)
   );
   return response.data.emotions;
 };
@@ -67,7 +68,7 @@ export const getChatHistory = async (
   limit: number = 20
 ): Promise<ChatHistoryItem[]> => {
   const response = await axiosClient.get<ChatHistoryItem[]>(
-    `/children/${childId}/interact/history`,
+    parentApi.interactions.history(childId),
     { params: { limit } }
   );
   return response.data;

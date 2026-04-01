@@ -4,6 +4,7 @@
  */
 
 import axiosClient from '../client/axiosClient';
+import { parentApi } from '../parentApi';
 import { getChild } from './childService';
 import { getChildTasks } from './taskService';
 import { getLatestAssessment, calculateSkillScores } from './assessmentService';
@@ -80,7 +81,7 @@ export interface DashboardData {
 export const getDashboardStats = async (
   childId: string
 ): Promise<DashboardResponse> => {
-  const response = await axiosClient.get<DashboardResponse>(`/dashboard/${childId}`);
+  const response = await axiosClient.get<DashboardResponse>(parentApi.dashboard.get(childId));
   return response.data;
 };
 
@@ -181,7 +182,7 @@ export const getCategoryProgress = async (
 ): Promise<CategoryProgressData[]> => {
   try {
     const response = await axiosClient.get<CategoryProgressData[]>(
-      `/dashboard/${childId}/category-progress`
+      parentApi.dashboard.categoryProgress(childId)
     );
     return response.data;
   } catch (error) {
@@ -290,7 +291,7 @@ export const getEmotionAnalytics = async (
   try {
     const params = reportId ? { report_id: reportId } : {};
     const response = await axiosClient.get<EmotionAnalyticsResponse>(
-      `/dashboard/${childId}/emotion-analytics`,
+      parentApi.dashboard.emotionAnalytics(childId),
       { params }
     );
     
@@ -449,7 +450,7 @@ export const analyzeEmotionReportAndGenerateTasks = async (
   reportId?: string
 ): Promise<ChildTaskWithDetails[]> => {
   const response = await axiosClient.post<ChildTaskWithDetails[]>(
-    `/dashboard/${childId}/analyze-emotion-report`,
+    parentApi.dashboard.analyzeEmotionReport(childId),
     { report_id: reportId || null }
   );
   return response.data;

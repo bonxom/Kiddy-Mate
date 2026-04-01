@@ -1,7 +1,8 @@
 from beanie import Document, Link
 from datetime import datetime
 from typing import Optional, Union
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
+from app.core.time import utc_now
 from app.models.child_models import Child
 from app.models.task_models import Task, TaskCategory, TaskType
 import enum
@@ -42,7 +43,7 @@ class ChildTask(Document):
     task: Optional[Link[Task]] = None
     task_data: Optional[TaskData] = None  # For custom tasks not in library
     status: ChildTaskStatus = ChildTaskStatus.ASSIGNED
-    assigned_at: datetime = datetime.utcnow()
+    assigned_at: datetime = Field(default_factory=utc_now)
     completed_at: Optional[datetime] = None
     
     

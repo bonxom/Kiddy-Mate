@@ -9,6 +9,8 @@ export type { ApiError } from './client/axiosClient';
 
 // Export API configuration
 export { API_BASE_URL, API_ENDPOINTS, STORAGE_KEYS } from './client/apiConfig';
+export { parentApi } from './parentApi';
+export { childApi } from './childApi';
 
 // Export all services
 export * from './services';

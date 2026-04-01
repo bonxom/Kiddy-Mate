@@ -1,7 +1,9 @@
 fastapi
 uvicorn[standard]
-beanie
+beanie==2.1.0
+lazy-model==0.4.0
 motor
+mongomock-motor
 pydantic
 pydantic[email]
 pydantic-settings
@@ -11,3 +13,5 @@ python-multipart
 apscheduler
 httpx
 openai
+pytest
+pytest-asyncio

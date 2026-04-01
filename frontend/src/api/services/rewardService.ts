@@ -4,6 +4,7 @@
  */
 
 import axiosClient from '../client/axiosClient';
+import { parentApi } from '../parentApi';
 
 export type RewardType = 'badge' | 'skin' | 'item';
 export type RedemptionStatus = 'pending' | 'approved' | 'rejected';
@@ -78,7 +79,7 @@ export const getAllRewards = async (params?: {
   is_active?: boolean;
   type?: RewardType;
 }): Promise<Reward[]> => {
-  const response = await axiosClient.get<Reward[]>('/shop/rewards', { params });
+  const response = await axiosClient.get<Reward[]>(parentApi.shop.rewards, { params });
   return response.data;
 };
 
@@ -86,7 +87,7 @@ export const getAllRewards = async (params?: {
  * Create new reward (parent)
  */
 export const createReward = async (data: RewardCreate): Promise<Reward> => {
-  const response = await axiosClient.post<Reward>('/shop/rewards', data);
+  const response = await axiosClient.post<Reward>(parentApi.shop.rewards, data);
   return response.data;
 };
 
@@ -98,7 +99,7 @@ export const updateReward = async (
   data: RewardUpdate
 ): Promise<Reward> => {
   const response = await axiosClient.put<Reward>(
-    `/shop/rewards/${rewardId}`,
+    parentApi.shop.reward(rewardId),
     data
   );
   return response.data;
@@ -108,7 +109,7 @@ export const updateReward = async (
  * Delete reward (parent)
  */
 export const deleteReward = async (rewardId: string): Promise<void> => {
-  await axiosClient.delete(`/shop/rewards/${rewardId}`);
+  await axiosClient.delete(parentApi.shop.reward(rewardId));
 };
 
 /**
@@ -119,7 +120,7 @@ export const updateRewardQuantity = async (
   delta: number
 ): Promise<{ id: string; remain: number }> => {
   const response = await axiosClient.patch<{ id: string; remain: number }>(
-    `/shop/rewards/${rewardId}/quantity`,
+    parentApi.shop.rewardQuantity(rewardId),
     null,
     { params: { delta } }
   );
@@ -139,7 +140,7 @@ export const requestRedemption = async (
     id: string;
     message: string;
     cost: number;
-  }>(`/children/${childId}/redeem`, { reward_id: rewardId });
+  }>(parentApi.childRewards.redeem(childId), { reward_id: rewardId });
   return response.data;
 };
 
@@ -150,7 +151,7 @@ export const getRedemptionRequests = async (params?: {
   status?: RedemptionStatus;
 }): Promise<RedemptionRequest[]> => {
   const response = await axiosClient.get<RedemptionRequest[]>(
-    '/shop/redemption-requests',
+    parentApi.shop.redemptionRequests,
     { params }
   );
   return response.data;
@@ -165,7 +166,7 @@ export const approveRedemption = async (
   const response = await axiosClient.post<{
     message: string;
     child_coins_remaining: number;
-  }>(`/shop/redemption-requests/${requestId}/approve`);
+  }>(parentApi.shop.approveRedemption(requestId));
   return response.data;
 };
 
@@ -176,7 +177,7 @@ export const rejectRedemption = async (
   requestId: string
 ): Promise<{ message: string }> => {
   const response = await axiosClient.post<{ message: string }>(
-    `/shop/redemption-requests/${requestId}/reject`
+    parentApi.shop.rejectRedemption(requestId)
   );
   return response.data;
 };
@@ -190,7 +191,7 @@ export const getInventory = async (
   childId: string
 ): Promise<ChildRewardWithDetails[]> => {
   const response = await axiosClient.get<ChildRewardWithDetails[]>(
-    `/children/${childId}/inventory`
+    parentApi.childRewards.inventory(childId)
   );
   return response.data;
 };
@@ -205,7 +206,7 @@ export const equipSkin = async (
   const response = await axiosClient.post<{
     message: string;
     reward_id: string;
-  }>(`/children/${childId}/avatar/equip`, null, {
+  }>(parentApi.childRewards.equipAvatar(childId), null, {
     params: { reward_id: rewardId },
   });
   return response.data;

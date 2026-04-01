@@ -1,8 +1,8 @@
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
-from app.routers.reports import generate_weekly_reports
-from app.routers.generate import generate_auto_tasks_for_all_children
-from app.routers.dashboard import update_skills_for_all_children
+from app.modules.ai.application.generation_service import generate_auto_tasks_for_all_children
+from app.modules.dashboard.application.dashboard_service import update_skills_for_all_children
+from app.modules.reports.application.report_service import generate_weekly_reports
 
 scheduler = AsyncIOScheduler()
 
@@ -29,5 +29,3 @@ scheduler.add_job(
     id="update_skills_job",
     replace_existing=True
 )
-
-scheduler.start()

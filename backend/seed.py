@@ -8,6 +8,7 @@ from datetime import datetime, timedelta
 from motor.motor_asyncio import AsyncIOMotorClient
 from beanie import init_beanie
 from beanie import Link
+from app.core.time import utc_now
 from app.models.beanie_models import (
     User, Child, Task, Reward, ChildReward, MiniGame, 
     GameSession, InteractionLog, Report, ChildTask, ChildDevelopmentAssessment
@@ -645,7 +646,7 @@ async def seed_database():
     
     print("📋 Assigning tasks to children...")
     
-    now = datetime.utcnow()
+    now = utc_now()
     child_tasks = []
     
     
