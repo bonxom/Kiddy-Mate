@@ -3,14 +3,13 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, Query
 
 from app.core.security.dependencies import (
-    require_child_principal,
     require_parent_principal,
-    resolve_child_for_current_actor,
+    resolve_parent_owned_child,
 )
 from app.modules.children.domain.models import Child
 from app.modules.identity.domain.models import User
 from app.modules.tasks.application import task_service as service
-from app.schemas.schemas import ChildTaskPublic, ChildTaskWithDetails, TaskPublic
+from app.schemas.schemas import ChildTaskWithDetails, TaskPublic
 
 router = APIRouter()
 
@@ -18,7 +17,8 @@ router = APIRouter()
 @router.get("/{child_id}/tasks/suggested", response_model=List[TaskPublic])
 async def get_suggested_tasks(
     child_id: str,
-    child: Child = Depends(resolve_child_for_current_actor),
+    child: Child = Depends(resolve_parent_owned_child),
+    _: User = Depends(require_parent_principal),
 ) -> List[TaskPublic]:
     return await service.get_suggested_tasks(child_id=child_id, child=child)
 
@@ -26,7 +26,7 @@ async def get_suggested_tasks(
 @router.get("/{child_id}/tasks", response_model=List[ChildTaskWithDetails])
 async def get_child_tasks(
     child_id: str,
-    child: Child = Depends(resolve_child_for_current_actor),
+    child: Child = Depends(resolve_parent_owned_child),
     limit: Optional[int] = Query(None, description="Limit number of results"),
     category: Optional[str] = Query(None, description="Filter by task category"),
     status_filter: Optional[service.ChildTaskStatus] = Query(
@@ -34,6 +34,7 @@ async def get_child_tasks(
         alias="status",
         description="Filter by task status",
     ),
+    _: User = Depends(require_parent_principal),
 ) -> List[ChildTaskWithDetails]:
     return await service.get_child_tasks(
         child_id=child_id,
@@ -44,29 +45,12 @@ async def get_child_tasks(
     )
 
 
-@router.post("/{child_id}/tasks/{task_id}/start", response_model=ChildTaskPublic)
-async def start_task(
-    child_id: str,
-    task_id: str,
-    request: service.AssignTaskRequest = service.AssignTaskRequest(),
-    child: Child = Depends(resolve_child_for_current_actor),
-    current_user: User = Depends(require_child_principal),
-) -> ChildTaskPublic:
-    return await service.start_task(
-        child_id=child_id,
-        task_id=task_id,
-        request=request,
-        child=child,
-        current_user=current_user,
-    )
-
-
 @router.post("/{child_id}/tasks/{task_id}/assign", response_model=ChildTaskWithDetails)
 async def assign_task_to_child(
     child_id: str,
     task_id: str,
     request: service.AssignTaskRequest,
-    child: Child = Depends(resolve_child_for_current_actor),
+    child: Child = Depends(resolve_parent_owned_child),
     current_user: User = Depends(require_parent_principal),
 ) -> ChildTaskWithDetails:
     return await service.assign_task_to_child(
@@ -78,26 +62,11 @@ async def assign_task_to_child(
     )
 
 
-@router.post("/{child_id}/tasks/{child_task_id}/complete", response_model=dict)
-async def complete_task(
-    child_id: str,
-    child_task_id: str,
-    child: Child = Depends(resolve_child_for_current_actor),
-    current_user: User = Depends(require_child_principal),
-) -> dict:
-    return await service.complete_task(
-        child_id=child_id,
-        child_task_id=child_task_id,
-        child=child,
-        current_user=current_user,
-    )
-
-
 @router.post("/{child_id}/tasks/{child_task_id}/verify", response_model=dict)
 async def verify_task(
     child_id: str,
     child_task_id: str,
-    child: Child = Depends(resolve_child_for_current_actor),
+    child: Child = Depends(resolve_parent_owned_child),
     current_user: User = Depends(require_parent_principal),
 ) -> dict:
     return await service.verify_task(
@@ -112,7 +81,7 @@ async def verify_task(
 async def reject_task_verification(
     child_id: str,
     child_task_id: str,
-    child: Child = Depends(resolve_child_for_current_actor),
+    child: Child = Depends(resolve_parent_owned_child),
     current_user: User = Depends(require_parent_principal),
 ) -> dict:
     return await service.reject_task_verification(
@@ -128,7 +97,8 @@ async def update_assigned_task(
     child_id: str,
     child_task_id: str,
     task_update: service.ChildTaskUpdateRequest,
-    child: Child = Depends(resolve_child_for_current_actor),
+    child: Child = Depends(resolve_parent_owned_child),
+    _: User = Depends(require_parent_principal),
 ) -> ChildTaskWithDetails:
     return await service.update_assigned_task(
         child_id=child_id,
@@ -142,7 +112,8 @@ async def update_assigned_task(
 async def create_and_assign_task(
     child_id: str,
     request: service.CreateAndAssignTaskRequest,
-    child: Child = Depends(resolve_child_for_current_actor),
+    child: Child = Depends(resolve_parent_owned_child),
+    _: User = Depends(require_parent_principal),
 ) -> ChildTaskWithDetails:
     return await service.create_and_assign_task(
         child_id=child_id,
@@ -155,7 +126,8 @@ async def create_and_assign_task(
 async def delete_assigned_task(
     child_id: str,
     child_task_id: str,
-    child: Child = Depends(resolve_child_for_current_actor),
+    child: Child = Depends(resolve_parent_owned_child),
+    _: User = Depends(require_parent_principal),
 ) -> dict:
     return await service.delete_assigned_task(
         child_id=child_id,
@@ -164,53 +136,10 @@ async def delete_assigned_task(
     )
 
 
-@router.get("/{child_id}/tasks/{task_id}/status", response_model=dict)
-async def check_task_status(
-    child_id: str,
-    task_id: str,
-    child: Child = Depends(resolve_child_for_current_actor),
-    current_user: User = Depends(require_child_principal),
-) -> dict:
-    return await service.check_task_status(
-        child_id=child_id,
-        task_id=task_id,
-        child=child,
-        current_user=current_user,
-    )
-
-
-@router.post("/{child_id}/tasks/{task_id}/giveup", response_model=dict)
-async def giveup_task(
-    child_id: str,
-    task_id: str,
-    child: Child = Depends(resolve_child_for_current_actor),
-) -> dict:
-    return await service.giveup_task(
-        child_id=child_id,
-        task_id=task_id,
-        child=child,
-    )
-
-
-@router.post("/{child_id}/tasks/unassigned", response_model=List[ChildTaskWithDetails])
-async def get_unassigned_tasks(
-    child_id: str,
-    category: Optional[str] = Query(None),
-    child: Child = Depends(resolve_child_for_current_actor),
-    current_user: User = Depends(require_child_principal),
-) -> List[ChildTaskWithDetails]:
-    return await service.get_unassigned_tasks(
-        child_id=child_id,
-        child=child,
-        current_user=current_user,
-        category=category,
-    )
-
-
 @router.post("/{child_id}/tasks/giveup", response_model=List[ChildTaskWithDetails])
 async def get_giveup_tasks(
     child_id: str,
-    child: Child = Depends(resolve_child_for_current_actor),
+    child: Child = Depends(resolve_parent_owned_child),
     current_user: User = Depends(require_parent_principal),
 ) -> List[ChildTaskWithDetails]:
     return await service.get_giveup_tasks(
@@ -219,19 +148,3 @@ async def get_giveup_tasks(
         current_user=current_user,
     )
 
-
-@router.get("/{child_id}/tasks/completed", response_model=List[ChildTaskWithDetails])
-async def get_completed_tasks(
-    child_id: str,
-    limit: Optional[int] = Query(None),
-    category: Optional[str] = Query(None),
-    child: Child = Depends(resolve_child_for_current_actor),
-    current_user: User = Depends(require_child_principal),
-) -> List[ChildTaskWithDetails]:
-    return await service.get_completed_tasks(
-        child_id=child_id,
-        child=child,
-        current_user=current_user,
-        limit=limit,
-        category=category,
-    )

@@ -2,10 +2,10 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, Query
 
-from app.core.security.dependencies import get_authenticated_child, require_child_principal
+from app.core.security.child_context import ChildAuthContext
+from app.core.security.dependencies import get_authenticated_child, require_child_auth_context
+from app.modules.child.application import task_service as service
 from app.modules.children.domain.models import Child
-from app.modules.identity.domain.models import User
-from app.modules.tasks.application import task_service as service
 from app.schemas.schemas import ChildTaskPublic, ChildTaskWithDetails
 
 router = APIRouter()
@@ -17,29 +17,27 @@ async def get_my_tasks(
     category: Optional[str] = Query(None),
     status: Optional[service.ChildTaskStatus] = Query(None, alias="status"),
     child: Child = Depends(get_authenticated_child),
+    context: ChildAuthContext = Depends(require_child_auth_context),
 ) -> list[ChildTaskWithDetails]:
-    return await service.get_child_tasks(
-        child_id=str(child.id),
+    return await service.list_tasks(
         child=child,
-        limit=limit,
-        category=category,
-        status_filter=status,
+        filters=service.TaskListFilters(limit=limit, category=category, status=status),
+        context=context,
     )
 
 
 @router.post("/me/tasks/{task_id}/start", response_model=ChildTaskPublic)
 async def start_my_task(
     task_id: str,
-    request: service.AssignTaskRequest = service.AssignTaskRequest(),
+    request: service.StartTaskRequest = service.StartTaskRequest(),
     child: Child = Depends(get_authenticated_child),
-    current_user: User = Depends(require_child_principal),
+    context: ChildAuthContext = Depends(require_child_auth_context),
 ) -> ChildTaskPublic:
     return await service.start_task(
-        child_id=str(child.id),
         task_id=task_id,
         request=request,
         child=child,
-        current_user=current_user,
+        context=context,
     )
 
 
@@ -47,13 +45,12 @@ async def start_my_task(
 async def complete_my_task(
     child_task_id: str,
     child: Child = Depends(get_authenticated_child),
-    current_user: User = Depends(require_child_principal),
+    context: ChildAuthContext = Depends(require_child_auth_context),
 ) -> dict:
     return await service.complete_task(
-        child_id=str(child.id),
         child_task_id=child_task_id,
         child=child,
-        current_user=current_user,
+        context=context,
     )
 
 
@@ -61,13 +58,12 @@ async def complete_my_task(
 async def get_my_task_status(
     task_id: str,
     child: Child = Depends(get_authenticated_child),
-    current_user: User = Depends(require_child_principal),
+    context: ChildAuthContext = Depends(require_child_auth_context),
 ) -> dict:
-    return await service.check_task_status(
-        child_id=str(child.id),
+    return await service.get_task_status(
         task_id=task_id,
         child=child,
-        current_user=current_user,
+        context=context,
     )
 
 
@@ -75,11 +71,12 @@ async def get_my_task_status(
 async def giveup_my_task(
     task_id: str,
     child: Child = Depends(get_authenticated_child),
+    context: ChildAuthContext = Depends(require_child_auth_context),
 ) -> dict:
-    return await service.giveup_task(
-        child_id=str(child.id),
+    return await service.give_up_task(
         task_id=task_id,
         child=child,
+        context=context,
     )
 
 
@@ -87,13 +84,12 @@ async def giveup_my_task(
 async def get_my_unassigned_tasks(
     category: Optional[str] = Query(None),
     child: Child = Depends(get_authenticated_child),
-    current_user: User = Depends(require_child_principal),
+    context: ChildAuthContext = Depends(require_child_auth_context),
 ) -> list[ChildTaskWithDetails]:
-    return await service.get_unassigned_tasks(
-        child_id=str(child.id),
+    return await service.list_unassigned_tasks(
         child=child,
-        current_user=current_user,
         category=category,
+        context=context,
     )
 
 
@@ -102,12 +98,11 @@ async def get_my_completed_tasks(
     limit: Optional[int] = Query(None),
     category: Optional[str] = Query(None),
     child: Child = Depends(get_authenticated_child),
-    current_user: User = Depends(require_child_principal),
+    context: ChildAuthContext = Depends(require_child_auth_context),
 ) -> list[ChildTaskWithDetails]:
-    return await service.get_completed_tasks(
-        child_id=str(child.id),
+    return await service.list_completed_tasks(
         child=child,
-        current_user=current_user,
         limit=limit,
         category=category,
+        context=context,
     )

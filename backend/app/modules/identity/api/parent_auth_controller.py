@@ -28,7 +28,7 @@ async def login_for_access_token(
 
 @router.post("/logout", response_model=dict)
 async def logout_user(
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_parent_principal),
 ) -> dict:
     return await service.logout_user(current_user=current_user)
 
@@ -42,14 +42,14 @@ async def register_child(
 
 
 @router.get("/me", response_model=dict)
-async def get_me(current_user: User = Depends(get_current_user)) -> dict:
+async def get_me(current_user: User = Depends(require_parent_principal)) -> dict:
     return await service.get_me(current_user=current_user)
 
 
 @router.put("/me", response_model=dict)
 async def update_profile(
     request: service.UpdateProfileRequest,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_parent_principal),
 ) -> dict:
     return await service.update_profile(request=request, current_user=current_user)
 
@@ -57,7 +57,7 @@ async def update_profile(
 @router.put("/me/password", response_model=dict)
 async def change_password(
     request: service.ChangePasswordRequest,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_parent_principal),
 ) -> dict:
     return await service.change_password(request=request, current_user=current_user)
 
@@ -65,14 +65,14 @@ async def change_password(
 @router.delete("/me", response_model=dict)
 async def delete_account(
     request: service.DeleteAccountRequest,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_parent_principal),
 ) -> dict:
     return await service.delete_account(request=request, current_user=current_user)
 
 
 @router.get("/me/notification-settings", response_model=dict)
 async def get_notification_settings(
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_parent_principal),
 ) -> dict:
     return await service.get_notification_settings(current_user=current_user)
 
@@ -80,7 +80,7 @@ async def get_notification_settings(
 @router.put("/me/notification-settings", response_model=dict)
 async def update_notification_settings(
     settings: service.NotificationSettings,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_parent_principal),
 ) -> dict:
     return await service.update_notification_settings(
         settings=settings,

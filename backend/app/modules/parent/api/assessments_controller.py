@@ -2,9 +2,10 @@ from typing import List
 
 from fastapi import APIRouter, Depends
 
-from app.core.security.dependencies import resolve_child_for_current_actor
+from app.core.security.dependencies import require_parent_principal, resolve_parent_owned_child
 from app.modules.assessments.application import assessment_service as service
 from app.modules.children.domain.models import Child
+from app.modules.identity.domain.models import User
 from app.schemas.schemas import ChildAssessmentPublic
 
 router = APIRouter()
@@ -14,7 +15,8 @@ router = APIRouter()
 async def create_child_assessment(
     child_id: str,
     assessment: service.ChildAssessmentCreate,
-    child: Child = Depends(resolve_child_for_current_actor),
+    child: Child = Depends(resolve_parent_owned_child),
+    _: User = Depends(require_parent_principal),
 ) -> ChildAssessmentPublic:
     return await service.create_child_assessment(
         child_id=child_id,
@@ -27,11 +29,12 @@ async def create_child_assessment(
 async def create_simple_assessment(
     child_id: str,
     assessment: service.SimpleAssessmentCreate,
-    child: Child = Depends(resolve_child_for_current_actor),
+    child: Child = Depends(resolve_parent_owned_child),
+    _: User = Depends(require_parent_principal),
 ) -> ChildAssessmentPublic:
     return await service.create_simple_assessment(
         child_id=child_id,
-        assessment=assessment,
+        simple_assessment=assessment,
         child=child,
     )
 
@@ -39,7 +42,8 @@ async def create_simple_assessment(
 @router.get("/{child_id}/assessments", response_model=List[ChildAssessmentPublic])
 async def list_child_assessments(
     child_id: str,
-    child: Child = Depends(resolve_child_for_current_actor),
+    child: Child = Depends(resolve_parent_owned_child),
+    _: User = Depends(require_parent_principal),
 ) -> List[ChildAssessmentPublic]:
     return await service.list_child_assessments(child_id=child_id, child=child)
 
@@ -48,7 +52,8 @@ async def list_child_assessments(
 async def get_child_assessment(
     child_id: str,
     assessment_id: str,
-    child: Child = Depends(resolve_child_for_current_actor),
+    child: Child = Depends(resolve_parent_owned_child),
+    _: User = Depends(require_parent_principal),
 ) -> ChildAssessmentPublic:
     return await service.get_child_assessment(
         child_id=child_id,
@@ -62,7 +67,8 @@ async def update_child_assessment(
     child_id: str,
     assessment_id: str,
     assessment_update: service.ChildAssessmentUpdate,
-    child: Child = Depends(resolve_child_for_current_actor),
+    child: Child = Depends(resolve_parent_owned_child),
+    _: User = Depends(require_parent_principal),
 ) -> ChildAssessmentPublic:
     return await service.update_child_assessment(
         child_id=child_id,

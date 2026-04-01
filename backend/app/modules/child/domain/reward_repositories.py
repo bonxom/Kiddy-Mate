@@ -1,0 +1,23 @@
+from __future__ import annotations
+
+from typing import Protocol
+
+from app.modules.children.domain.models import Child
+from app.modules.identity.domain.models import User
+from app.modules.rewards.domain.models import ChildReward, RedemptionRequest, Reward
+
+
+class ChildRewardRepository(Protocol):
+    async def get_reward(self, reward_id: str) -> Reward | None: ...
+
+    async def get_parent(self, child: Child) -> User | None: ...
+
+    async def create_redemption_request(self, redemption_request: RedemptionRequest) -> RedemptionRequest: ...
+
+    async def list_child_rewards(self, child: Child) -> list[ChildReward]: ...
+
+    async def load_reward(self, child_reward: ChildReward) -> Reward | None: ...
+
+    async def list_equipped_rewards(self, child: Child) -> list[ChildReward]: ...
+
+    async def save_child_reward(self, child_reward: ChildReward) -> ChildReward: ...

@@ -8,6 +8,7 @@ def to_child_public(child: Child) -> ChildPublic:
         name=child.name,
         birth_date=child.birth_date,
         initial_traits=child.initial_traits,
+        username=child.username,
         current_coins=child.current_coins,
         level=child.level,
         nickname=child.nickname,

@@ -1,8 +1,9 @@
 from fastapi import Depends, HTTPException, status
 
+from app.core.security.child_context import ChildAuthContext
 from app.models.child_models import Child
 from app.models.user_models import User, UserRole
-from app.services.auth import get_current_user
+from app.services.auth import get_current_child_auth_context, get_current_user
 from app.shared.query_helpers import extract_id_from_link
 
 
@@ -33,29 +34,42 @@ async def require_child_principal(
     return current_user
 
 
+async def require_child_auth_context(
+    child_context: ChildAuthContext = Depends(get_current_child_auth_context),
+) -> ChildAuthContext:
+    return child_context
+
+
 async def get_authenticated_child(
-    current_user: User = Depends(require_child_principal),
+    child_context: ChildAuthContext = Depends(require_child_auth_context),
 ) -> Child:
-    if not current_user.child_profile:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Child profile not linked to user account.",
-        )
-
-    child = None
-    if hasattr(current_user.child_profile, "fetch"):
-        child = await current_user.child_profile.fetch()
-    elif isinstance(current_user.child_profile, Child):
-        child = current_user.child_profile
-    else:
-        child_id = extract_id_from_link(current_user.child_profile)
-        if child_id:
-            child = await Child.get(child_id)
-
+    child = await Child.get(child_context.child_id)
     if not child:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Child profile not found.",
+        )
+
+    return child
+
+
+async def resolve_parent_owned_child(
+    child_id: str,
+    current_user: User = Depends(require_parent_principal),
+) -> Child:
+    normalized_child_id = child_id.strip()
+    child = await Child.get(normalized_child_id)
+    if not child:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Child not found.",
+        )
+
+    parent_id = extract_id_from_link(child.parent)
+    if not parent_id or parent_id != str(current_user.id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Forbidden: You do not own this child profile.",
         )
 
     return child

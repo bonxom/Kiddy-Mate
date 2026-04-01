@@ -1,5 +1,6 @@
 from app.models.child_models import Child
 from app.models.user_models import User, UserRole
+from app.core.security.child_context import ChildAuthContext, build_child_auth_context
 
 
 def build_child_principal(child: Child) -> User:
@@ -19,3 +20,9 @@ def build_child_principal(child: Child) -> User:
         child_profile=child,
         onboarding_completed=True,
     )
+
+
+def build_child_security_bundle(child: Child) -> tuple[User, ChildAuthContext]:
+    principal = build_child_principal(child)
+    context = build_child_auth_context(child=child, principal=principal)
+    return principal, context

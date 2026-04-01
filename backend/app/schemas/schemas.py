@@ -58,6 +58,7 @@ class ChildUpdate(BaseModel):
 
 class ChildInDB(ChildBase):
     id: str
+    username: Optional[str] = None
     current_coins: int
     level: int
     model_config = ConfigDict(from_attributes=True)

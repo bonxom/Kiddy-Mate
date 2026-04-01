@@ -21,6 +21,7 @@ os.environ.setdefault("ACCESS_TOKEN_EXPIRE_MINUTES", "30")
 from app.core.time import utc_now
 import app.bootstrap.app_factory as app_factory
 import app.modules.ai.application.generation_service as generation_service
+import app.modules.child.infrastructure.interaction_gateway as child_interaction_gateway
 import app.modules.children.application.children_service as children_service
 import app.modules.dashboard.application.dashboard_service as dashboard_service
 import app.modules.interactions.application.interaction_service as interaction_service
@@ -191,6 +192,8 @@ async def api_context(monkeypatch):
     monkeypatch.setattr(children_service, "analyze_assessment_with_chatgpt", _stub_assessment_analysis)
     monkeypatch.setattr(generation_service, "generate_gemini_response", _stub_gemini_response)
     monkeypatch.setattr(interaction_service, "generate_gemini_response", _stub_gemini_response)
+    monkeypatch.setattr(child_interaction_gateway, "generate_child_avatar_response", _stub_gemini_response)
+    monkeypatch.setattr(child_interaction_gateway, "detect_emotion_from_text", lambda *_args, **_kwargs: "Happy")
     monkeypatch.setattr(report_service, "generate_openai_response", _stub_openai_response)
     monkeypatch.setattr(dashboard_service, "generate_openai_response", _stub_openai_response)
     monkeypatch.setattr(generation_service, "generate_initial_tasks_for_child", _stub_generate_initial_tasks_for_child)

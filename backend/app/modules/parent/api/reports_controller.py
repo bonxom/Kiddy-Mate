@@ -2,7 +2,7 @@ from typing import List
 
 from fastapi import APIRouter, Depends
 
-from app.core.security.dependencies import require_parent_principal, resolve_child_for_current_actor
+from app.core.security.dependencies import require_parent_principal, resolve_parent_owned_child
 from app.modules.children.domain.models import Child
 from app.modules.identity.domain.models import User
 from app.modules.reports.application import report_service as service
@@ -13,7 +13,8 @@ router = APIRouter()
 
 @router.get("/{child_id}", response_model=List[ReportPublic])
 async def get_reports(
-    child: Child = Depends(resolve_child_for_current_actor),
+    child: Child = Depends(resolve_parent_owned_child),
+    _: User = Depends(require_parent_principal),
 ) -> List[ReportPublic]:
     return await service.get_reports(child=child)
 
@@ -22,7 +23,8 @@ async def get_reports(
 async def get_report(
     child_id: str,
     report_id: str,
-    child: Child = Depends(resolve_child_for_current_actor),
+    child: Child = Depends(resolve_parent_owned_child),
+    _: User = Depends(require_parent_principal),
 ) -> ReportPublic:
     return await service.get_report(child_id=child_id, report_id=report_id, child=child)
 
@@ -30,7 +32,7 @@ async def get_report(
 @router.post("/{child_id}/generate", response_model=ReportPublic)
 async def generate_report(
     child_id: str,
-    child: Child = Depends(resolve_child_for_current_actor),
+    child: Child = Depends(resolve_parent_owned_child),
     current_user: User = Depends(require_parent_principal),
 ) -> ReportPublic:
     return await service.generate_report(

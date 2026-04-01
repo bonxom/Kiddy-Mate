@@ -1,18 +1,16 @@
-"""
-Task Library Router
-Handles task library management (CRUD for tasks in the global library)
-These endpoints don't require a child_id context
-"""
+"""Parent task library use cases."""
 
-from fastapi import APIRouter, HTTPException, status, Depends
-from beanie import Link
-from app.modules.tasks.domain.models import Task, TaskCategory, TaskType, UnityType
-from app.schemas.schemas import TaskPublic, TaskCreate
-from typing import List, Optional
-from app.services.auth import get_current_user
+from typing import Optional
+
 from app.modules.identity.domain.models import User
-from app.shared.query_helpers import extract_id_from_link
+from app.modules.identity.domain.models import UserRole
+from app.modules.tasks.domain.errors import TaskLibraryAccessDeniedError, TaskNotFoundError
 from pydantic import BaseModel
+
+from app.modules.tasks.domain.models import Task, TaskCategory, TaskType, UnityType
+from app.modules.tasks.domain.repositories import TaskLibraryRepository
+from app.modules.tasks.infrastructure.task_library_repository import BeanieTaskLibraryRepository
+from app.schemas.schemas import TaskCreate, TaskPublic
 
 class TaskUpdateRequest(BaseModel):
     title: Optional[str] = None
@@ -25,43 +23,45 @@ class TaskUpdateRequest(BaseModel):
     reward_badge_name: Optional[str] = None
     unity_type: Optional[UnityType] = None
 
+task_library_repository: TaskLibraryRepository = BeanieTaskLibraryRepository()
+
+
+def _ensure_parent_user(current_user: User) -> None:
+    if current_user.role != UserRole.PARENT:
+        raise TaskLibraryAccessDeniedError("Task library is available to parent accounts only.")
+
+
+def _to_task_public(task: Task) -> TaskPublic:
+    return TaskPublic(
+        id=str(task.id),
+        title=task.title,
+        description=task.description,
+        category=task.category,
+        type=task.type,
+        difficulty=task.difficulty,
+        suggested_age_range=task.suggested_age_range,
+        reward_coins=task.reward_coins,
+        reward_badge_name=task.reward_badge_name,
+        unity_type=task.unity_type.value if task.unity_type else None,
+    )
+
+
 async def list_all_tasks(
-    current_user: User = None
-) -> List[TaskPublic]:
-    """
-    Get all tasks from the library.
-    Note: Task Library is global (shared across all users).
-    Tasks are filtered by child ownership when assigned via ChildTask.
-    This endpoint returns all available tasks in the global library.
-    """
-    # Get all tasks from library (global, not filtered by user)
-    # Task ownership is determined when tasks are assigned to children
-    tasks = await Task.find_all().to_list()
-    return [
-        TaskPublic(
-            id=str(t.id),
-            title=t.title,
-            description=t.description,
-            category=t.category,
-            type=t.type,
-            difficulty=t.difficulty,
-            suggested_age_range=t.suggested_age_range,
-            reward_coins=t.reward_coins,
-            reward_badge_name=t.reward_badge_name,
-            unity_type=t.unity_type.value if t.unity_type else None,
-        )
-        for t in tasks
-    ]
+    current_user: User,
+) -> list[TaskPublic]:
+    _ensure_parent_user(current_user)
+    tasks = await task_library_repository.list_all()
+    return [_to_task_public(task) for task in tasks]
 
 async def create_task(
     task: TaskCreate,
-    current_user: User = None
-):
-    """Create a custom task (parent can create tasks for their children)."""
+    current_user: User,
+) -> TaskPublic:
+    _ensure_parent_user(current_user)
     unity_type_value = None
     if task.unity_type:
         unity_type_value = UnityType(task.unity_type)
-    
+
     new_task = Task(
         title=task.title,
         description=task.description,
@@ -73,35 +73,19 @@ async def create_task(
         reward_badge_name=task.reward_badge_name,
         unity_type=unity_type_value,
     )
-    await new_task.insert()
-    
-    return TaskPublic(
-        id=str(new_task.id),
-        title=new_task.title,
-        description=new_task.description,
-        category=new_task.category,
-        type=new_task.type,
-        difficulty=new_task.difficulty,
-        suggested_age_range=new_task.suggested_age_range,
-        reward_coins=new_task.reward_coins,
-        reward_badge_name=new_task.reward_badge_name,
-        unity_type=new_task.unity_type.value if new_task.unity_type else None,
-    )
+    created_task = await task_library_repository.create(new_task)
+    return _to_task_public(created_task)
 
 async def update_task(
     task_id: str,
     task_update: TaskUpdateRequest,
-    current_user: User = None
-):
-    """Update an existing task in the library."""
-    task = await Task.get(task_id)
+    current_user: User,
+) -> TaskPublic:
+    _ensure_parent_user(current_user)
+    task = await task_library_repository.get(task_id)
     if not task:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Task not found."
-        )
-    
-    
+        raise TaskNotFoundError(f"Task '{task_id}' not found.")
+
     if task_update.title is not None:
         task.title = task_update.title
     if task_update.description is not None:
@@ -120,40 +104,19 @@ async def update_task(
         task.reward_badge_name = task_update.reward_badge_name
     if task_update.unity_type is not None:
         task.unity_type = task_update.unity_type
-    
-    await task.save()
-    
-    return TaskPublic(
-        id=str(task.id),
-        title=task.title,
-        description=task.description,
-        category=task.category,
-        type=task.type,
-        difficulty=task.difficulty,
-        suggested_age_range=task.suggested_age_range,
-        reward_coins=task.reward_coins,
-        reward_badge_name=task.reward_badge_name,
-        unity_type=task.unity_type.value if task.unity_type else None,
-    )
+
+    updated_task = await task_library_repository.save(task)
+    return _to_task_public(updated_task)
 
 async def delete_task(
     task_id: str,
-    current_user: User = None
-):
-    """Delete a task from the library. Also removes it from any child's assigned tasks."""
-    from app.models.childtask_models import ChildTask
-    
-    task = await Task.get(task_id)
+    current_user: User,
+) -> dict:
+    _ensure_parent_user(current_user)
+    task = await task_library_repository.get(task_id)
     if not task:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Task not found."
-        )
-    
-    
-    await ChildTask.find(ChildTask.task.id == task_id).delete()  # type: ignore
-    
-    
-    await task.delete()
-    
+        raise TaskNotFoundError(f"Task '{task_id}' not found.")
+
+    await task_library_repository.delete_assignments_for_task(task_id)
+    await task_library_repository.delete(task)
     return {"message": f"Task {task_id} deleted successfully."}

@@ -2,8 +2,9 @@ from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends
 
-from app.core.security.dependencies import resolve_child_for_current_actor
+from app.core.security.dependencies import require_parent_principal, resolve_parent_owned_child
 from app.modules.children.domain.models import Child
+from app.modules.identity.domain.models import User
 from app.modules.interactions.application import interaction_service as service
 
 router = APIRouter()
@@ -13,7 +14,8 @@ router = APIRouter()
 async def interact_with_child(
     child_id: str,
     request: service.ChatRequest,
-    child: Child = Depends(resolve_child_for_current_actor),
+    child: Child = Depends(resolve_parent_owned_child),
+    _: User = Depends(require_parent_principal),
 ) -> dict:
     return await service.interact_with_child(
         child_id=child_id,
@@ -25,7 +27,8 @@ async def interact_with_child(
 @router.get("/{child_id}/interact/logs", response_model=Dict[str, List[Dict[str, Any]]])
 async def get_interaction_logs(
     child_id: str,
-    child: Child = Depends(resolve_child_for_current_actor),
+    child: Child = Depends(resolve_parent_owned_child),
+    _: User = Depends(require_parent_principal),
 ) -> Dict[str, List[Dict[str, Any]]]:
     return await service.get_interaction_logs(child_id=child_id, child=child)
 
@@ -34,7 +37,8 @@ async def get_interaction_logs(
 async def get_interaction_history(
     child_id: str,
     limit: Optional[int] = 20,
-    child: Child = Depends(resolve_child_for_current_actor),
+    child: Child = Depends(resolve_parent_owned_child),
+    _: User = Depends(require_parent_principal),
 ) -> List[Dict[str, Any]]:
     return await service.get_interaction_history(
         child_id=child_id,

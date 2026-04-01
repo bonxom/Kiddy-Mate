@@ -240,7 +240,7 @@ async def test_task_library_and_parent_child_task_endpoints(api_context):
     assert child_tasks.status_code == 200
 
     start_task = await client.post(
-        f"/parent/children/{api_context.child.id}/tasks/{api_context.tasks.logic.id}/start",
+        f"/child/me/tasks/{api_context.tasks.logic.id}/start",
         json={},
         headers=api_context.headers.child,
     )
@@ -278,7 +278,7 @@ async def test_task_library_and_parent_child_task_endpoints(api_context):
     assert update_assigned.status_code == 200
 
     complete_task = await client.post(
-        f"/parent/children/{api_context.child.id}/tasks/{assigned_child_task_id}/complete",
+        f"/child/me/tasks/{assigned_child_task_id}/complete",
         headers=api_context.headers.child,
     )
     assert complete_task.status_code == 200
@@ -296,19 +296,19 @@ async def test_task_library_and_parent_child_task_endpoints(api_context):
     assert reject_task.status_code == 200
 
     task_status = await client.get(
-        f"/parent/children/{api_context.child.id}/tasks/{api_context.tasks.logic.id}/status",
+        f"/child/me/tasks/{api_context.tasks.logic.id}/status",
         headers=api_context.headers.child,
     )
     assert task_status.status_code == 200
 
     giveup_task = await client.post(
-        f"/parent/children/{api_context.child.id}/tasks/{api_context.tasks.physical.id}/giveup",
-        headers=api_context.headers.parent,
+        f"/child/me/tasks/{api_context.tasks.physical.id}/giveup",
+        headers=api_context.headers.child,
     )
     assert giveup_task.status_code == 200
 
-    unassigned = await client.post(
-        f"/parent/children/{api_context.child.id}/tasks/unassigned",
+    unassigned = await client.get(
+        "/child/me/tasks/unassigned",
         headers=api_context.headers.child,
     )
     assert unassigned.status_code == 200
@@ -320,7 +320,7 @@ async def test_task_library_and_parent_child_task_endpoints(api_context):
     assert giveup_list.status_code == 200
 
     completed = await client.get(
-        f"/parent/children/{api_context.child.id}/tasks/completed",
+        "/child/me/tasks/completed",
         headers=api_context.headers.child,
     )
     assert completed.status_code == 200
@@ -507,7 +507,7 @@ async def test_rewards_games_and_child_endpoints(api_context):
     assert pending_requests.status_code == 200
 
     reject_request = await client.post(
-        f"/parent/children/{api_context.child.id}/redeem",
+        "/child/me/rewards/redeem",
         json={"reward_id": created_reward_id},
         headers=api_context.headers.child,
     )
@@ -568,3 +568,32 @@ async def test_rewards_games_and_child_endpoints(api_context):
         headers=api_context.headers.parent,
     )
     assert delete_reward.status_code == 204
+
+
+@pytest.mark.asyncio
+async def test_actor_boundary_between_parent_and_child_namespaces(api_context):
+    client = api_context.client
+
+    child_cannot_read_parent_children = await client.get(
+        f"/parent/children/{api_context.child.id}",
+        headers=api_context.headers.child,
+    )
+    assert child_cannot_read_parent_children.status_code == 403
+
+    child_cannot_use_parent_library = await client.get(
+        "/parent/tasks",
+        headers=api_context.headers.child,
+    )
+    assert child_cannot_use_parent_library.status_code == 403
+
+    child_cannot_read_parent_reports = await client.get(
+        f"/parent/reports/{api_context.child.id}",
+        headers=api_context.headers.child,
+    )
+    assert child_cannot_read_parent_reports.status_code == 403
+
+    parent_cannot_use_child_profile = await client.get(
+        "/child/me",
+        headers=api_context.headers.parent,
+    )
+    assert parent_cannot_use_child_profile.status_code == 401
