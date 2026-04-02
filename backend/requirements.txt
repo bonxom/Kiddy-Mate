@@ -1,7 +1,8 @@
 fastapi
 uvicorn[standard]
-beanie
-motor
+beanie==1.29.0
+motor==3.6.0
+pymongo<5
 pydantic
 pydantic[email]
 pydantic-settings
