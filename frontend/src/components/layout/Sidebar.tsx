@@ -7,30 +7,33 @@ import {
   Settings,
   LogOut,
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../providers/AuthProvider';
+import LanguageToggle from '../common/LanguageToggle';
 
 const Sidebar = () => {
+  const { t } = useTranslation();
   const { logout } = useAuth();
   const navItems = [
     {
       to: '/parent/dashboard',
       icon: LayoutDashboard,
-      label: 'Dashboard',
+      label: t('dashboard.title', { defaultValue: 'Dashboard' }),
     },
     {
       to: '/parent/tasks',
       icon: ListTodo,
-      label: 'Task Center',
+      label: t('taskCenter.title', { defaultValue: 'Task Center' }),
     },
     {
       to: '/parent/rewards',
       icon: Award,
-      label: 'Reward Center',
+      label: t('rewardCenter.title', { defaultValue: 'Reward Center' }),
     },
     {
       to: '/parent/settings',
       icon: Settings,
-      label: 'Settings',
+      label: t('settings.title', { defaultValue: 'Settings' }),
     },
   ];
 
@@ -71,6 +74,10 @@ const Sidebar = () => {
         })}
       </nav>
 
+      <div className="mb-3">
+        <LanguageToggle compact className="bg-white/10 border-white/20 text-white" />
+      </div>
+
       {/* Logout Button */}
       <button
         className="group relative flex items-center justify-center w-full h-14 rounded-lg transition-all duration-200 hover:bg-white/10 px-3"
@@ -93,7 +100,7 @@ const Sidebar = () => {
         
         {/* Tooltip */}
         <span className="absolute left-full ml-4 px-3 py-2 bg-gray-900 text-white text-sm rounded-md whitespace-nowrap opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 pointer-events-none">
-          Log out
+          {t('common.logout', { defaultValue: 'Log out' })}
           {/* Arrow */}
           <span className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-gray-900"></span>
         </span>

@@ -12,6 +12,7 @@ from app.modules.identity.domain.models import User
 from app.shared.query_helpers import extract_id_from_link
 from typing import List, Dict, Any
 from datetime import datetime, timedelta
+from app.core.locale import build_output_language_instruction
 from app.core.time import utc_now
 import logging
 import json
@@ -232,7 +233,8 @@ async def _generate_report_internal(child: Child) -> Report:
         "3. Completion rate trends (improving = confidence, declining = discouragement) "
         "4. Child's personality, interests, and strengths "
         "Always provide emotion_trends with at least 2-3 emotions inferred from task patterns, even if no direct emotion data exists. "
-        "Return ONLY valid JSON, no markdown, no extra text."
+        "Return ONLY valid JSON, no markdown, no extra text. "
+        + build_output_language_instruction(json_output=True)
     )
     
     # Build task details for emotion inference (only completed tasks in period)
@@ -330,6 +332,9 @@ Generate a report with the following structure (JSON only):
     "emotional_support": "Specific suggestions for emotional support based on inferred or recorded emotions"
   }}
 }}
+
+LANGUAGE REQUIREMENT:
+{build_output_language_instruction(json_output=True)}
 """
     
     # Call LLM

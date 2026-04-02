@@ -5,6 +5,7 @@
 
 import { Target, Brain, Dumbbell, Palette, Users, BookOpen } from 'lucide-react';
 import type { ElementType } from 'react';
+import { translateUiString } from '../i18n/runtime';
 
 export interface CategoryConfig {
   name: string;
@@ -47,7 +48,7 @@ export const CATEGORY_ICONS: Record<string, ElementType> = {
  */
 export const getCategoryConfig = (category: string): CategoryConfig => {
   return {
-    name: category,
+    name: translateUiString(category),
     color: CATEGORY_COLORS[category]?.color || '#6b7280',
     bgColor: CATEGORY_COLORS[category]?.bgColor || 'bg-gray-50',
     icon: CATEGORY_ICONS[category] || Target,

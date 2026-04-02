@@ -6,6 +6,7 @@ from typing import Optional
 from pydantic import BaseModel
 
 from app.core.security.child_context import ChildAuthContext, build_child_auth_context
+from app.core.locale import localize_message
 from app.core.time import utc_now
 from app.modules.child.domain.errors import ChildForbiddenError, ChildNotFoundError, ChildValidationError
 from app.modules.child.domain.task_repositories import ChildTaskRepository
@@ -255,7 +256,12 @@ async def complete_task(
     child_task.progress = 100
     child_task.completed_at = utc_now()
     await repo.save_child_task(child_task)
-    return {"message": "Task completed successfully! Waiting for parent verification."}
+    return {
+        "message": localize_message(
+            "Task completed successfully! Waiting for parent verification.",
+            "Nhiem vu da hoan thanh. Dang cho phu huynh xac minh.",
+        )
+    }
 
 
 async def get_task_status(
@@ -322,7 +328,10 @@ async def give_up_task(
 
     if child_task.status == ChildTaskStatus.GIVEUP:
         return {
-            "message": "Task marked as given up successfully.",
+            "message": localize_message(
+                "Task marked as given up successfully.",
+                "Da danh dau nhiem vu bo cuoc thanh cong.",
+            ),
             "status": ChildTaskStatus.GIVEUP.value,
         }
     if child_task.status not in {
@@ -336,7 +345,13 @@ async def give_up_task(
 
     child_task.status = ChildTaskStatus.GIVEUP
     await repo.save_child_task(child_task)
-    return {"message": "Task marked as given up successfully.", "status": ChildTaskStatus.GIVEUP.value}
+    return {
+        "message": localize_message(
+            "Task marked as given up successfully.",
+            "Da danh dau nhiem vu bo cuoc thanh cong.",
+        ),
+        "status": ChildTaskStatus.GIVEUP.value,
+    }
 
 
 async def list_unassigned_tasks(

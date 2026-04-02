@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import { getDashboardData } from '../../api/services/dashboardService';
 import { useChild } from '../../providers/ChildProvider';
 import StatsCards from '../../features/parents/dashboard/StatsCards';
@@ -16,6 +17,7 @@ import { TaskEvents } from '../../utils/events';
 import type { Report } from '../../api/services/reportService';
 
 const DashboardPage = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const isOnboardingProcessing = searchParams.get('onboarding') === 'processing';
@@ -159,10 +161,10 @@ const DashboardPage = () => {
           <div className="text-center max-w-md">
             <div className="text-6xl mb-4">⏱️</div>
             <h2 className="text-2xl font-bold text-gray-900 mb-2">
-              Onboarding is taking longer than expected
+              {t('dashboard.onboardingSlowTitle')}
             </h2>
             <p className="text-gray-600 mb-6">
-              Your onboarding request is still being processed. This may take a few more moments.
+              {t('dashboard.onboardingSlowBody')}
             </p>
             <div className="space-y-3">
               <button
@@ -173,13 +175,13 @@ const DashboardPage = () => {
                 }}
                 className="w-full px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
               >
-                Check Again
+                {t('common.checkAgain')}
               </button>
               <button
                 onClick={() => navigate('/onboarding')}
                 className="w-full px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
               >
-                Go Back to Onboarding
+                {t('common.goBackToOnboarding')}
               </button>
             </div>
           </div>
@@ -190,11 +192,9 @@ const DashboardPage = () => {
     return (
       <div className="flex items-center justify-center h-screen">
         <div className="text-center">
-          <Loading text="Setting up your account..." size="lg" />
+          <Loading text={t('dashboard.onboardingLoading')} size="lg" />
           <p className="mt-4 text-gray-600">
-            We're analyzing your child's assessment and creating their profile.
-            <br />
-            This may take a few moments...
+            {t('dashboard.onboardingLoadingBody')}
           </p>
           <div className="mt-6 flex justify-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
@@ -208,7 +208,7 @@ const DashboardPage = () => {
   if (childLoading || (isLoading && !dashboardData)) {
     return (
       <div className="flex items-center justify-center h-screen">
-        <Loading text="Loading dashboard..." />
+        <Loading text={t('dashboard.loading')} />
       </div>
     );
   }
@@ -223,12 +223,12 @@ const DashboardPage = () => {
     return (
       <div className="flex items-center justify-center h-screen">
         <div className="text-center">
-          <p className="text-red-600 mb-4">Failed to load dashboard data. Please try again.</p>
+          <p className="text-red-600 mb-4">{t('dashboard.loadError')}</p>
           <button
             onClick={() => refetch()}
             className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
           >
-            Retry
+            {t('common.retry')}
           </button>
         </div>
       </div>
@@ -249,15 +249,15 @@ const DashboardPage = () => {
           <div className="flex items-start justify-between gap-4">
             <div className="flex-1">
               <h1 className="text-3xl font-bold text-gray-900 mb-2">
-                Dashboard
+                {t('dashboard.title')}
               </h1>
-              <p className="text-gray-600">Track your children's progress and celebrate their achievements</p>
+              <p className="text-gray-600">{t('dashboard.description')}</p>
             </div>
             
             <div className="flex items-center gap-3">
               <ChildSelector />
               <span className="text-lg font-normal text-gray-500 whitespace-nowrap">
-                Welcome back! 👋
+                {t('common.welcomeBack')}
               </span>
             </div>
           </div>

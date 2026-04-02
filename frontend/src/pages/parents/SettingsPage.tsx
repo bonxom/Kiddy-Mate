@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { User, Users, Bell } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import Badge from '../../components/ui/Badge';
 import AccountSettingsTab from '../../features/parents/settings/AccountSettingsTab';
 import ChildProfilesTab from '../../features/parents/settings/ChildProfilesTab';
@@ -9,6 +10,7 @@ import { useChild } from '../../providers/ChildProvider';
 type TabType = 'account' | 'children' | 'notifications';
 
 const SettingsPage = () => {
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<TabType>('account');
   const { children } = useChild();
 
@@ -16,18 +18,18 @@ const SettingsPage = () => {
   const tabs = useMemo(() => [
     {
       id: 'account' as TabType,
-      label: 'Account Settings',
+      label: t('settings.account', { defaultValue: 'Account Settings' }),
       icon: User,
     },
     {
       id: 'children' as TabType,
-      label: 'Children Profiles',
+      label: t('settings.children', { defaultValue: 'Children Profiles' }),
       icon: Users,
       count: children.length,
     },
     {
       id: 'notifications' as TabType,
-      label: 'Notifications',
+      label: t('settings.notifications', { defaultValue: 'Notifications' }),
       icon: Bell,
     },
   ], [children.length]);
@@ -38,10 +40,10 @@ const SettingsPage = () => {
         {/* Header */}
         <div>
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Settings ⚙️
+            {t('settings.title')}
           </h1>
           <p className="text-gray-600">
-            Manage your account, children profiles, and notification preferences
+            {t('settings.description')}
           </p>
         </div>
 

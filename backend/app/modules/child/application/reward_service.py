@@ -3,6 +3,7 @@ from __future__ import annotations
 from pydantic import BaseModel
 
 from app.core.security.child_context import ChildAuthContext, build_child_auth_context
+from app.core.locale import localize_message
 from app.modules.child.domain.errors import ChildForbiddenError, ChildNotFoundError, ChildValidationError
 from app.modules.child.domain.reward_repositories import ChildRewardRepository
 from app.modules.child.infrastructure.reward_repository import BeanieChildRewardRepository
@@ -58,7 +59,10 @@ async def redeem_reward(
     redemption = await repo.create_redemption_request(redemption)
     return {
         "id": str(redemption.id),
-        "message": "Redemption request created. Waiting for parent approval.",
+        "message": localize_message(
+            "Redemption request created. Waiting for parent approval.",
+            "Da tao yeu cau doi thuong. Dang cho phu huynh phe duyet.",
+        ),
         "cost": reward.cost_coins,
     }
 
@@ -135,4 +139,10 @@ async def equip_avatar_skin(
 
     child_reward.is_equipped = True
     await repo.save_child_reward(child_reward)
-    return {"message": "Skin equipped successfully.", "reward_id": reward_id}
+    return {
+        "message": localize_message(
+            "Skin equipped successfully.",
+            "Da trang bi vat pham thanh cong.",
+        ),
+        "reward_id": reward_id,
+    }

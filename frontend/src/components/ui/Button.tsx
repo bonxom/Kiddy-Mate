@@ -1,5 +1,8 @@
 import { type ButtonHTMLAttributes, type ReactNode } from 'react';
 import { Loader2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+
+import { translateUiString } from '../../i18n/runtime';
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   children: ReactNode;
@@ -21,6 +24,7 @@ const Button = ({
   disabled,
   ...props
 }: ButtonProps) => {
+  const { t } = useTranslation();
   const baseStyles = 'inline-flex items-center justify-center gap-2 font-semibold rounded-xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed active:scale-95 btn-ripple shadow-soft hover:shadow-medium';
   
   const variantStyles = {
@@ -40,6 +44,7 @@ const Button = ({
   };
 
   const widthStyle = fullWidth ? 'w-full' : '';
+  const translatedChildren = typeof children === 'string' ? translateUiString(children) : children;
 
   return (
     <button
@@ -50,12 +55,12 @@ const Button = ({
       {loading ? (
         <>
           <Loader2 className="w-4 h-4 animate-spin" />
-          <span>Loading...</span>
+          <span>{translateUiString(t('common.loading', { defaultValue: 'Loading...' }))}</span>
         </>
       ) : (
         <>
           {icon && <span className="shrink-0">{icon}</span>}
-          {children}
+          {translatedChildren}
         </>
       )}
     </button>

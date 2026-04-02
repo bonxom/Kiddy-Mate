@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Plus, Store, Gift } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import Button from '../../components/ui/Button';
 import Badge from '../../components/ui/Badge';
 import ShopManagementTab from '../../features/parents/reward-management/ShopManagementTab';
@@ -9,6 +10,7 @@ import { getAllRewards, getRedemptionRequests } from '../../api/services/rewardS
 type TabType = 'shop' | 'redemption';
 
 const RewardCenterPage = () => {
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<TabType>('shop');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [rewardsCount, setRewardsCount] = useState(0);
@@ -49,13 +51,13 @@ const RewardCenterPage = () => {
   const tabs = [
     {
       id: 'shop' as TabType,
-      label: 'Shop Management',
+      label: t('rewardCenter.shopManagement', { defaultValue: 'Shop Management' }),
       icon: Store,
       count: rewardsCount,
     },
     {
       id: 'redemption' as TabType,
-      label: 'Redemption Requests',
+      label: t('rewardCenter.redemptionRequests', { defaultValue: 'Redemption Requests' }),
       icon: Gift,
       count: pendingRequestsCount,
       badge: pendingRequestsCount > 0,
@@ -69,10 +71,10 @@ const RewardCenterPage = () => {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold text-gray-900 mb-2">
-              Reward Center 🎁
+              {t('rewardCenter.title')}
             </h1>
             <p className="text-gray-600">
-              Manage rewards and approve redemption requests from your children
+              {t('rewardCenter.description')}
             </p>
           </div>
         </div>
@@ -125,7 +127,7 @@ const RewardCenterPage = () => {
                   icon={<Plus className="w-5 h-5" />}
                   size="sm"
                 >
-                  Add Reward
+                  {t('rewardCenter.addReward', { defaultValue: 'Add Reward' })}
                 </Button>
               </div>
             )}

@@ -1,4 +1,7 @@
 import { Loader2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+
+import { translateUiString } from '../../i18n/runtime';
 
 interface LoadingProps {
   size?: 'sm' | 'md' | 'lg';
@@ -7,6 +10,7 @@ interface LoadingProps {
 }
 
 const Loading = ({ size = 'md', text, fullScreen = false }: LoadingProps) => {
+  useTranslation();
   const sizeClasses = {
     sm: 'w-4 h-4',
     md: 'w-8 h-8',
@@ -18,13 +22,14 @@ const Loading = ({ size = 'md', text, fullScreen = false }: LoadingProps) => {
     md: 'text-base',
     lg: 'text-lg',
   };
+  const translatedText = translateUiString(text);
 
   const content = (
     <div className="flex flex-col items-center justify-center gap-3">
       <Loader2 className={`${sizeClasses[size]} text-accent-500 animate-spin`} strokeWidth={2.5} />
-      {text && (
+      {translatedText && (
         <p className={`${textSizes[size]} text-gray-600 font-medium animate-pulse`}>
-          {text}
+          {translatedText}
         </p>
       )}
     </div>

@@ -1,4 +1,7 @@
 import { type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
+
+import { translateUiString } from '../../i18n/runtime';
 
 interface CardProps {
   children: ReactNode;
@@ -21,6 +24,7 @@ const Card = ({
   variant = 'default',
   badge,
 }: CardProps) => {
+  useTranslation();
   const paddingStyles = {
     none: '',
     sm: 'p-4',
@@ -38,6 +42,8 @@ const Card = ({
   const hoverStyle = hover 
     ? 'hover:shadow-strong hover:scale-[1.02] hover:-translate-y-1 cursor-pointer card-shine' 
     : '';
+  const translatedTitle = translateUiString(title);
+  const translatedSubtitle = translateUiString(subtitle);
 
   return (
     <div 
@@ -49,16 +55,16 @@ const Card = ({
         ${className}
       `}
     >
-      {(title || subtitle || badge) && (
+      {(translatedTitle || translatedSubtitle || badge) && (
         <div className="mb-5 flex items-start justify-between">
           <div className="flex-1">
-            {title && (
+            {translatedTitle && (
               <h3 className="text-xl font-bold text-gray-900 mb-1 flex items-center gap-2">
-                {title}
+                {translatedTitle}
               </h3>
             )}
-            {subtitle && (
-              <p className="text-sm text-gray-600">{subtitle}</p>
+            {translatedSubtitle && (
+              <p className="text-sm text-gray-600">{translatedSubtitle}</p>
             )}
           </div>
           {badge && (

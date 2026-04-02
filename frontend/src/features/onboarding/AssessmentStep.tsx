@@ -1,9 +1,13 @@
 import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CheckCircle2, ChevronRight } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import Button from '../../components/ui/Button';
 import Badge from '../../components/ui/Badge';
-import { assessmentQuestionsPrimary, assessmentQuestionsSecondary } from '../../data/assessmentQuestions';
+import {
+  getAssessmentQuestionsPrimary,
+  getAssessmentQuestionsSecondary,
+} from '../../data/assessmentQuestions';
 import type { AssessmentAnswer, AssessmentCategory, ChildAssessment } from '../../types/auth.types';
 
 interface AssessmentStepProps {
@@ -33,6 +37,7 @@ const categoryInfo: Record<AssessmentCategory, { icon: string; color: string; ti
 const AssessmentStep = ({ 
   childName, dateOfBirth, initialData, onComplete 
 }: AssessmentStepProps) => {
+  const { t, i18n } = useTranslation();
   const [answers, setAnswers] = useState<AssessmentAnswer[]>(initialData.answers || []);
   const [currentQuestionIndices, setCurrentQuestionIndices] = useState<Record<AssessmentCategory, number>>({
     discipline: 0,
@@ -42,10 +47,11 @@ const AssessmentStep = ({
   const [expandedCategory, setExpandedCategory] = useState<AssessmentCategory | null>(null);
 
   const relevantQuestions = useMemo(() => {
-    if (!dateOfBirth) return assessmentQuestionsPrimary;
+    const language = i18n.resolvedLanguage?.startsWith('vi') ? 'vi' : 'en';
+    if (!dateOfBirth) return getAssessmentQuestionsPrimary(language);
     const age = new Date().getFullYear() - new Date(dateOfBirth).getFullYear();
-    return age > 10 ? assessmentQuestionsSecondary : assessmentQuestionsPrimary;
-  }, [dateOfBirth]);
+    return age > 10 ? getAssessmentQuestionsSecondary(language) : getAssessmentQuestionsPrimary(language);
+  }, [dateOfBirth, i18n.resolvedLanguage]);
 
   const categories: AssessmentCategory[] = ['discipline', 'emotional', 'social'];
 
@@ -77,10 +83,12 @@ const AssessmentStep = ({
       <div className="w-full flex-1 flex flex-col min-h-0">
         <div className="text-center mb-4 shrink-0">
           <Badge variant="warning" className="mb-2 bg-orange-100 text-orange-800 border-orange-200 text-xs">
-            Assessment for {childName}
+            {t('assessment.forChild', { defaultValue: `Assessment for ${childName}`, childName })}
           </Badge>
           <h1 className="text-xl font-bold text-gray-900 mb-1">Questionnaire 📋</h1>
-          <p className="text-xs text-gray-500">Answer questions for each category below</p>
+          <p className="text-xs text-gray-500">
+            {t('assessment.instructions', { defaultValue: 'Answer questions for each category below' })}
+          </p>
         </div>
 
         {/* Three Category Rows - Each with inline question */}

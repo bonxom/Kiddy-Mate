@@ -1,8 +1,10 @@
 import { useState, useRef, useEffect } from 'react';
 import { ChevronDown, User } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useChild } from '../../providers/ChildProvider';
 
 const ChildSelector = () => {
+  const { t } = useTranslation();
   const { selectedChildId, children, setSelectedChildId } = useChild();
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -40,7 +42,7 @@ const ChildSelector = () => {
     if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
       age--;
     }
-    return age > 0 ? `${age} tuổi` : '';
+    return age > 0 ? t('common.ageDisplay', { age }) : '';
   };
 
   const getAvatarDisplay = (child: typeof children[0]) => {
@@ -109,7 +111,9 @@ const ChildSelector = () => {
             <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">
               <User className="w-4 h-4 text-gray-400" />
             </div>
-            <span className="text-sm font-medium text-gray-500">Select child</span>
+            <span className="text-sm font-medium text-gray-500">
+              {t('common.selectChild', { defaultValue: 'Select child' })}
+            </span>
           </>
         )}
         <ChevronDown 
@@ -124,7 +128,7 @@ const ChildSelector = () => {
         <div className="absolute top-full mt-2 right-0 w-64 bg-white rounded-lg shadow-xl border border-gray-200 py-2 z-50 animate-slide-up">
           <div className="px-3 py-2 border-b border-gray-100">
             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
-              Select Child
+              {t('common.selectChild', { defaultValue: 'Select child' })}
             </p>
           </div>
           

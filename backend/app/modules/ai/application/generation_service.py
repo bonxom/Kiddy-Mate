@@ -9,6 +9,7 @@ from typing import List, Optional, Dict, Any, Union
 from app.modules.children.domain.models import Child, ChildDevelopmentAssessment
 from app.modules.tasks.domain.models import ChildTask, ChildTaskStatus, UnityType as ChildTaskUnityType
 from app.modules.tasks.domain.models import Task, TaskCategory, TaskType, UnityType as TaskUnityType
+from app.core.locale import build_output_language_instruction, localize_message
 from app.shared.query_helpers import get_child_tasks_by_child, extract_id_from_link, fetch_link_or_get_object
 from app.services.auth import get_current_user
 from app.modules.identity.domain.models import User
@@ -403,6 +404,7 @@ async def generate_single_task_for_category(
         "Your task is to create appropriate tasks for children based on assessment information and task completion history. "
         "\n\nIMPORTANT: You MUST return ONLY a valid JSON object (not array), no explanations, no markdown code blocks, no additional text. "
         "Return only a pure JSON object with the exact fields specified in the prompt.\n\n"
+        + build_output_language_instruction(json_output=True)
     )
     
     # Call LLM
@@ -701,6 +703,8 @@ async def generate_tasks(
             "- unity_type (string): One of: life, choice, talk\n\n"
             "Example correct JSON format with 1 task:\n"
             '[{"title": "Clean room", "description": "Help child clean their own room", "category": "Independence", "type": "logic", "difficulty": 2, "suggested_age_range": "6-8", "reward_coins": 50, "unity_type": "life"}]'
+            + "\n\n"
+            + build_output_language_instruction(json_output=True)
         )
         
         child_info_text = f"""
@@ -922,7 +926,8 @@ async def score_child(
             "You are a child development assessment expert. "
             "Your task is to evaluate and score 5 aspects of child development based on assessment information and task completion history. "
             "Return the result as JSON with 5 fields: logic, independence, emotional, discipline, social. "
-            "Each score from 0-100."
+            "Each score from 0-100. "
+            + build_output_language_instruction(json_output=True)
         )
         
         user_prompt = f"""
@@ -1199,7 +1204,10 @@ async def manual_trigger_auto_generate(
         
         if not categories_to_generate:
             return {
-                "message": "No categories need task generation",
+                "message": localize_message(
+                    "No categories need task generation",
+                    "Khong co nhom nao can sinh them nhiem vu.",
+                ),
                 "active_tasks": total_active,
                 "categories_to_generate": {}
             }
@@ -1234,7 +1242,10 @@ async def manual_trigger_auto_generate(
         await child.save()
         
         return {
-            "message": f"Successfully generated {len(generated_tasks)} tasks",
+            "message": localize_message(
+                f"Successfully generated {len(generated_tasks)} tasks",
+                f"Da tao thanh cong {len(generated_tasks)} nhiem vu.",
+            ),
             "generated_tasks": generated_tasks,
             "categories": categories_to_generate
         }

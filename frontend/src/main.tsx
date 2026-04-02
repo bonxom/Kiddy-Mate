@@ -6,6 +6,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { AuthProvider } from './providers/AuthProvider'
 import ErrorBoundary from './components/common/ErrorBoundary'
 import { Toaster } from 'react-hot-toast'
+import './i18n'
+import { installLocalizationRuntimePatches } from './i18n'
 import './styles/index.css'
 
 // Create QueryClient instance with default options
@@ -18,6 +20,8 @@ const queryClient = new QueryClient({
     },
   },
 });
+
+installLocalizationRuntimePatches();
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>

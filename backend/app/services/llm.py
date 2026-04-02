@@ -3,14 +3,23 @@ import json
 from typing import Optional, Dict, Any
 
 from app.config import settings
-
-DEFAULT_SYSTEM_INSTRUCTION = (
-    "You are a friendly Vietnamese assistant named Dat, helping children. "
-    "Please answer in detail, easy to understand, using 3-5 sentences, and be encouraging. "
-    "When asked who you are, briefly introduce yourself (name is Dat)."
-)
+from app.core.locale import build_output_language_instruction, get_current_locale
 
 DEFAULT_TIMEOUT = 30.0
+
+
+def _default_system_instruction() -> str:
+    if get_current_locale() == "vi":
+        return (
+            "You are a friendly assistant named Dat, helping children. "
+            "Please answer in Vietnamese, easy to understand, using 3-5 sentences, and be encouraging. "
+            "When asked who you are, briefly introduce yourself (name is Dat)."
+        )
+    return (
+        "You are a friendly assistant named Dat, helping children. "
+        "Please answer in English, easy to understand, using 3-5 sentences, and be encouraging. "
+        "When asked who you are, briefly introduce yourself (name is Dat)."
+    )
 
 
 def generate_openai_response(prompt: str, system_instruction: Optional[str] = None, max_tokens: int = 1024) -> str:
@@ -29,7 +38,7 @@ def generate_openai_response(prompt: str, system_instruction: Optional[str] = No
     if not api_key:
         raise RuntimeError("NAVER_API_KEY is not configured in environment variables")
     
-    instruction = system_instruction or DEFAULT_SYSTEM_INSTRUCTION
+    instruction = system_instruction or _default_system_instruction()
     
     try:
         from openai import OpenAI
@@ -121,7 +130,11 @@ def analyze_assessment_with_chatgpt(
             messages=[
                 {
                     "role": "system",
-                    "content": "You are an expert child development analyst. Analyze assessment data and return ONLY valid JSON, no markdown, no extra text."
+                    "content": (
+                        "You are an expert child development analyst. Analyze assessment data and return ONLY valid JSON, "
+                        "no markdown, no extra text. "
+                        + build_output_language_instruction(json_output=True)
+                    ),
                 },
                 {
                     "role": "user",
@@ -301,6 +314,10 @@ ASSESSMENT ANSWERS:
                     # Fallback if question ID not found in mapping
                     prompt += f"Q: {q_id}\nA: {rating}/5\n\n"
     
-    prompt += "\nNow analyze the assessment and return ONLY the JSON response as specified above. No markdown, no explanations outside the JSON."
+    prompt += (
+        "\nNow analyze the assessment and return ONLY the JSON response as specified above. "
+        "No markdown, no explanations outside the JSON. "
+        + build_output_language_instruction(json_output=True)
+    )
     
     return prompt

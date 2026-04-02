@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { User, Phone, ArrowRight, Plus, Minus, Sparkles } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
 import type { ParentInfo } from '../../types/auth.types';
@@ -11,6 +12,7 @@ interface ParentInfoStepProps {
 }
 
 const ParentInfoStep = ({ initialData, onComplete }: ParentInfoStepProps) => {
+  const { t } = useTranslation();
   const [formData, setFormData] = useState<ParentInfo>(initialData);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -80,7 +82,7 @@ const ParentInfoStep = ({ initialData, onComplete }: ParentInfoStepProps) => {
         {/* Counter for Children */}
         <div className="flex-1 flex flex-col justify-center py-6">
           <label className="block text-sm font-medium text-slate-700 mb-3 text-center">
-            Number of children?
+            {t('parentInfo.numberOfChildren', { defaultValue: 'Number of children?' })}
           </label>
           <div className="flex items-center justify-center gap-5">
             <button
@@ -108,7 +110,11 @@ const ParentInfoStep = ({ initialData, onComplete }: ParentInfoStepProps) => {
             </button>
           </div>
           {errors.numberOfChildren && <p className="text-sm text-red-500 text-center mt-3 font-medium">{errors.numberOfChildren}</p>}
-          <p className="text-xs text-slate-400 text-center mt-4">You can always add or remove children later from settings</p>
+          <p className="text-xs text-slate-400 text-center mt-4">
+            {t('parentInfo.childrenHint', {
+              defaultValue: 'You can always add or remove children later from settings',
+            })}
+          </p>
         </div>
 
         <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 flex items-start gap-3">

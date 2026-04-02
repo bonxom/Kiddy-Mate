@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends
 from beanie import Link
 from pydantic import BaseModel
+from app.core.locale import build_output_language_instruction, localize_message
 from app.shared.query_helpers import extract_id_from_link
 from app.modules.interactions.domain.models import InteractionLog
 from app.modules.children.domain.models import Child
@@ -78,10 +79,20 @@ async def interact_with_child(
         prompt = f"User asks: {user_input}"
     
     try:
-        avatar_response = generate_gemini_response(prompt)
+        avatar_response = generate_gemini_response(
+            prompt,
+            (
+                "You are a friendly assistant named Dat, helping children. "
+                "Keep your response warm, practical, and easy to understand for a child. "
+                + build_output_language_instruction()
+            ),
+        )
     except Exception as e:
         logger.error(f"Error generating avatar response: {e}")
-        avatar_response = "Sorry, I'm currently busy. Please ask again later!"
+        avatar_response = localize_message(
+            "Sorry, I'm currently busy. Please ask again later!",
+            "Minh dang ban mot chut. Ban thu lai sau nhe!",
+        )
 
     # Detect emotion from user input
     detected_emotion = None
@@ -100,7 +111,13 @@ async def interact_with_child(
     )
     await interaction_log.insert()
 
-    return {"message": "Interaction recorded successfully.", "avatar_response": avatar_response}
+    return {
+        "message": localize_message(
+            "Interaction recorded successfully.",
+            "Da ghi lai tuong tac thanh cong.",
+        ),
+        "avatar_response": avatar_response,
+    }
 
 async def get_interaction_logs(
     child_id: str,

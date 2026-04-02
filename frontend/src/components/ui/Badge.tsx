@@ -1,4 +1,7 @@
 import { type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
+
+import { translateUiString } from '../../i18n/runtime';
 
 interface BadgeProps {
   children: ReactNode;
@@ -17,6 +20,7 @@ const Badge = ({
   dot = false,
   pulse = false,
 }: BadgeProps) => {
+  useTranslation();
   const variantStyles = {
     default: 'bg-gray-100 text-gray-800 border-gray-200',
     success: 'bg-success-50 text-success-800 border-success-200',
@@ -46,6 +50,7 @@ const Badge = ({
     md: 'w-2 h-2',
     lg: 'w-2.5 h-2.5',
   };
+  const translatedChildren = typeof children === 'string' ? translateUiString(children) : children;
 
   return (
     <span
@@ -65,7 +70,7 @@ const Badge = ({
           )}
         </span>
       )}
-      {children}
+      {translatedChildren}
     </span>
   );
 };

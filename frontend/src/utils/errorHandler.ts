@@ -5,6 +5,7 @@
 
 import toast from 'react-hot-toast';
 import { getErrorMessage } from '../api/client/axiosClient';
+import { translateUiString } from '../i18n/runtime';
 
 /**
  * Handle API errors with toast notifications
@@ -13,7 +14,7 @@ import { getErrorMessage } from '../api/client/axiosClient';
  * @returns The error message string
  */
 export const handleApiError = (error: unknown, customMessage?: string): string => {
-    const message = customMessage || getErrorMessage(error);
+    const message = translateUiString(customMessage || getErrorMessage(error));
 
     // Show toast notification
     toast.error(message, {
@@ -37,7 +38,7 @@ export const handleApiError = (error: unknown, customMessage?: string): string =
  * @param message - Success message to display
  */
 export const showSuccess = (message: string) => {
-    toast.success(message, {
+    toast.success(translateUiString(message), {
         duration: 3000,
         icon: '✅',
     });
@@ -48,7 +49,7 @@ export const showSuccess = (message: string) => {
  * @param message - Info message to display
  */
 export const showInfo = (message: string) => {
-    toast(message, {
+    toast(translateUiString(message), {
         duration: 3000,
         icon: 'ℹ️',
     });
@@ -59,7 +60,7 @@ export const showInfo = (message: string) => {
  * @param message - Warning message to display
  */
 export const showWarning = (message: string) => {
-    toast(message, {
+    toast(translateUiString(message), {
         duration: 4000,
         icon: '⚠️',
         style: {
@@ -74,7 +75,7 @@ export const showWarning = (message: string) => {
  * @returns Toast ID for dismissing later
  */
 export const showLoading = (message: string = 'Loading...') => {
-    return toast.loading(message);
+    return toast.loading(translateUiString(message));
 };
 
 /**

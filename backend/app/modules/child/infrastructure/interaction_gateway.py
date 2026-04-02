@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 
+from app.core.locale import build_output_language_instruction, localize_message
 from app.modules.child.domain.interaction_gateways import ChildInteractionGateway
 from app.services.llm import generate_gemini_response, generate_openai_response
 
@@ -47,7 +48,12 @@ Return ONLY one word: Happy, Sad, Angry, Excited, Scared, Neutral, Curious, Frus
 
 
 def generate_child_avatar_response(prompt: str) -> str:
-    return generate_gemini_response(prompt)
+    system_instruction = (
+        "You are a friendly assistant named Dat, helping children. "
+        "Keep your response warm, practical, and easy to understand for a child. "
+        + build_output_language_instruction()
+    )
+    return generate_gemini_response(prompt, system_instruction)
 
 
 class LLMChildInteractionGateway(ChildInteractionGateway):
@@ -56,7 +62,10 @@ class LLMChildInteractionGateway(ChildInteractionGateway):
             return generate_child_avatar_response(prompt)
         except Exception as exc:
             logger.error("Error generating avatar response: %s", exc)
-            return "Sorry, I'm currently busy. Please ask again later!"
+            return localize_message(
+                "Sorry, I'm currently busy. Please ask again later!",
+                "Minh dang ban mot chut. Ban thu lai sau nhe!",
+            )
 
     def detect_emotion(self, user_input: str) -> str:
         return detect_emotion_from_text(user_input)

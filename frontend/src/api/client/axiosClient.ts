@@ -6,6 +6,8 @@
 import axios, { AxiosError } from 'axios';
 import type { AxiosInstance, InternalAxiosRequestConfig, AxiosResponse } from 'axios';
 import { API_BASE_URL, STORAGE_KEYS, REQUEST_TIMEOUT } from './apiConfig';
+import { detectBrowserLanguage, normalizeLanguage } from '../../i18n/language';
+import { translateUiString } from '../../i18n/runtime';
 
 // Create axios instance with default config
 const axiosClient: AxiosInstance = axios.create({
@@ -21,10 +23,18 @@ axiosClient.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
     // Get token from localStorage
     const token = localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN);
+    const language = normalizeLanguage(
+      localStorage.getItem(STORAGE_KEYS.LANGUAGE) ?? detectBrowserLanguage()
+    );
     
     // Add Authorization header if token exists
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
+    }
+
+    if (config.headers) {
+      config.headers['Accept-Language'] = language;
+      config.headers['X-Language'] = language;
     }
     
     return config;
@@ -97,12 +107,14 @@ export interface ApiError {
 export const getErrorMessage = (error: unknown): string => {
   if (axios.isAxiosError(error)) {
     const apiError = error.response?.data as ApiError;
-    return apiError?.detail || apiError?.message || error.message || 'An error occurred';
+    return translateUiString(
+      apiError?.detail || apiError?.message || error.message || 'An error occurred'
+    );
   }
   
   if (error instanceof Error) {
-    return error.message;
+    return translateUiString(error.message);
   }
   
-  return 'An unexpected error occurred';
+  return translateUiString('An unexpected error occurred');
 };

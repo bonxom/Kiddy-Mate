@@ -7,6 +7,7 @@ from app.modules.tasks.domain.models import Task, TaskCategory, TaskType, UnityT
 from app.modules.reports.domain.models import Report
 from app.models.childtask_models import UnityType as ChildTaskUnityType
 from app.shared.query_helpers import extract_id_from_link, fetch_link_or_get_object, get_child_tasks_by_child
+from app.core.locale import build_output_language_instruction, localize_message
 from app.services.llm import generate_openai_response
 from app.modules.identity.domain.models import User
 from app.schemas.schemas import ChildTaskWithDetails, TaskPublic
@@ -388,7 +389,8 @@ async def analyze_emotion_report_and_generate_tasks(
         system_instruction = (
             "You are a child education expert specializing in emotional intelligence and task design. "
             "Based on emotion analysis from a child's report, generate appropriate tasks that address emotional needs and development areas. "
-            "Return ONLY valid JSON array, no markdown, no extra text. Maximum 20 tasks."
+            "Return ONLY valid JSON array, no markdown, no extra text. Maximum 20 tasks. "
+            + build_output_language_instruction(json_output=True)
         )
         
         prompt = f"""
@@ -435,6 +437,9 @@ Return a JSON array of task objects. Each task must have:
 }}
 
 Generate up to 20 tasks. Focus on emotional development and addressing the insights from the report.
+
+LANGUAGE REQUIREMENT:
+{build_output_language_instruction(json_output=True)}
 """
         
         # Call LLM
@@ -958,12 +963,18 @@ async def manual_update_skills(
         updated = await update_child_skills(child)
         if updated:
             return {
-                "message": "Skills updated successfully",
+                "message": localize_message(
+                    "Skills updated successfully",
+                    "Da cap nhat ky nang thanh cong.",
+                ),
                 "skills": child.initial_traits.get("overall_traits", {}) if child.initial_traits else {}
             }
         else:
             return {
-                "message": "No significant changes detected, skills remain the same",
+                "message": localize_message(
+                    "No significant changes detected, skills remain the same",
+                    "Khong co thay doi dang ke, ky nang duoc giu nguyen.",
+                ),
                 "skills": child.initial_traits.get("overall_traits", {}) if child.initial_traits else {}
             }
     except Exception as e:

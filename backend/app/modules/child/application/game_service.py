@@ -4,6 +4,7 @@ from typing import Any
 
 from pydantic import BaseModel
 
+from app.core.locale import localize_message
 from app.core.security.child_context import ChildAuthContext, build_child_auth_context
 from app.core.time import utc_now
 from app.modules.child.domain.errors import ChildForbiddenError, ChildNotFoundError
@@ -93,4 +94,9 @@ async def submit_game_session(
     session.score = request.score
     session.behavior_data = request.behavior_data
     await repo.save_session(session)
-    return {"message": "Game session recorded successfully."}
+    return {
+        "message": localize_message(
+            "Game session recorded successfully.",
+            "Da luu phien choi thanh cong.",
+        )
+    }

@@ -12,9 +12,14 @@ import {
   updateChild,
   deleteChild,
 } from '../../../api/services/childService';
-import { assessmentQuestionsPrimary, assessmentQuestionsSecondary } from '../../../data/assessmentQuestions';
+import {
+  getAssessmentQuestionsPrimary,
+  getAssessmentQuestionsSecondary,
+} from '../../../data/assessmentQuestions';
+import { useTranslation } from 'react-i18next';
 
 const ChildProfilesTab = () => {
+  const { i18n } = useTranslation();
   const [children, setChildren] = useState<ChildProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -142,7 +147,11 @@ const ChildProfilesTab = () => {
         // If has assessment data, include it for LLM analysis
         if (fullChildData.assessment && fullChildData.assessment.answers.length > 0) {
           // Combine all assessment questions (same as onboarding)
-          const allQuestions = [...assessmentQuestionsPrimary, ...assessmentQuestionsSecondary];
+          const language = i18n.resolvedLanguage?.startsWith('vi') ? 'vi' : 'en';
+          const allQuestions = [
+            ...getAssessmentQuestionsPrimary(language),
+            ...getAssessmentQuestionsSecondary(language),
+          ];
           
           // Convert assessment answers to backend format (same as onboarding)
           const getCategoryAnswers = (category: string) => {

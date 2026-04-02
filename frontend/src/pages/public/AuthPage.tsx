@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { Sparkles, LogIn, UserPlus, Lock, User } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
 import PasswordInput from '../../components/ui/PasswordInput';
+import LanguageToggle from '../../components/common/LanguageToggle';
 import { useAuth } from '../../providers/AuthProvider';
 import { loginChild } from '../../api/services/childAuthService';
 import { STORAGE_KEYS } from '../../api/client/apiConfig';
@@ -12,6 +14,7 @@ import type { LoginCredentials, RegisterCredentials } from '../../types/auth.typ
 type AuthMode = 'login' | 'register' | 'child';
 
 const AuthPage = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
   const { login, register } = useAuth();
@@ -109,7 +112,8 @@ const AuthPage = () => {
       // Redirect to parent dashboard after successful login
       navigate('/parent/dashboard', { replace: true });
     } catch (error: any) {
-      const errorMessage = error?.message || 'Login failed. Please try again.';
+      const errorMessage =
+        error?.message || t('auth.loginError', { defaultValue: 'Login failed. Please try again.' });
       setLoginErrors({ password: errorMessage });
     } finally {
       setIsLoading(false);
@@ -134,7 +138,8 @@ const AuthPage = () => {
       // Redirect to onboarding after successful registration
       navigate('/onboarding', { replace: true });
     } catch (error: any) {
-      const errorMessage = error?.message || 'Registration failed. Please try again.';
+      const errorMessage =
+        error?.message || t('auth.registerError', { defaultValue: 'Registration failed. Please try again.' });
       setRegisterErrors({ email: errorMessage });
     } finally {
       setIsLoading(false);
@@ -185,7 +190,10 @@ const AuthPage = () => {
         }
       }, 100);
     } catch (error: any) {
-      const errorMessage = error?.response?.data?.detail || error?.message || 'Login failed. Please try again.';
+      const errorMessage =
+        error?.response?.data?.detail ||
+        error?.message ||
+        t('auth.loginError', { defaultValue: 'Login failed. Please try again.' });
       setChildErrors({ password: errorMessage });
     } finally {
       setIsLoading(false);
@@ -212,6 +220,9 @@ const AuthPage = () => {
 
   return (
     <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4 py-10 relative overflow-hidden">
+      <div className="absolute top-4 right-4 z-20">
+        <LanguageToggle />
+      </div>
       {/* --- Background Decoration (Dùng màu cứng thay vì custom class để đảm bảo hiện) --- */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-1/4 -left-1/4 w-[50%] h-[50%] bg-blue-500 rounded-full blur-[100px] opacity-30" />
@@ -240,8 +251,8 @@ const AuthPage = () => {
             ${mode === 'register' && 'hidden md:flex'} 
         `}>
             <div className="mb-8">
-                <h2 className="text-3xl font-bold text-[#06325a] mb-2">Sign In</h2>
-                <p className="text-gray-500">Welcome back! Please login to continue.</p>
+                <h2 className="text-3xl font-bold text-[#06325a] mb-2">{t('auth.loginTitle')}</h2>
+                <p className="text-gray-500">{t('auth.loginDescription')}</p>
             </div>
 
             <form onSubmit={handleLoginSubmit} className="space-y-5 relative z-10">
@@ -282,10 +293,10 @@ const AuthPage = () => {
                 <div className="flex justify-between items-center text-sm">
                     <label className="flex items-center gap-2 text-gray-600 cursor-pointer">
                         <input type="checkbox" className="rounded border-gray-300 text-[#06325a]" />
-                        Remember me
+                        {t('auth.rememberMe', { defaultValue: 'Remember me' })}
                     </label>
                     <Link to="/forgot-password" className="text-[#3498db] font-semibold">
-                        Forgot password?
+                        {t('auth.forgotPassword', { defaultValue: 'Forgot password?' })}
                     </Link>
                 </div>
 
@@ -298,7 +309,9 @@ const AuthPage = () => {
                     className="bg-[#06325a] hover:bg-[#052848] text-white transition-all rounded-xl py-3 shadow-lg hover:shadow-xl"
                     icon={<LogIn className="w-5 h-5" />}
                 >
-                    {isLoading ? 'Signing in...' : 'Sign In'}
+                    {isLoading
+                      ? t('auth.signingIn', { defaultValue: 'Signing in...' })
+                      : t('auth.loginTitle')}
                 </Button>
             </form>
         </div>
@@ -317,8 +330,12 @@ const AuthPage = () => {
             {mode === 'child' ? (
               <>
                 <div className="mb-6">
-                  <h2 className="text-3xl font-bold text-[#06325a] mb-2">Child Login</h2>
-                  <p className="text-gray-500">Welcome! Please login with your username.</p>
+                  <h2 className="text-3xl font-bold text-[#06325a] mb-2">{t('auth.childLoginTitle')}</h2>
+                  <p className="text-gray-500">
+                    {t('auth.childLoginDescription', {
+                      defaultValue: 'Welcome! Please login with your username.',
+                    })}
+                  </p>
                 </div>
 
                 <form onSubmit={handleChildLoginSubmit} className="space-y-5 relative z-10">
@@ -364,7 +381,9 @@ const AuthPage = () => {
                     className="bg-[#10b981] hover:bg-[#059669] text-white transition-all rounded-xl py-3 shadow-lg hover:shadow-xl"
                     icon={<LogIn className="w-5 h-5" />}
                   >
-                    {isLoading ? 'Logging in...' : 'Login'}
+                    {isLoading
+                      ? t('auth.signingIn', { defaultValue: 'Signing in...' })
+                      : t('auth.loginTitle')}
                   </Button>
                 </form>
 
@@ -380,8 +399,12 @@ const AuthPage = () => {
             ) : (
               <>
                 <div className="mb-6">
-                  <h2 className="text-3xl font-bold text-[#06325a] mb-2">Create Account</h2>
-                  <p className="text-gray-500">Join our community for parents today.</p>
+                  <h2 className="text-3xl font-bold text-[#06325a] mb-2">{t('auth.registerTitle')}</h2>
+                  <p className="text-gray-500">
+                    {t('auth.registerDescription', {
+                      defaultValue: 'Join our community for parents today.',
+                    })}
+                  </p>
                 </div>
 
                 <form onSubmit={handleRegisterSubmit} className="space-y-4 relative z-10">
@@ -460,7 +483,9 @@ const AuthPage = () => {
                     className="bg-[#10b981] hover:bg-[#059669] text-white transition-all rounded-xl py-3 shadow-lg hover:shadow-xl"
                     icon={<UserPlus className="w-5 h-5" />}
                 >
-                    {isLoading ? 'Creating Account...' : 'Create Account'}
+                    {isLoading
+                      ? t('auth.creatingAccount', { defaultValue: 'Creating Account...' })
+                      : t('auth.registerTitle')}
                 </Button>
             </form>
               </>
@@ -501,21 +526,27 @@ const AuthPage = () => {
                 <div className="inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-white/10 backdrop-blur-md mb-6 border border-white/20 shadow-lg">
                     <UserPlus className="w-10 h-10 text-white" />
                 </div>
-                <h2 className="text-4xl font-bold mb-4 text-white">New Here?</h2>
-                <p className="text-blue-100 mb-8 text-lg">Join Kiddy-Mate to access AI-powered parenting insights!</p>
+                <h2 className="text-4xl font-bold mb-4 text-white">
+                  {t('auth.newHereTitle', { defaultValue: 'New Here?' })}
+                </h2>
+                <p className="text-blue-100 mb-8 text-lg">
+                  {t('auth.newHereBody', {
+                    defaultValue: 'Join Kiddy-Mate to access AI-powered parenting insights!',
+                  })}
+                </p>
                 
                 <div className="flex flex-col gap-3 w-full max-w-xs">
                   <button 
                       onClick={() => switchMode('register')}
                       className="relative z-50 bg-white text-[#06325a] hover:bg-blue-50 rounded-full px-10 py-3 font-bold text-lg shadow-lg transform transition hover:scale-105 cursor-pointer"
                   >
-                      Sign Up Now
+                      {t('auth.signUpNow', { defaultValue: 'Sign Up Now' })}
                   </button>
                   <button 
                       onClick={() => switchMode('child')}
                       className="relative z-50 bg-white/20 backdrop-blur-md text-white border border-white/30 hover:bg-white/30 rounded-full px-10 py-3 font-bold text-lg shadow-lg transform transition hover:scale-105 cursor-pointer"
                   >
-                      Child Login
+                      {t('auth.childLoginTitle')}
                   </button>
                 </div>
             </div>
@@ -527,15 +558,21 @@ const AuthPage = () => {
                 <div className="inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-white/10 backdrop-blur-md mb-6 border border-white/20 shadow-lg">
                     <Lock className="w-10 h-10 text-white" />
                 </div>
-                <h2 className="text-4xl font-bold mb-4 text-white">Welcome Back!</h2>
-                <p className="text-blue-100 mb-8 text-lg">Already have an account? Sign in to continue.</p>
+                <h2 className="text-4xl font-bold mb-4 text-white">
+                  {t('auth.overlayWelcomeBack', { defaultValue: 'Welcome Back!' })}
+                </h2>
+                <p className="text-blue-100 mb-8 text-lg">
+                  {t('auth.overlayWelcomeBody', {
+                    defaultValue: 'Already have an account? Sign in to continue.',
+                  })}
+                </p>
                 
                 {/* FIX 3: Button có z-index cao và cursor-pointer */}
                 <button 
                     onClick={() => switchMode('login')}
                     className="relative z-50 bg-white text-[#06325a] hover:bg-blue-50 rounded-full px-10 py-3 font-bold text-lg shadow-lg transform transition hover:scale-105 cursor-pointer"
                 >
-                    Sign In
+                    {t('auth.loginTitle')}
                 </button>
             </div>
 
@@ -546,14 +583,20 @@ const AuthPage = () => {
                 <div className="inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-white/10 backdrop-blur-md mb-6 border border-white/20 shadow-lg">
                     <User className="w-10 h-10 text-white" />
                 </div>
-                <h2 className="text-4xl font-bold mb-4 text-white">Parent Login?</h2>
-                <p className="text-green-100 mb-8 text-lg">Are you a parent? Sign in to manage your account.</p>
+                <h2 className="text-4xl font-bold mb-4 text-white">
+                  {t('auth.parentLoginPromptTitle', { defaultValue: 'Parent Login?' })}
+                </h2>
+                <p className="text-green-100 mb-8 text-lg">
+                  {t('auth.parentLoginPromptBody', {
+                    defaultValue: 'Are you a parent? Sign in to manage your account.',
+                  })}
+                </p>
                 
                 <button 
                     onClick={() => switchMode('login')}
                     className="relative z-50 bg-white text-[#10b981] hover:bg-green-50 rounded-full px-10 py-3 font-bold text-lg shadow-lg transform transition hover:scale-105 cursor-pointer"
                 >
-                    Parent Sign In
+                    {t('auth.parentSignIn', { defaultValue: 'Parent Sign In' })}
                 </button>
             </div>
         </div>

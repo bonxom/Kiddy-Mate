@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Sparkles, Quote, ArrowLeft, Bot } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 // Dịch vụ và dữ liệu API (giả định các paths này là chính xác)
 import { completeOnboarding } from '../../api/services/onboardingService';
@@ -9,8 +10,12 @@ import { STORAGE_KEYS } from '../../api/client/apiConfig';
 import ParentInfoStep from '../../features/onboarding/ParentInfoStep';
 import ChildInfoStep from '../../features/onboarding/ChildInfoStep';
 import AssessmentStep from '../../features/onboarding/AssessmentStep';
-import { assessmentQuestionsPrimary, assessmentQuestionsSecondary } from '../../data/assessmentQuestions';
+import {
+  getAssessmentQuestionsPrimary,
+  getAssessmentQuestionsSecondary,
+} from '../../data/assessmentQuestions';
 import type { OnboardingData, OnboardingStep, ParentInfo, ChildBasicInfo, ChildAssessment } from '../../types/auth.types';
+import LanguageToggle from '../../components/common/LanguageToggle';
 
 interface QuoteData {
     text: string;
@@ -37,6 +42,7 @@ const QUOTES: QuoteData[] = [
 ];
 
 const OnboardingPage = () => {
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   
   // State quản lý bước hiện tại và dữ liệu
@@ -123,17 +129,20 @@ const OnboardingPage = () => {
     try {
       const userStr = localStorage.getItem(STORAGE_KEYS.AUTH_USER);
       if (!userStr) {
-        alert('Session expired. Please login again.');
+        alert(t('auth.sessionExpired', { defaultValue: 'Session expired. Please login again.' }));
         navigate('/login');
         return;
       }
       const user = JSON.parse(userStr);
       
-      const allQuestions = [...assessmentQuestionsPrimary, ...assessmentQuestionsSecondary];
+      const allQuestions = [
+        ...getAssessmentQuestionsPrimary(i18n.resolvedLanguage?.startsWith('vi') ? 'vi' : 'en'),
+        ...getAssessmentQuestionsSecondary(i18n.resolvedLanguage?.startsWith('vi') ? 'vi' : 'en'),
+      ];
 
       // Validate required fields before sending
       if (!finalData.parentInfo.displayName || !finalData.parentInfo.displayName.trim()) {
-        alert('Please enter your display name');
+        alert(t('onboarding.enterDisplayName', { defaultValue: 'Please enter your display name' }));
         return;
       }
 
@@ -218,7 +227,10 @@ const OnboardingPage = () => {
       console.error('Onboarding validation error:', error);
       
       // Extract error message from response
-      let errorMessage = 'Failed to complete onboarding. Please try again.';
+      let errorMessage = t(
+        'onboarding.completeError',
+        { defaultValue: 'Failed to complete onboarding. Please try again.' }
+      );
       if (error?.response?.data?.detail) {
         errorMessage = error.response.data.detail;
       } else if (error?.message) {
@@ -249,7 +261,10 @@ const OnboardingPage = () => {
   // --- GIAO DIỆN (Đã cải tiến UI/UX) ---
   return (
     // Container chính: dùng h-screen và overflow-hidden để cố định layout
-    <div className="flex h-screen w-full bg-white font-sans overflow-hidden">
+<div className="flex h-screen w-full bg-white font-sans overflow-hidden">
+        <div className="absolute top-4 right-4 z-30">
+          <LanguageToggle />
+        </div>
       
       {/* ===========================================================
           LEFT COLUMN (BRANDING + ROBOT) - Nền màu xanh đậm
@@ -287,7 +302,7 @@ const OnboardingPage = () => {
                 </div>
                 <div>
                     <h1 className="text-2xl font-bold tracking-tight">Kiddy-Mate</h1>
-                    <p className="text-xs text-blue-200 tracking-widest uppercase">AI Parenting Assistant</p>
+<p className="text-xs text-blue-200 tracking-widest uppercase">{t('onboarding.pageTagline')}</p>
                 </div>
             </div>
         </div>

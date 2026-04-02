@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowLeft, ArrowRight, Baby, Calendar, Heart, AlertCircle, User, Lock } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
-import { favoriteTopicOptions } from '../../data/assessmentQuestions';
+import { getFavoriteTopicOptions } from '../../data/assessmentQuestions';
 import type { ChildBasicInfo } from '../../types/auth.types';
 
 interface ChildInfoStepProps {
@@ -15,6 +16,7 @@ interface ChildInfoStepProps {
 }
 
 const ChildInfoStep = ({ childNumber, totalChildren, initialData, onComplete, onBack }: ChildInfoStepProps) => {
+  const { t, i18n } = useTranslation();
   const [formData, setFormData] = useState<ChildBasicInfo>(initialData || {
     fullName: '',
     dateOfBirth: '',
@@ -25,6 +27,7 @@ const ChildInfoStep = ({ childNumber, totalChildren, initialData, onComplete, on
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [ageWarning, setAgeWarning] = useState<string | null>(null);
+  const favoriteTopicOptions = getFavoriteTopicOptions(i18n.resolvedLanguage?.startsWith('vi') ? 'vi' : 'en');
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -80,9 +83,11 @@ const ChildInfoStep = ({ childNumber, totalChildren, initialData, onComplete, on
     >
       <div className="text-center mb-6">
         <span className="inline-block px-3 py-1 rounded-full bg-blue-50 text-blue-600 text-xs font-bold uppercase tracking-wider mb-2">
-           Child {childNumber} / {totalChildren}
+           {t('childInfo.childCounter', { defaultValue: `Child ${childNumber} / ${totalChildren}`, childNumber, totalChildren })}
         </span>
-        <h2 className="text-xl font-bold text-slate-800">Child Information</h2>
+        <h2 className="text-xl font-bold text-slate-800">
+          {t('childInfo.title', { defaultValue: 'Child Information' })}
+        </h2>
       </div>
 
       <form onSubmit={(e) => {
@@ -191,7 +196,9 @@ const ChildInfoStep = ({ childNumber, totalChildren, initialData, onComplete, on
 
         {/* Interests */}
         <div>
-          <label className="block text-xs font-bold text-slate-500 mb-3 uppercase tracking-wide">Interests (Select all)</label>
+          <label className="block text-xs font-bold text-slate-500 mb-3 uppercase tracking-wide">
+            {t('childInfo.interests', { defaultValue: 'Interests (Select all)' })}
+          </label>
           <div className="flex flex-wrap gap-2 max-h-36 overflow-y-auto pr-1 custom-scrollbar content-start">
             {favoriteTopicOptions.map((topic) => {
               const isSelected = formData.favoriteTopics?.includes(topic.id);

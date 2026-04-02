@@ -1,5 +1,8 @@
 import { type ReactNode, useEffect } from 'react';
 import { X } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+
+import { translateUiString } from '../../i18n/runtime';
 
 interface ModalProps {
   isOpen: boolean;
@@ -20,6 +23,7 @@ const Modal = ({
   showCloseButton = true,
   closeOnBackdrop = true,
 }: ModalProps) => {
+  useTranslation();
   // Đóng modal khi nhấn ESC
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
@@ -45,6 +49,8 @@ const Modal = ({
   }, [isOpen]);
 
   if (!isOpen) return null;
+
+  const translatedTitle = translateUiString(title);
 
   const sizeStyles = {
     sm: 'max-w-md',
@@ -77,12 +83,12 @@ const Modal = ({
         `}
       >
         {/* Header */}
-        {(title || showCloseButton) && (
+        {(translatedTitle || showCloseButton) && (
                     <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-gray-50">
-            {title && (
+            {translatedTitle && (
               <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
                 <div className="w-1 h-6 bg-gradient-accent rounded-full" />
-                {title}
+                {translatedTitle}
               </h2>
             )}
             {showCloseButton && (

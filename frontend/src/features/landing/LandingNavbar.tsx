@@ -1,9 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Bot, Menu, X } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import Button from '../../components/ui/Button';
+import LanguageToggle from '../../components/common/LanguageToggle';
 
 const LandingNavbar = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [scrollY, setScrollY] = useState(0);
@@ -38,29 +41,30 @@ const LandingNavbar = () => {
           {/* Desktop Menu */}
           <div className="hidden md:flex items-center gap-8">
             <a href="#features" className="text-gray-700 hover:text-primary-600 font-medium transition-colors">
-              Features
+              {t('landing.nav.features', { defaultValue: 'Features' })}
             </a>
             <a href="#how-it-works" className="text-gray-700 hover:text-primary-600 font-medium transition-colors">
-              How It Works
+              {t('landing.nav.howItWorks', { defaultValue: 'How It Works' })}
             </a>
             <a href="#pricing" className="text-gray-700 hover:text-primary-600 font-medium transition-colors">
-              Pricing
+              {t('landing.nav.pricing', { defaultValue: 'Pricing' })}
             </a>
             <a href="#testimonials" className="text-gray-700 hover:text-primary-600 font-medium transition-colors">
-              Reviews
+              {t('landing.nav.reviews', { defaultValue: 'Reviews' })}
             </a>
           </div>
 
           {/* Auth Buttons */}
           <div className="hidden md:flex items-center gap-4">
+            <LanguageToggle compact />
             <Button 
               variant="ghost" 
               onClick={() => navigate('/login')}
             >
-              Login
+              {t('auth.loginTitle', { defaultValue: 'Sign In' })}
             </Button>
             <Button onClick={() => navigate('/register')}>
-              Sign Up Free
+              {t('landing.nav.signUp', { defaultValue: 'Sign Up Free' })}
             </Button>
           </div>
 
@@ -78,24 +82,27 @@ const LandingNavbar = () => {
       {isMenuOpen && (
         <div className="md:hidden bg-white border-t border-gray-100 shadow-lg animate-slide-down">
           <div className="px-4 py-6 space-y-4">
+            <div className="pb-2">
+              <LanguageToggle />
+            </div>
             <a href="#features" className="block text-gray-700 hover:text-primary-600 font-medium">
-              Features
+              {t('landing.nav.features', { defaultValue: 'Features' })}
             </a>
             <a href="#how-it-works" className="block text-gray-700 hover:text-primary-600 font-medium">
-              How It Works
+              {t('landing.nav.howItWorks', { defaultValue: 'How It Works' })}
             </a>
             <a href="#pricing" className="block text-gray-700 hover:text-primary-600 font-medium">
-              Pricing
+              {t('landing.nav.pricing', { defaultValue: 'Pricing' })}
             </a>
             <a href="#testimonials" className="block text-gray-700 hover:text-primary-600 font-medium">
-              Reviews
+              {t('landing.nav.reviews', { defaultValue: 'Reviews' })}
             </a>
             <div className="pt-4 space-y-3 border-t border-gray-100">
               <Button variant="ghost" fullWidth onClick={() => navigate('/login')}>
-                Login
+                {t('auth.loginTitle', { defaultValue: 'Sign In' })}
               </Button>
               <Button fullWidth onClick={() => navigate('/register')}>
-                Sign Up Free
+                {t('landing.nav.signUp', { defaultValue: 'Sign Up Free' })}
               </Button>
             </div>
           </div>

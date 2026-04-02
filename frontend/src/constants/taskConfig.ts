@@ -17,6 +17,7 @@ import {
   type LucideIcon
 } from 'lucide-react';
 import type { TaskCategory, TaskStatus } from '../types/task.types';
+import { translateUiString } from '../i18n/runtime';
 
 // ============================================================================
 // TASK CATEGORY CONFIGURATION
@@ -24,7 +25,7 @@ import type { TaskCategory, TaskStatus } from '../types/task.types';
 
 export type TaskCategoryKey = 'self-discipline' | 'logic' | 'creativity' | 'social' | 'physical' | 'academic';
 
-export const TASK_CATEGORY_LABELS: Record<TaskCategoryKey, string> = {
+const TASK_CATEGORY_LABEL_SEEDS: Record<TaskCategoryKey, string> = {
   'self-discipline': 'Independence',
   logic: 'Logic',
   creativity: 'Creativity',
@@ -32,6 +33,15 @@ export const TASK_CATEGORY_LABELS: Record<TaskCategoryKey, string> = {
   physical: 'Physical',
   academic: 'Academic',
 };
+
+export const TASK_CATEGORY_LABELS: Record<TaskCategoryKey, string> = new Proxy(
+  TASK_CATEGORY_LABEL_SEEDS,
+  {
+    get(target, prop: string) {
+      return translateUiString(target[prop as TaskCategoryKey]);
+    },
+  }
+) as Record<TaskCategoryKey, string>;
 
 export const TASK_CATEGORY_ICONS: Record<TaskCategoryKey, LucideIcon> = {
   'self-discipline': Target,
@@ -134,7 +144,7 @@ export function getCategoryConfig(category: TaskCategory) {
   return {
     icon: TASK_CATEGORY_ICONS[category],
     color: TASK_CATEGORY_COLORS[category],
-    label: TASK_CATEGORY_LABELS[category],
+    label: translateUiString(TASK_CATEGORY_LABEL_SEEDS[category]),
   };
 }
 
@@ -142,14 +152,20 @@ export function getCategoryConfig(category: TaskCategory) {
  * Get priority configuration
  */
 export function getPriorityConfig(priority: TaskPriorityKey) {
-  return TASK_PRIORITY_CONFIG[priority];
+  return {
+    ...TASK_PRIORITY_CONFIG[priority],
+    label: translateUiString(TASK_PRIORITY_CONFIG[priority].label),
+  };
 }
 
 /**
  * Get status configuration
  */
 export function getStatusConfig(status: TaskStatus) {
-  return TASK_STATUS_CONFIG[status];
+  return {
+    ...TASK_STATUS_CONFIG[status],
+    label: translateUiString(TASK_STATUS_CONFIG[status].label),
+  };
 }
 
 /**

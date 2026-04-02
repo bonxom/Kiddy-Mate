@@ -35,4 +35,5 @@ export const STORAGE_KEYS = {
   AUTH_TOKEN: 'auth_token',
   AUTH_USER: 'auth_user',
   REFRESH_TOKEN: 'refresh_token',
+  LANGUAGE: 'app_language',
 } as const;

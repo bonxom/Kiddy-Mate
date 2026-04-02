@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Plus, ListTodo, Library } from 'lucide-react';
 import { useQueryClient, useQuery } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import Button from '../../components/ui/Button';
 import Badge from '../../components/ui/Badge';
 import AssignedTasksTab from '../../features/parents/task-management/AssignedTasksTab';
@@ -12,6 +13,7 @@ import { getChildTasks } from '../../api/services/taskService';
 type TabType = 'assigned' | 'library';
 
 const TaskCenterContent = () => {
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<TabType>('assigned');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [assignedCount, setAssignedCount] = useState(0);
@@ -115,13 +117,13 @@ const TaskCenterContent = () => {
   const tabs = [
     {
       id: 'assigned' as TabType,
-      label: 'Assigned Tasks',
+      label: t('taskCenter.assignedTasks', { defaultValue: 'Assigned Tasks' }),
       icon: ListTodo,
       count: assignedCount,
     },
     {
       id: 'library' as TabType,
-      label: 'Task Library',
+      label: t('taskCenter.library', { defaultValue: 'Task Library' }),
       icon: Library,
       count: libraryCount,
     },
@@ -133,10 +135,10 @@ const TaskCenterContent = () => {
         {/* Header */}
         <div>
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Task Center 📋
+            {t('taskCenter.title')}
           </h1>
           <p className="text-gray-600">
-            Manage and create tasks to help your children develop great habits
+            {t('taskCenter.description')}
           </p>
         </div>
 
@@ -190,7 +192,7 @@ const TaskCenterContent = () => {
                 size="sm"
                 className="whitespace-nowrap"
               >
-                Add Task
+                {t('taskCenter.addTask', { defaultValue: 'Add Task' })}
               </Button>
             </div>
           </div>

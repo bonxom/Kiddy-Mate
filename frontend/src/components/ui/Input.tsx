@@ -1,5 +1,8 @@
 import { type InputHTMLAttributes, forwardRef, useState } from 'react';
 import { Eye, EyeOff, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+
+import { translateUiString } from '../../i18n/runtime';
 
 interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   label?: string;
@@ -25,6 +28,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
     required, 
     ...props 
   }, ref) => {
+    useTranslation();
     const [showPassword, setShowPassword] = useState(false);
     const widthStyle = fullWidth ? 'w-full' : '';
     const isPassword = type === 'password';
@@ -34,14 +38,20 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
     const hasRightIcon = !!icon && iconPosition === 'right';
     
     const hasRightAccessory = isPassword || hasRightIcon || !!error || !!success;
+    const translatedLabel = translateUiString(label);
+    const translatedError = translateUiString(error);
+    const translatedHelperText = translateUiString(helperText);
+    const translatedPlaceholder = translateUiString(
+      typeof props.placeholder === 'string' ? props.placeholder : undefined
+    );
 
     const accessoryClass = "absolute right-0 inset-y-0 flex items-center pr-3";
     
     return (
       <div className={`${widthStyle}`}>
-        {label && (
+        {translatedLabel && (
           <label className="block text-sm font-semibold text-gray-700 mb-2">
-            {label}
+            {translatedLabel}
             {required && <span className="text-red-500 ml-1">*</span>}
           </label>
         )}
@@ -71,6 +81,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
               ${className}
               ${error ? 'border-red-300 focus:border-red-500 focus:ring-red-500/50' : success ? 'border-success-300 focus:border-success-500 focus:ring-success-500/50' : 'border-gray-200 hover:border-gray-300'}
             `}
+            placeholder={translatedPlaceholder}
             {...props}
           />
 
@@ -103,7 +114,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
               )}
 
               {/* Error and success icons */}
-              {error && !isPassword && !icon && (
+              {translatedError && !isPassword && !icon && (
                 <div className="text-red-500">
                   <AlertCircle className="w-5 h-5" />
                 </div>
@@ -117,14 +128,14 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
           )}
         </div>
         
-        {error && (
+        {translatedError && (
           <div className="mt-1.5 flex items-center gap-1 text-sm text-red-600 animate-slide-down">
             <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-            <p>{error}</p>
+            <p>{translatedError}</p>
           </div>
         )}
-        {helperText && !error && (
-          <p className="mt-1.5 text-sm text-gray-500">{helperText}</p>
+        {translatedHelperText && !translatedError && (
+          <p className="mt-1.5 text-sm text-gray-500">{translatedHelperText}</p>
         )}
       </div>
     );

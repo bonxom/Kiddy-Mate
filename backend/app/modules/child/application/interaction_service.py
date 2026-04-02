@@ -4,6 +4,7 @@ from typing import Any, Optional
 
 from pydantic import BaseModel
 
+from app.core.locale import localize_message
 from app.core.security.child_context import ChildAuthContext, build_child_auth_context
 from app.modules.child.domain.interaction_gateways import ChildInteractionGateway
 from app.modules.child.domain.interaction_repositories import ChildInteractionRepository
@@ -64,7 +65,13 @@ async def chat(
         detected_emotion=detected_emotion,
     )
     await repo.create_log(interaction_log)
-    return {"message": "Interaction recorded successfully.", "avatar_response": avatar_response}
+    return {
+        "message": localize_message(
+            "Interaction recorded successfully.",
+            "Da ghi lai tuong tac thanh cong.",
+        ),
+        "avatar_response": avatar_response,
+    }
 
 
 async def get_logs(
