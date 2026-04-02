@@ -7,7 +7,7 @@ import { childApi } from '../childApi';
 import { parentApi } from '../parentApi';
 
 // Get API base URL from environment variable or use default
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 // Central endpoint exports
 export const API_ENDPOINTS = {
