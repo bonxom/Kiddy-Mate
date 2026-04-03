@@ -9,50 +9,50 @@ const PricingSection = () => {
 
   const pricingPlans = [
     {
-      name: 'Free',
+      name: 'Miễn phí',
       price: 0,
-      period: 'forever',
-      description: 'Perfect for trying out',
+      period: 'mãi mãi',
+      description: 'Phù hợp để trải nghiệm',
       features: [
-        '1 child profile',
-        'Basic task management',
-        '10 tasks per month',
-        'Simple rewards',
-        'Community support',
+        '1 hồ sơ trẻ',
+        'Quản lý nhiệm vụ cơ bản',
+        '10 nhiệm vụ mỗi tháng',
+        'Phần thưởng đơn giản',
+        'Hỗ trợ cộng đồng',
       ],
-      cta: 'Start Free',
+      cta: 'Bắt đầu miễn phí',
       popular: false,
     },
     {
       name: 'Pro',
       price: 9,
-      period: 'month',
-      description: 'Most popular choice',
+      period: 'tháng',
+      description: 'Lựa chọn phổ biến nhất',
       features: [
-        'Up to 3 children',
-        'Unlimited tasks',
-        'Advanced analytics',
-        'Custom rewards',
-        'Priority support',
-        'Emotion tracking',
+        'Tối đa 3 trẻ',
+        'Nhiệm vụ không giới hạn',
+        'Phân tích nâng cao',
+        'Phần thưởng tùy chỉnh',
+        'Hỗ trợ ưu tiên',
+        'Theo dõi cảm xúc',
       ],
-      cta: 'Start Pro Trial',
+      cta: 'Dùng thử gói Pro',
       popular: true,
     },
     {
-      name: 'Family',
+      name: 'Gia đình',
       price: 19,
-      period: 'month',
-      description: 'For larger families',
+      period: 'tháng',
+      description: 'Dành cho gia đình đông con',
       features: [
-        'Unlimited children',
-        'Everything in Pro',
-        'Family sharing',
-        'Export reports',
-        'API access',
-        'Dedicated support',
+        'Số lượng trẻ không giới hạn',
+        'Bao gồm mọi thứ của Pro',
+        'Chia sẻ cho cả gia đình',
+        'Xuất báo cáo',
+        'Truy cập API',
+        'Hỗ trợ riêng',
       ],
-      cta: 'Start Family Trial',
+      cta: 'Dùng thử gói Gia đình',
       popular: false,
     },
   ];
@@ -62,13 +62,13 @@ const PricingSection = () => {
       <div className="max-w-7xl mx-auto">
         <div className="text-center mb-16">
           <Badge variant="warning" className="mb-4">
-            Pricing
+            Bảng giá
           </Badge>
           <h2 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-4">
-            Choose Your Perfect Plan
+            Chọn gói phù hợp nhất cho gia đình bạn
           </h2>
           <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-            Start free, upgrade when you're ready. No surprises.
+            Bắt đầu miễn phí, nâng cấp khi bạn sẵn sàng. Không có chi phí ẩn.
           </p>
         </div>
 

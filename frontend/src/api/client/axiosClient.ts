@@ -6,7 +6,6 @@
 import axios, { AxiosError } from 'axios';
 import type { AxiosInstance, InternalAxiosRequestConfig, AxiosResponse } from 'axios';
 import { API_BASE_URL, STORAGE_KEYS, REQUEST_TIMEOUT } from './apiConfig';
-import { detectBrowserLanguage, normalizeLanguage } from '../../i18n/language';
 import { translateUiString } from '../../i18n/runtime';
 
 // Create axios instance with default config
@@ -23,9 +22,7 @@ axiosClient.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
     // Get token from localStorage
     const token = localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN);
-    const language = normalizeLanguage(
-      localStorage.getItem(STORAGE_KEYS.LANGUAGE) ?? detectBrowserLanguage()
-    );
+    const language = 'vi';
     
     // Add Authorization header if token exists
     if (token && config.headers) {

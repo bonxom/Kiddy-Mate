@@ -34,7 +34,7 @@ const ChildLoginPage = () => {
       // Navigate to child dashboard
       navigate('/child/dashboard');
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Invalid username or password');
+      setError(err.response?.data?.detail || 'Tên đăng nhập hoặc mật khẩu không đúng');
     } finally {
       setIsLoading(false);
     }
@@ -53,9 +53,9 @@ const ChildLoginPage = () => {
             <Sparkles className="w-10 h-10 text-white" />
           </div>
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Welcome Back! 🎉
+            Chào mừng quay lại! 🎉
           </h1>
-          <p className="text-gray-600">Login to your Kiddy-Mate account</p>
+          <p className="text-gray-600">Đăng nhập vào tài khoản Kiddy-Mate của bé</p>
         </div>
 
         {/* Login Form */}
@@ -67,10 +67,10 @@ const ChildLoginPage = () => {
           )}
 
           <Input
-            label="Username"
+            label="Tên đăng nhập"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
-            placeholder="Enter your username"
+            placeholder="Nhập tên đăng nhập"
             icon={<User className="w-5 h-5 text-purple-500" />}
             fullWidth
             className="py-3 text-base"
@@ -78,11 +78,11 @@ const ChildLoginPage = () => {
           />
 
           <Input
-            label="Password"
+            label="Mật khẩu"
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            placeholder="Enter your password"
+            placeholder="Nhập mật khẩu"
             icon={<Lock className="w-5 h-5 text-purple-500" />}
             fullWidth
             className="py-3 text-base"
@@ -97,20 +97,20 @@ const ChildLoginPage = () => {
             className="bg-linear-to-r from-purple-500 to-pink-500 text-white shadow-lg hover:shadow-xl"
             disabled={isLoading}
           >
-            {isLoading ? 'Logging in...' : 'Login'}
+            {isLoading ? 'Đang đăng nhập...' : 'Đăng nhập'}
           </Button>
         </form>
 
         {/* Footer */}
         <div className="mt-6 text-center">
           <p className="text-sm text-gray-500">
-            Don't have an account? Ask your parent to create one!
+            Chưa có tài khoản? Hãy nhờ phụ huynh tạo giúp nhé!
           </p>
           <button
             onClick={() => navigate('/login')}
             className="mt-2 text-sm font-semibold text-purple-600 hover:text-purple-700"
           >
-            Parent Login →
+            Đăng nhập phụ huynh →
           </button>
         </div>
       </motion.div>

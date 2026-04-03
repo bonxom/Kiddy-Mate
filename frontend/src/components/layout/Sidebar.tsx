@@ -9,7 +9,6 @@ import {
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../providers/AuthProvider';
-import LanguageToggle from '../common/LanguageToggle';
 
 const Sidebar = () => {
   const { t } = useTranslation();
@@ -73,11 +72,6 @@ const Sidebar = () => {
           );
         })}
       </nav>
-
-      <div className="mb-3">
-        <LanguageToggle compact className="bg-white/10 border-white/20 text-white" />
-      </div>
-
       {/* Logout Button */}
       <button
         className="group relative flex items-center justify-center w-full h-14 rounded-lg transition-all duration-200 hover:bg-white/10 px-3"

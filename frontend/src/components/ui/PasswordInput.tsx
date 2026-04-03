@@ -1,5 +1,6 @@
 import { useState, forwardRef } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
+import { translateUiString } from '../../i18n/runtime';
 import Input from './Input';
 
 interface PasswordInputProps {
@@ -17,7 +18,7 @@ interface PasswordInputProps {
 const PasswordInput = forwardRef<HTMLInputElement, PasswordInputProps>(
   (
     {
-      label = 'Password',
+      label = 'Mật khẩu',
       value,
       onChange,
       placeholder = '••••••••',
@@ -45,11 +46,11 @@ const PasswordInput = forwardRef<HTMLInputElement, PasswordInputProps>(
     const passwordStrength = getPasswordStrength(value);
 
     const strengthConfig = [
-      { label: 'Very Weak', color: 'bg-danger-500', textColor: 'text-danger-600' },
-      { label: 'Weak', color: 'bg-warning-500', textColor: 'text-warning-600' },
-      { label: 'Fair', color: 'bg-yellow-500', textColor: 'text-yellow-600' },
-      { label: 'Good', color: 'bg-success-400', textColor: 'text-success-600' },
-      { label: 'Strong', color: 'bg-success-600', textColor: 'text-success-700' },
+      { label: 'Rất yếu', color: 'bg-danger-500', textColor: 'text-danger-600' },
+      { label: 'Yếu', color: 'bg-warning-500', textColor: 'text-warning-600' },
+      { label: 'Trung bình', color: 'bg-yellow-500', textColor: 'text-yellow-600' },
+      { label: 'Tốt', color: 'bg-success-400', textColor: 'text-success-600' },
+      { label: 'Mạnh', color: 'bg-success-600', textColor: 'text-success-700' },
     ];
 
     const currentStrength = strengthConfig[passwordStrength - 1];
@@ -72,7 +73,7 @@ const PasswordInput = forwardRef<HTMLInputElement, PasswordInputProps>(
               type="button"
               onClick={() => setShowPassword(!showPassword)}
               className="text-gray-400 hover:text-gray-600 transition-colors focus:outline-none"
-              aria-label={showPassword ? 'Hide password' : 'Show password'}
+              aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
             >
               {showPassword ? (
                 <EyeOff className="w-5 h-5" />
@@ -100,7 +101,7 @@ const PasswordInput = forwardRef<HTMLInputElement, PasswordInputProps>(
             </div>
             {currentStrength && (
               <p className={`text-xs font-medium ${currentStrength.textColor}`}>
-                Password strength: {currentStrength.label}
+                {translateUiString('Password strength:')} {currentStrength.label}
               </p>
             )}
           </div>

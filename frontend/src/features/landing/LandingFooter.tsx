@@ -14,7 +14,7 @@ const LandingFooter = () => {
               <span className="text-xl font-bold text-white">Kiddy-Mate</span>
             </div>
             <p className="text-gray-400 mb-4">
-              Making parenting easier and childhood more fun through gamification.
+              Giúp việc nuôi dạy con nhẹ nhàng hơn và tuổi thơ vui hơn nhờ trải nghiệm trò chơi hóa.
             </p>
             <div className="flex gap-3">
               {/* Social Icons placeholder */}
@@ -32,40 +32,40 @@ const LandingFooter = () => {
 
           {/* Product */}
           <div>
-            <h4 className="font-bold text-white mb-4">Product</h4>
+            <h4 className="font-bold text-white mb-4">Sản phẩm</h4>
             <ul className="space-y-2">
-              <li><a href="#features" className="hover:text-white transition-colors">Features</a></li>
-              <li><a href="#pricing" className="hover:text-white transition-colors">Pricing</a></li>
+              <li><a href="#features" className="hover:text-white transition-colors">Tính năng</a></li>
+              <li><a href="#pricing" className="hover:text-white transition-colors">Bảng giá</a></li>
               <li><a href="#" className="hover:text-white transition-colors">Demo</a></li>
-              <li><a href="#" className="hover:text-white transition-colors">Roadmap</a></li>
+              <li><a href="#" className="hover:text-white transition-colors">Lộ trình</a></li>
             </ul>
           </div>
 
           {/* Company */}
           <div>
-            <h4 className="font-bold text-white mb-4">Company</h4>
+            <h4 className="font-bold text-white mb-4">Công ty</h4>
             <ul className="space-y-2">
-              <li><a href="#" className="hover:text-white transition-colors">About Us</a></li>
-              <li><a href="#" className="hover:text-white transition-colors">Careers</a></li>
-              <li><a href="#" className="hover:text-white transition-colors">Contact</a></li>
+              <li><a href="#" className="hover:text-white transition-colors">Về chúng tôi</a></li>
+              <li><a href="#" className="hover:text-white transition-colors">Tuyển dụng</a></li>
+              <li><a href="#" className="hover:text-white transition-colors">Liên hệ</a></li>
               <li><a href="#" className="hover:text-white transition-colors">Blog</a></li>
             </ul>
           </div>
 
           {/* Resources */}
           <div>
-            <h4 className="font-bold text-white mb-4">Resources</h4>
+            <h4 className="font-bold text-white mb-4">Tài nguyên</h4>
             <ul className="space-y-2">
-              <li><a href="#" className="hover:text-white transition-colors">Help Center</a></li>
-              <li><a href="#" className="hover:text-white transition-colors">Privacy Policy</a></li>
-              <li><a href="#" className="hover:text-white transition-colors">Terms of Service</a></li>
-              <li><a href="#" className="hover:text-white transition-colors">API Docs</a></li>
+              <li><a href="#" className="hover:text-white transition-colors">Trung tâm trợ giúp</a></li>
+              <li><a href="#" className="hover:text-white transition-colors">Chính sách riêng tư</a></li>
+              <li><a href="#" className="hover:text-white transition-colors">Điều khoản dịch vụ</a></li>
+              <li><a href="#" className="hover:text-white transition-colors">Tài liệu API</a></li>
             </ul>
           </div>
         </div>
 
         <div className="border-t border-gray-800 pt-8 text-center text-gray-400">
-          <p>© 2025 Kiddy-Mate. All rights reserved. Made with ❤️ for families everywhere.</p>
+          <p>© 2025 Kiddy-Mate. Bảo lưu mọi quyền. Được tạo ra với ❤️ dành cho mọi gia đình.</p>
         </div>
       </div>
     </footer>

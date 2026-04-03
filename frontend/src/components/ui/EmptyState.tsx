@@ -1,5 +1,6 @@
 import { type ReactNode } from 'react';
 import { 
+  Plus,
   Inbox, 
   Search, 
   FileQuestion, 
@@ -11,6 +12,7 @@ import {
   type LucideIcon
 } from 'lucide-react';
 import Button from './Button';
+import { translateUiString } from '../../i18n/runtime';
 
 type IconType = 'inbox' | 'search' | 'question' | 'alert' | 'package' | 'task' | 'reward' | 'users';
 
@@ -45,6 +47,9 @@ const EmptyState = ({
   };
 
   const IconComponent = typeof icon === 'string' ? iconMap[icon as IconType] : null;
+  const translatedTitle = translateUiString(title);
+  const translatedDescription = translateUiString(description);
+  const translatedActionLabel = action ? translateUiString(action.label) : '';
 
   return (
     <div className={`flex flex-col items-center justify-center py-16 px-4 text-center ${className}`}>
@@ -65,13 +70,13 @@ const EmptyState = ({
 
       {/* Title */}
       <h3 className="text-xl font-bold text-gray-900 mb-2">
-        {title}
+        {translatedTitle}
       </h3>
 
       {/* Description */}
       {description && (
         <p className="text-gray-600 max-w-md mb-6">
-          {description}
+          {translatedDescription}
         </p>
       )}
 
@@ -82,7 +87,7 @@ const EmptyState = ({
           icon={action.icon}
           className="animate-bounce-soft"
         >
-          {action.label}
+          {translatedActionLabel}
         </Button>
       )}
     </div>
@@ -127,8 +132,5 @@ export const NoRewardsYet = ({ onCreate }: { onCreate: () => void }) => (
     }}
   />
 );
-
-// For the missing import
-import { Plus } from 'lucide-react';
 
 export default EmptyState;

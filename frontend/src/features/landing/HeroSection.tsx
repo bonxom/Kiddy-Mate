@@ -66,16 +66,16 @@ const HeroSection = () => {
             <div className="inline-flex justify-center lg:justify-start">
               <Badge variant="primary" className="mb-2 inline-flex shadow-soft hover:shadow-medium transition-shadow">
                 <Sparkles className="w-3 h-3" />
-                Trusted by 10,000+ families
+                Được hơn 10.000 gia đình tin dùng
               </Badge>
             </div>
             
             {/* Main Headline */}
             <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-gray-900 leading-tight">
-              Transform Chores into{' '}
+              Biến việc nhà thành những{' '}
               <span className="relative inline-block">
                 <span className="bg-linear-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent animate-pulse-soft">
-                  Adventures
+                  cuộc phiêu lưu
                 </span>
                 <svg className="absolute -bottom-2 left-0 w-full" height="12" viewBox="0 0 200 12" xmlns="http://www.w3.org/2000/svg">
                   <path d="M0 8 Q50 2, 100 8 T200 8" stroke="url(#gradient)" strokeWidth="3" fill="none" strokeLinecap="round"/>
@@ -93,8 +93,8 @@ const HeroSection = () => {
             
             {/* Subtitle */}
             <p className="text-lg sm:text-xl md:text-2xl text-gray-600 max-w-2xl mx-auto lg:mx-0 leading-relaxed">
-              Gamified task management for kids with AI-powered rewards. 
-              Make parenting easier and childhood more fun!
+              Quản lý nhiệm vụ cho bé theo phong cách trò chơi cùng phần thưởng được hỗ trợ bởi AI.
+              Giúp việc nuôi dạy con nhẹ nhàng hơn và tuổi thơ vui hơn mỗi ngày!
             </p>
 
             {/* CTA Buttons */}
@@ -105,7 +105,7 @@ const HeroSection = () => {
                 icon={<Sparkles className="w-5 h-5" />}
                 className="text-lg shadow-strong hover:shadow-glow-accent hover:scale-105 transition-all duration-300 group"
               >
-                Start Free Trial
+                Bắt đầu dùng thử miễn phí
                 <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
               </Button>
               <Button 
@@ -114,7 +114,7 @@ const HeroSection = () => {
                 icon={<Star className="w-5 h-5" />}
                 className="text-lg hover:bg-primary-50 transition-all duration-300"
               >
-                Watch Demo
+                Xem demo
               </Button>
             </div>
 
@@ -122,11 +122,11 @@ const HeroSection = () => {
             <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6 justify-center lg:justify-start text-sm text-gray-600 pt-2">
               <div className="flex items-center gap-2 bg-white/60 backdrop-blur-sm px-4 py-2 rounded-full shadow-soft">
                 <CheckCircle2 className="w-5 h-5 text-green-500 shrink-0" />
-                <span className="font-medium">No credit card required</span>
+                <span className="font-medium">Không cần thẻ tín dụng</span>
               </div>
               <div className="flex items-center gap-2 bg-white/60 backdrop-blur-sm px-4 py-2 rounded-full shadow-soft">
                 <CheckCircle2 className="w-5 h-5 text-green-500 shrink-0" />
-                <span className="font-medium">14-day free trial</span>
+                <span className="font-medium">Dùng thử miễn phí 14 ngày</span>
               </div>
             </div>
           </div>

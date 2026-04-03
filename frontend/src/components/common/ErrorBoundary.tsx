@@ -69,8 +69,8 @@ class ErrorBoundary extends Component<Props, State> {
                                     <AlertTriangle className="w-6 h-6" />
                                 </div>
                                 <div>
-                                    <h1 className="text-2xl font-bold">Oops! Something went wrong</h1>
-                                    <p className="text-red-100 text-sm mt-1">Don't worry, it's not your fault</p>
+                                    <h1 className="text-2xl font-bold">Rất tiếc! Đã xảy ra lỗi</h1>
+                                    <p className="text-red-100 text-sm mt-1">Đừng lo, lỗi này không phải do bạn</p>
                                 </div>
                             </div>
                         </div>
@@ -78,9 +78,9 @@ class ErrorBoundary extends Component<Props, State> {
                         {/* Body */}
                         <div className="p-6 space-y-4">
                             <div className="bg-red-50 border border-red-100 rounded-lg p-4">
-                                <p className="text-red-800 font-semibold text-sm mb-2">Error Details:</p>
+                                <p className="text-red-800 font-semibold text-sm mb-2">Chi tiết lỗi:</p>
                                 <p className="text-red-700 text-sm font-mono">
-                                    {this.state.error?.message || 'An unexpected error occurred'}
+                                    {this.state.error?.message || 'Đã xảy ra lỗi không mong muốn'}
                                 </p>
                             </div>
 
@@ -88,7 +88,7 @@ class ErrorBoundary extends Component<Props, State> {
                             {import.meta.env.DEV && this.state.errorInfo && (
                                 <details className="bg-gray-50 border border-gray-200 rounded-lg p-4">
                                     <summary className="text-gray-700 font-semibold text-sm cursor-pointer">
-                                        Technical Details (Dev Only)
+                                        Chi tiết kỹ thuật (chỉ ở môi trường dev)
                                     </summary>
                                     <pre className="text-xs text-gray-600 mt-2 overflow-x-auto whitespace-pre-wrap">
                                         {this.state.errorInfo.componentStack}
@@ -102,13 +102,13 @@ class ErrorBoundary extends Component<Props, State> {
                                     onClick={this.handleReset}
                                     className="flex-1 px-4 py-3 bg-gray-100 text-gray-700 rounded-lg font-semibold hover:bg-gray-200 transition-colors"
                                 >
-                                    Try Again
+                                    Thử lại
                                 </button>
                                 <button
                                     onClick={() => window.location.href = '/'}
                                     className="flex-1 px-4 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg font-semibold hover:from-blue-600 hover:to-purple-700 transition-all shadow-soft"
                                 >
-                                    Go Home
+                                    Về trang chủ
                                 </button>
                             </div>
                         </div>

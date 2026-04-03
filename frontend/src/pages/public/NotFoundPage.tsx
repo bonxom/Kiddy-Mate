@@ -29,12 +29,12 @@ const NotFoundPage = () => {
           </div>
 
           <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-4">
-            Oops! Page Not Found
+            Rất tiếc! Không tìm thấy trang
           </h1>
           
           <p className="text-xl text-gray-700 mb-8 max-w-lg mx-auto">
-            Looks like this page went on a little adventure and got lost. 
-            Don't worry, we'll help you find your way back!
+            Có vẻ trang này đã đi lạc mất rồi.
+            Đừng lo, chúng tôi sẽ giúp bạn quay lại đúng hướng!
           </p>
         </div>
 
@@ -42,7 +42,7 @@ const NotFoundPage = () => {
         <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-strong p-8 border border-white/50">
           <div className="space-y-4">
             <h2 className="text-lg font-bold text-gray-900 mb-4 text-center">
-              What would you like to do?
+              Bạn muốn làm gì tiếp theo?
             </h2>
             
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -55,7 +55,7 @@ const NotFoundPage = () => {
                 icon={<ArrowLeft className="w-5 h-5" />}
                 className="shadow-soft hover:shadow-medium active:scale-95 transition-all duration-300"
               >
-                Go Back
+                Quay lại
               </Button>
 
               {/* Home Button */}
@@ -67,7 +67,7 @@ const NotFoundPage = () => {
                 icon={<Home className="w-5 h-5" />}
                 className="shadow-soft hover:shadow-strong active:scale-95 transition-all duration-300"
               >
-                Go Home
+                Về trang chủ
               </Button>
             </div>
 
@@ -77,10 +77,10 @@ const NotFoundPage = () => {
                 <Search className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
                 <div className="flex-1">
                   <p className="text-sm font-semibold text-gray-900 mb-1">
-                    Looking for something specific?
+                    Bạn đang tìm nội dung cụ thể?
                   </p>
                   <p className="text-sm text-gray-700">
-                    Try visiting our homepage or contact support if you need assistance.
+                    Hãy vào trang chủ hoặc liên hệ hỗ trợ nếu bạn cần trợ giúp.
                   </p>
                 </div>
               </div>
@@ -89,32 +89,32 @@ const NotFoundPage = () => {
             {/* Common Links */}
             <div className="mt-6 pt-6 border-t border-gray-200">
               <p className="text-sm font-semibold text-gray-700 mb-3 text-center">
-                Popular Pages:
+                Các trang phổ biến:
               </p>
               <div className="flex flex-wrap justify-center gap-2">
                 <button
                   onClick={() => navigate('/login')}
                   className="px-4 py-2 rounded-xl bg-gray-100 text-gray-700 text-sm font-medium hover:bg-gray-200 shadow-soft hover:shadow-medium active:scale-95 transition-all duration-300"
                 >
-                  Login
+                  Đăng nhập
                 </button>
                 <button
                   onClick={() => navigate('/register')}
                   className="px-4 py-2 rounded-xl bg-gray-100 text-gray-700 text-sm font-medium hover:bg-gray-200 shadow-soft hover:shadow-medium active:scale-95 transition-all duration-300"
                 >
-                  Register
+                  Đăng ký
                 </button>
                 <button
                   onClick={() => navigate('/#features')}
                   className="px-4 py-2 rounded-xl bg-gray-100 text-gray-700 text-sm font-medium hover:bg-gray-200 shadow-soft hover:shadow-medium active:scale-95 transition-all duration-300"
                 >
-                  Features
+                  Tính năng
                 </button>
                 <button
                   onClick={() => navigate('/#pricing')}
                   className="px-4 py-2 rounded-xl bg-gray-100 text-gray-700 text-sm font-medium hover:bg-gray-200 shadow-soft hover:shadow-medium active:scale-95 transition-all duration-300"
                 >
-                  Pricing
+                  Bảng giá
                 </button>
               </div>
             </div>
@@ -124,7 +124,7 @@ const NotFoundPage = () => {
         {/* Fun Message */}
         <div className="mt-8 text-center">
           <p className="text-gray-600 italic">
-            "Even the best adventurers take wrong turns sometimes!" 🗺️✨
+            "Ngay cả những nhà thám hiểm giỏi nhất đôi khi cũng rẽ nhầm đường!" 🗺️✨
           </p>
         </div>
       </div>

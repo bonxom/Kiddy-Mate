@@ -6,32 +6,32 @@ const FeaturesSection = () => {
   const features = [
     {
       icon: BarChart3,
-      title: 'Smart Dashboard',
-      description: 'Real-time progress tracking with beautiful charts and analytics for every child',
+      title: 'Bảng điều khiển thông minh',
+      description: 'Theo dõi tiến độ theo thời gian thực với biểu đồ trực quan và phân tích riêng cho từng bé',
       iconBg: 'bg-linear-to-br from-blue-100 to-blue-200',
       iconColor: 'text-blue-700',
       cardGradient: 'hover:bg-linear-to-br hover:from-blue-50 hover:to-transparent',
     },
     {
       icon: Zap,
-      title: 'Gamification',
-      description: 'Transform boring tasks into exciting quests with coins, levels, and achievements',
+      title: 'Trò chơi hóa',
+      description: 'Biến những nhiệm vụ nhàm chán thành hành trình thú vị với xu, cấp độ và thành tích',
       iconBg: 'bg-linear-to-br from-purple-100 to-purple-200',
       iconColor: 'text-purple-700',
       cardGradient: 'hover:bg-linear-to-br hover:from-purple-50 hover:to-transparent',
     },
     {
       icon: Gift,
-      title: 'Reward Shop',
-      description: 'Flexible reward system that motivates kids to complete tasks and develop habits',
+      title: 'Cửa hàng phần thưởng',
+      description: 'Hệ thống phần thưởng linh hoạt giúp bé có động lực hoàn thành nhiệm vụ và xây dựng thói quen',
       iconBg: 'bg-linear-to-br from-amber-100 to-yellow-200',
       iconColor: 'text-amber-700',
       cardGradient: 'hover:bg-linear-to-br hover:from-yellow-50 hover:to-transparent',
     },
     {
       icon: TrendingUp,
-      title: 'Skill Development',
-      description: 'Track growth in 6 key areas: Logic, Creativity, Physical, Social, Independence & Academic',
+      title: 'Phát triển kỹ năng',
+      description: 'Theo dõi sự tiến bộ ở 6 lĩnh vực chính: Logic, Sáng tạo, Thể chất, Xã hội, Tự lập và Học thuật',
       iconBg: 'bg-linear-to-br from-green-100 to-emerald-200',
       iconColor: 'text-green-700',
       cardGradient: 'hover:bg-linear-to-br hover:from-green-50 hover:to-transparent',
@@ -43,13 +43,13 @@ const FeaturesSection = () => {
       <div className="max-w-7xl mx-auto">
         <div className="text-center mb-16">
           <Badge variant="primary" className="mb-4">
-            Features
+            Tính năng
           </Badge>
           <h2 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-4">
-            Why Parents Love Kiddy-Mate
+            Vì sao phụ huynh yêu thích Kiddy-Mate
           </h2>
           <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-            Everything you need to transform your family's daily routine into an engaging experience
+            Mọi thứ bạn cần để biến nếp sinh hoạt hằng ngày của gia đình thành một trải nghiệm đầy hứng thú
           </p>
         </div>
 

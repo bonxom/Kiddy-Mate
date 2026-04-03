@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { Bot, Menu, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import Button from '../../components/ui/Button';
-import LanguageToggle from '../../components/common/LanguageToggle';
 
 const LandingNavbar = () => {
   const { t } = useTranslation();
@@ -56,7 +55,6 @@ const LandingNavbar = () => {
 
           {/* Auth Buttons */}
           <div className="hidden md:flex items-center gap-4">
-            <LanguageToggle compact />
             <Button 
               variant="ghost" 
               onClick={() => navigate('/login')}
@@ -82,9 +80,6 @@ const LandingNavbar = () => {
       {isMenuOpen && (
         <div className="md:hidden bg-white border-t border-gray-100 shadow-lg animate-slide-down">
           <div className="px-4 py-6 space-y-4">
-            <div className="pb-2">
-              <LanguageToggle />
-            </div>
             <a href="#features" className="block text-gray-700 hover:text-primary-600 font-medium">
               {t('landing.nav.features', { defaultValue: 'Features' })}
             </a>

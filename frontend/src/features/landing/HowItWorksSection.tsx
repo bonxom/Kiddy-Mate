@@ -6,20 +6,20 @@ const HowItWorksSection = () => {
   const steps = [
     {
       step: '1',
-      title: 'Create Tasks',
-      description: 'Set up personalized tasks tailored to your child\'s age and abilities',
+      title: 'Tạo nhiệm vụ',
+      description: 'Thiết lập các nhiệm vụ được cá nhân hóa phù hợp với độ tuổi và khả năng của bé',
       icon: Target,
     },
     {
       step: '2',
-      title: 'Track Progress',
-      description: 'Monitor real-time completion, emotions, and skill development',
+      title: 'Theo dõi tiến độ',
+      description: 'Theo dõi thời gian hoàn thành, cảm xúc và sự phát triển kỹ năng theo thời gian thực',
       icon: Brain,
     },
     {
       step: '3',
-      title: 'Reward Success',
-      description: 'Auto-reward with coins and let kids redeem for real prizes',
+      title: 'Trao phần thưởng',
+      description: 'Tự động thưởng xu và cho bé đổi lấy những phần quà thật',
       icon: Trophy,
     },
   ];
@@ -29,13 +29,13 @@ const HowItWorksSection = () => {
       <div className="max-w-7xl mx-auto">
         <div className="text-center mb-16">
           <Badge variant="info" className="mb-4">
-            Simple Process
+            Quy trình đơn giản
           </Badge>
           <h2 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-4">
-            Get Started in 3 Easy Steps
+            Bắt đầu chỉ với 3 bước dễ dàng
           </h2>
           <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-            Setting up Kiddy-Mate takes less than 5 minutes
+            Thiết lập Kiddy-Mate chỉ mất chưa đến 5 phút
           </p>
         </div>
 

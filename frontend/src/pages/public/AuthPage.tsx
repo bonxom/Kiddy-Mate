@@ -5,7 +5,6 @@ import { useTranslation } from 'react-i18next';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
 import PasswordInput from '../../components/ui/PasswordInput';
-import LanguageToggle from '../../components/common/LanguageToggle';
 import { useAuth } from '../../providers/AuthProvider';
 import { loginChild } from '../../api/services/childAuthService';
 import { STORAGE_KEYS } from '../../api/client/apiConfig';
@@ -220,9 +219,6 @@ const AuthPage = () => {
 
   return (
     <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4 py-10 relative overflow-hidden">
-      <div className="absolute top-4 right-4 z-20">
-        <LanguageToggle />
-      </div>
       {/* --- Background Decoration (Dùng màu cứng thay vì custom class để đảm bảo hiện) --- */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-1/4 -left-1/4 w-[50%] h-[50%] bg-blue-500 rounded-full blur-[100px] opacity-30" />

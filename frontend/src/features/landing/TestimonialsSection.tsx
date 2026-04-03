@@ -6,27 +6,27 @@ const TestimonialsSection = () => {
   const testimonials = [
     {
       name: 'Sarah Mitchell',
-      role: 'Mother of 2',
+      role: 'Mẹ của 2 bé',
       avatar: 'S',
       avatarGradient: 'bg-linear-to-br from-pink-500 to-rose-600',
       rating: 5,
-      text: 'Game changer! My kids actually ASK to do their chores now. The coin system is pure magic! ✨',
+      text: 'Thật sự thay đổi cuộc chơi! Giờ các con mình còn chủ động xin làm việc nhà. Hệ thống xu đúng là phép màu! ✨',
     },
     {
       name: 'John Davis',
-      role: 'Father of 3',
+      role: 'Bố của 3 bé',
       avatar: 'J',
       avatarGradient: 'bg-linear-to-br from-blue-500 to-indigo-600',
       rating: 5,
-      text: 'Finally, a solution that works! The dashboard helps me see which child needs more encouragement.',
+      text: 'Cuối cùng cũng có một giải pháp thực sự hiệu quả! Bảng điều khiển giúp tôi biết bé nào đang cần được động viên thêm.',
     },
     {
       name: 'Lisa Chen',
-      role: 'Mother of 1',
+      role: 'Mẹ của 1 bé',
       avatar: 'L',
       avatarGradient: 'bg-linear-to-br from-purple-500 to-violet-600',
       rating: 5,
-      text: 'The emotion tracking feature is brilliant. I can tell when my son is stressed and adjust tasks accordingly.',
+      text: 'Tính năng theo dõi cảm xúc thật sự tuyệt vời. Tôi có thể nhận ra lúc con căng thẳng để điều chỉnh nhiệm vụ phù hợp.',
     },
   ];
 
@@ -35,13 +35,13 @@ const TestimonialsSection = () => {
       <div className="max-w-7xl mx-auto">
         <div className="text-center mb-16">
           <Badge variant="success" className="mb-4">
-            Testimonials
+            Phản hồi thực tế
           </Badge>
           <h2 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-4">
-            What Parents Are Saying
+            Phụ huynh đang nói gì
           </h2>
           <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-            Join thousands of happy families already using Kiddy-Mate
+            Tham gia cùng hàng nghìn gia đình đang sử dụng Kiddy-Mate mỗi ngày
           </p>
         </div>
 

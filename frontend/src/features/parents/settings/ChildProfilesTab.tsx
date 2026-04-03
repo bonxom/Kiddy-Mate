@@ -19,7 +19,7 @@ import {
 import { useTranslation } from 'react-i18next';
 
 const ChildProfilesTab = () => {
-  const { i18n } = useTranslation();
+  useTranslation();
   const [children, setChildren] = useState<ChildProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -147,10 +147,9 @@ const ChildProfilesTab = () => {
         // If has assessment data, include it for LLM analysis
         if (fullChildData.assessment && fullChildData.assessment.answers.length > 0) {
           // Combine all assessment questions (same as onboarding)
-          const language = i18n.resolvedLanguage?.startsWith('vi') ? 'vi' : 'en';
           const allQuestions = [
-            ...getAssessmentQuestionsPrimary(language),
-            ...getAssessmentQuestionsSecondary(language),
+            ...getAssessmentQuestionsPrimary('vi'),
+            ...getAssessmentQuestionsSecondary('vi'),
           ];
           
           // Convert assessment answers to backend format (same as onboarding)
@@ -253,7 +252,7 @@ const ChildProfilesTab = () => {
       <div className="flex items-center justify-center h-64">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-gray-500 text-sm">Loading children profiles...</p>
+          <p className="text-gray-500 text-sm">Đang tải hồ sơ của các bé...</p>
         </div>
       </div>
     );
@@ -272,10 +271,10 @@ const ChildProfilesTab = () => {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold text-gray-900 mb-1">
-            Manage Children's Profiles
+            Quản lý hồ sơ của các bé
           </h2>
           <p className="text-gray-600 text-sm">
-            Update personality & interests as they grow
+            Cập nhật tính cách và sở thích của bé theo từng giai đoạn phát triển
           </p>
         </div>
         <Button
@@ -284,7 +283,7 @@ const ChildProfilesTab = () => {
           size="md"
           className="whitespace-nowrap shadow-md hover:shadow-lg"
         >
-          Add Child Profile
+          Thêm hồ sơ cho bé
         </Button>
       </div>
 
@@ -333,7 +332,7 @@ const ChildProfilesTab = () => {
                     {child.gender === 'male' ? '👦' : child.gender === 'female' ? '👧' : '🌟'}
                   </span>
                   <span className="px-2.5 py-0.5 bg-blue-50 text-blue-700 text-xs font-bold rounded-full border border-blue-100">
-                    {child.age} yrs
+                    {child.age} tuổi
                   </span>
                 </div>
               </div>
@@ -343,7 +342,7 @@ const ChildProfilesTab = () => {
                   {child.fullName}
                 </p>
                 <p className="text-xs text-gray-500 flex items-center gap-1">
-                  🎂 Birthday: {formatDate(child.dateOfBirth, child.age).split(' (')[0]}
+                  🎂 Ngày sinh: {formatDate(child.dateOfBirth, child.age).split(' (')[0]}
                 </p>
               </div>
 
@@ -371,7 +370,7 @@ const ChildProfilesTab = () => {
                   className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 text-sm font-semibold rounded-xl border-2 border-purple-300 text-purple-600 bg-white hover:bg-purple-50 hover:border-purple-400 hover:text-purple-700 transition-all duration-200 active:scale-95 shadow-soft hover:shadow-medium"
                 >
                   <Edit2 className="w-3.5 h-3.5" />
-                  Edit
+                  Chỉnh sửa
                 </button>
                 <button
                   onClick={(e) => {
@@ -395,8 +394,8 @@ const ChildProfilesTab = () => {
           <div className="w-16 h-16 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 group-hover:from-purple-100 group-hover:to-blue-100 flex items-center justify-center mb-4 transition-all duration-300 shadow-soft group-hover:shadow-md">
             <Plus className="w-8 h-8 text-gray-400 group-hover:text-purple-600 transition-colors" />
           </div>
-          <p className="font-semibold text-gray-600 group-hover:text-purple-700 transition-colors">Add Another Child</p>
-          <p className="text-xs text-gray-400 mt-1 group-hover:text-gray-500 transition-colors">Create a new learning path</p>
+          <p className="font-semibold text-gray-600 group-hover:text-purple-700 transition-colors">Thêm một bé nữa</p>
+          <p className="text-xs text-gray-400 mt-1 group-hover:text-gray-500 transition-colors">Tạo thêm một lộ trình phát triển mới</p>
         </button>
       </div>
 
@@ -405,16 +404,16 @@ const ChildProfilesTab = () => {
           <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gray-100 mb-4">
             <Sparkles className="w-10 h-10 text-gray-400" />
           </div>
-          <p className="text-lg font-semibold text-gray-700 mb-1">No child profiles yet</p>
+          <p className="text-lg font-semibold text-gray-700 mb-1">Chưa có hồ sơ nào của bé</p>
           <p className="text-sm text-gray-500 mb-4">
-            Click "Add Child Profile" to start the journey!
+            Hãy bấm "Thêm hồ sơ cho bé" để bắt đầu hành trình nhé!
           </p>
           <Button
             onClick={handleAddClick}
             icon={<Plus className="w-5 h-5" />}
             size="sm"
           >
-            Add Your First Child
+            Thêm bé đầu tiên
           </Button>
         </div>
       )}
@@ -435,17 +434,17 @@ const ChildProfilesTab = () => {
             setIsDeleteModalOpen(false);
             setSelectedChild(null);
           }}
-          title="Confirm Deletion"
+          title="Xác nhận xóa"
           size="sm"
         >
           <div className="space-y-4">
             <div className="p-4 bg-red-50 border border-red-200 rounded-xl shadow-soft">
               <p className="text-gray-900 font-semibold text-center">
-                Are you sure you want to delete <strong className="text-red-600">{selectedChild.nickname}</strong>'s profile?
+                Bạn có chắc muốn xóa hồ sơ của <strong className="text-red-600">{selectedChild.nickname}</strong> không?
               </p>
               <p className="text-sm text-red-600 text-center mt-2 flex items-center justify-center gap-2">
                 <AlertTriangle className="w-4 h-4" />
-                This action cannot be undone and all progress will be lost.
+                Hành động này không thể hoàn tác và toàn bộ tiến độ sẽ bị mất.
               </p>
             </div>
             <div className="flex gap-3 justify-center mt-4">
@@ -456,10 +455,10 @@ const ChildProfilesTab = () => {
                   setSelectedChild(null);
                 }}
               >
-                Cancel
+                Hủy
               </Button>
               <Button variant="danger" onClick={handleConfirmDelete} disabled={saving}>
-                {saving ? 'Deleting...' : 'Delete Profile'}
+                {saving ? 'Đang xóa...' : 'Xóa hồ sơ'}
               </Button>
             </div>
           </div>

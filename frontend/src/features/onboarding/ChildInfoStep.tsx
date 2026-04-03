@@ -16,7 +16,7 @@ interface ChildInfoStepProps {
 }
 
 const ChildInfoStep = ({ childNumber, totalChildren, initialData, onComplete, onBack }: ChildInfoStepProps) => {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const [formData, setFormData] = useState<ChildBasicInfo>(initialData || {
     fullName: '',
     dateOfBirth: '',
@@ -27,7 +27,7 @@ const ChildInfoStep = ({ childNumber, totalChildren, initialData, onComplete, on
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [ageWarning, setAgeWarning] = useState<string | null>(null);
-  const favoriteTopicOptions = getFavoriteTopicOptions(i18n.resolvedLanguage?.startsWith('vi') ? 'vi' : 'en');
+  const favoriteTopicOptions = getFavoriteTopicOptions('vi');
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -57,7 +57,7 @@ const ChildInfoStep = ({ childNumber, totalChildren, initialData, onComplete, on
       if (age < 3 || age > 18) {
         newErrors.dateOfBirth = 'Age must be 3-18';
       } else if (age < 6 || age > 14) {
-        setAgeWarning(`Optimized for 6-14 years.`);
+        setAgeWarning('Tối ưu cho độ tuổi 6-14.');
       }
     }
 
@@ -99,13 +99,13 @@ const ChildInfoStep = ({ childNumber, totalChildren, initialData, onComplete, on
         
         {/* Full Name */}
         <Input
-          label="Full Name"
+          label="Họ và tên"
           value={formData.fullName}
           onChange={(e) => {
              setFormData({ ...formData, fullName: e.target.value });
              setErrors({ ...errors, fullName: '' });
           }}
-          placeholder="e.g. Nguyen Van A"
+          placeholder="Ví dụ: Nguyễn Văn A"
           icon={<Baby className="w-4 h-4 text-slate-400" />}
           error={errors.fullName}
           fullWidth
@@ -114,7 +114,7 @@ const ChildInfoStep = ({ childNumber, totalChildren, initialData, onComplete, on
 
         {/* Account Credentials */}
         <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3">
-          <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide">Account Credentials</label>
+          <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide">Tài khoản của bé</label>
           
           <Input
             label="Username"
@@ -131,14 +131,14 @@ const ChildInfoStep = ({ childNumber, totalChildren, initialData, onComplete, on
           />
           
           <Input
-            label="Password"
+            label="Mật khẩu"
             type="password"
             value={formData.password}
             onChange={(e) => {
               setFormData({ ...formData, password: e.target.value });
               setErrors({ ...errors, password: '' });
             }}
-            placeholder="Min 6 characters"
+            placeholder="Tối thiểu 6 ký tự"
             icon={<Lock className="w-4 h-4 text-slate-400" />}
             error={errors.password}
             fullWidth
@@ -149,16 +149,16 @@ const ChildInfoStep = ({ childNumber, totalChildren, initialData, onComplete, on
         {/* Compact Grid: Nickname + DOB */}
         <div className="grid grid-cols-2 gap-4">
             <Input
-                label="Nickname"
+                label="Biệt danh"
                 value={formData.nickname}
                 onChange={(e) => setFormData({ ...formData, nickname: e.target.value })}
-                placeholder="e.g. Bi"
+                placeholder="Ví dụ: Bi"
                 icon={<Heart className="w-4 h-4 text-slate-400" />}
                 fullWidth className="py-2 text-sm bg-slate-50 border-slate-200"
             />
             <div>
                 <Input
-                    label="Date of Birth"
+                    label="Ngày sinh"
                     type="date"
                     value={formData.dateOfBirth}
                     onChange={(e) => {
@@ -175,7 +175,7 @@ const ChildInfoStep = ({ childNumber, totalChildren, initialData, onComplete, on
 
         {/* Gender Select */}
         <div>
-          <label className="block text-xs font-bold text-slate-500 mb-2 uppercase tracking-wide">Gender</label>
+          <label className="block text-xs font-bold text-slate-500 mb-2 uppercase tracking-wide">Giới tính</label>
           <div className="grid grid-cols-3 gap-2">
             {(['male', 'female', 'other'] as const).map((gender) => (
               <button
@@ -188,7 +188,7 @@ const ChildInfoStep = ({ childNumber, totalChildren, initialData, onComplete, on
                     : 'border-slate-200 text-slate-500 hover:bg-slate-50 hover:border-slate-300'
                 }`}
               >
-                {gender === 'male' ? '👦 Boy' : gender === 'female' ? '👧 Girl' : '🌟 Other'}
+                {gender === 'male' ? '👦 Bé trai' : gender === 'female' ? '👧 Bé gái' : '🌟 Khác'}
               </button>
             ))}
           </div>

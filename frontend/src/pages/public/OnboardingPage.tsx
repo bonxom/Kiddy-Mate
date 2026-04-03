@@ -15,7 +15,6 @@ import {
   getAssessmentQuestionsSecondary,
 } from '../../data/assessmentQuestions';
 import type { OnboardingData, OnboardingStep, ParentInfo, ChildBasicInfo, ChildAssessment } from '../../types/auth.types';
-import LanguageToggle from '../../components/common/LanguageToggle';
 
 interface QuoteData {
     text: string;
@@ -24,25 +23,25 @@ interface QuoteData {
 
 const QUOTES: QuoteData[] = [
     {
-        text: "The way we talk to our children becomes their inner voice.",
+        text: 'Cách chúng ta nói chuyện với con hôm nay sẽ trở thành tiếng nói nội tâm của con ngày mai.',
         author: "Peggy O'Mara",
     },
     {
-        text: "Children are not things to be molded, but people to be unfolded.",
-        author: "Jess Lair",
+        text: 'Trẻ em không phải là những thứ để nhào nặn, mà là những con người cần được mở ra và phát triển.',
+        author: 'Jess Lair',
     },
     {
-        text: "The best inheritance a parent can give his children is a few minutes of his time each day.",
-        author: "Orlando Aloysius Battista",
+        text: 'Tài sản quý giá nhất cha mẹ có thể trao cho con là vài phút trọn vẹn mỗi ngày.',
+        author: 'Orlando Aloysius Battista',
     },
     {
-        text: "Don't worry that children never listen to you; worry that they are always watching you.",
-        author: "Robert Fulghum",
+        text: 'Đừng lo vì con không nghe lời bạn; hãy nhớ rằng con luôn quan sát bạn mỗi ngày.',
+        author: 'Robert Fulghum',
     },
 ];
 
 const OnboardingPage = () => {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const navigate = useNavigate();
   
   // State quản lý bước hiện tại và dữ liệu
@@ -136,8 +135,8 @@ const OnboardingPage = () => {
       const user = JSON.parse(userStr);
       
       const allQuestions = [
-        ...getAssessmentQuestionsPrimary(i18n.resolvedLanguage?.startsWith('vi') ? 'vi' : 'en'),
-        ...getAssessmentQuestionsSecondary(i18n.resolvedLanguage?.startsWith('vi') ? 'vi' : 'en'),
+        ...getAssessmentQuestionsPrimary('vi'),
+        ...getAssessmentQuestionsSecondary('vi'),
       ];
 
       // Validate required fields before sending
@@ -262,9 +261,6 @@ const OnboardingPage = () => {
   return (
     // Container chính: dùng h-screen và overflow-hidden để cố định layout
 <div className="flex h-screen w-full bg-white font-sans overflow-hidden">
-        <div className="absolute top-4 right-4 z-30">
-          <LanguageToggle />
-        </div>
       
       {/* ===========================================================
           LEFT COLUMN (BRANDING + ROBOT) - Nền màu xanh đậm
@@ -324,7 +320,7 @@ const OnboardingPage = () => {
                
               {/* Bong bóng chat - Static after initial render */}
               <div className="absolute -top-4 -right-12 bg-white text-[#06325a] px-4 py-2 rounded-xl rounded-bl-none shadow-lg font-bold text-sm whitespace-nowrap">
-                 Hi there! 👋
+                 Xin chào! 👋
               </div>
             </div>
             
@@ -338,10 +334,10 @@ const OnboardingPage = () => {
 
             <div className="mt-10 text-center max-w-xs">
                 <h2 className="text-2xl font-bold mb-2 text-transparent bg-clip-text bg-linear-to-r from-white to-blue-200">
-                    Your AI Companion
+                    Người bạn đồng hành AI của bạn
                 </h2>
                 <p className="text-blue-200 text-sm leading-relaxed">
-                    I'm here to help you track your child's growth and provide personalized parenting insights.
+                    Mình sẽ giúp bạn theo dõi sự phát triển của bé và đưa ra những gợi ý nuôi dạy con được cá nhân hóa.
                 </p>
             </div>
         </div>
@@ -397,9 +393,9 @@ const OnboardingPage = () => {
                     <Bot className="w-6 h-6 text-[#06325a]" />
                     <span className="font-bold text-[#06325a]">Kiddy-Mate</span>
                  </div>
-                 <span className="text-xs font-bold bg-slate-100 text-slate-600 px-3 py-1 rounded-full border border-slate-200">
-                    Step {currentStep === 'parent-info' ? 1 : currentStep === 'child-info' ? 2 : 3}
-                 </span>
+               <span className="text-xs font-bold bg-slate-100 text-slate-600 px-3 py-1 rounded-full border border-slate-200">
+                    Bước {currentStep === 'parent-info' ? 1 : currentStep === 'child-info' ? 2 : 3}
+               </span>
             </div>
         </div>
 
@@ -413,10 +409,10 @@ const OnboardingPage = () => {
                         onClick={handleBack}
                         className="mb-3 group flex items-center gap-2 text-slate-400 hover:text-[#06325a] transition-all text-xs font-medium"
                     >
-                        <div className="w-8 h-8 rounded-full bg-white border border-slate-200 flex items-center justify-center group-hover:border-[#06325a] transition-colors">
-                            <ArrowLeft className="w-4 h-4" />
-                        </div>
-                        Back to previous step
+                      <div className="w-8 h-8 rounded-full bg-white border border-slate-200 flex items-center justify-center group-hover:border-[#06325a] transition-colors">
+                          <ArrowLeft className="w-4 h-4" />
+                      </div>
+                        Quay lại bước trước
                     </button>
                 )}
 

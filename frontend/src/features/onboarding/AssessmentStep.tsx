@@ -21,23 +21,23 @@ interface AssessmentStepProps {
 }
 
 const ratingEmojis = [
-  { value: 1, emoji: '😢', label: 'Never', color: 'text-red-500' },
-  { value: 2, emoji: '😕', label: 'Rarely', color: 'text-orange-500' },
-  { value: 3, emoji: '😐', label: 'Sometimes', color: 'text-gray-500' },
-  { value: 4, emoji: '😊', label: 'Often', color: 'text-blue-500' },
-  { value: 5, emoji: '🤩', label: 'Always', color: 'text-green-500' },
+  { value: 1, emoji: '😢', label: 'Không bao giờ', color: 'text-red-500' },
+  { value: 2, emoji: '😕', label: 'Hiếm khi', color: 'text-orange-500' },
+  { value: 3, emoji: '😐', label: 'Thỉnh thoảng', color: 'text-gray-500' },
+  { value: 4, emoji: '😊', label: 'Thường xuyên', color: 'text-blue-500' },
+  { value: 5, emoji: '🤩', label: 'Luôn luôn', color: 'text-green-500' },
 ];
 
 const categoryInfo: Record<AssessmentCategory, { icon: string; color: string; title: string }> = {
-  discipline: { icon: '✅', color: 'bg-blue-500', title: 'Discipline' },
-  emotional: { icon: '💖', color: 'bg-pink-500', title: 'Emotional' },
-  social: { icon: '🤝', color: 'bg-purple-500', title: 'Social' },
+  discipline: { icon: '✅', color: 'bg-blue-500', title: 'Kỷ luật' },
+  emotional: { icon: '💖', color: 'bg-pink-500', title: 'Cảm xúc' },
+  social: { icon: '🤝', color: 'bg-purple-500', title: 'Xã hội' },
 };
 
 const AssessmentStep = ({ 
   childName, dateOfBirth, initialData, onComplete 
 }: AssessmentStepProps) => {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const [answers, setAnswers] = useState<AssessmentAnswer[]>(initialData.answers || []);
   const [currentQuestionIndices, setCurrentQuestionIndices] = useState<Record<AssessmentCategory, number>>({
     discipline: 0,
@@ -47,11 +47,10 @@ const AssessmentStep = ({
   const [expandedCategory, setExpandedCategory] = useState<AssessmentCategory | null>(null);
 
   const relevantQuestions = useMemo(() => {
-    const language = i18n.resolvedLanguage?.startsWith('vi') ? 'vi' : 'en';
-    if (!dateOfBirth) return getAssessmentQuestionsPrimary(language);
+    if (!dateOfBirth) return getAssessmentQuestionsPrimary('vi');
     const age = new Date().getFullYear() - new Date(dateOfBirth).getFullYear();
-    return age > 10 ? getAssessmentQuestionsSecondary(language) : getAssessmentQuestionsPrimary(language);
-  }, [dateOfBirth, i18n.resolvedLanguage]);
+    return age > 10 ? getAssessmentQuestionsSecondary('vi') : getAssessmentQuestionsPrimary('vi');
+  }, [dateOfBirth]);
 
   const categories: AssessmentCategory[] = ['discipline', 'emotional', 'social'];
 
@@ -85,7 +84,7 @@ const AssessmentStep = ({
           <Badge variant="warning" className="mb-2 bg-orange-100 text-orange-800 border-orange-200 text-xs">
             {t('assessment.forChild', { defaultValue: `Assessment for ${childName}`, childName })}
           </Badge>
-          <h1 className="text-xl font-bold text-gray-900 mb-1">Questionnaire 📋</h1>
+          <h1 className="text-xl font-bold text-gray-900 mb-1">Bảng câu hỏi 📋</h1>
           <p className="text-xs text-gray-500">
             {t('assessment.instructions', { defaultValue: 'Answer questions for each category below' })}
           </p>
@@ -132,7 +131,7 @@ const AssessmentStep = ({
                       <div>
                         <h3 className="text-sm font-bold text-gray-900">{categoryInfo[cat].title}</h3>
                         <p className="text-[10px] text-gray-500">
-                          {answered} / {total} answered
+                          {answered} / {total} đã trả lời
                         </p>
                       </div>
                     </div>
@@ -207,7 +206,7 @@ const AssessmentStep = ({
                             disabled={currentIndex === 0}
                             className="text-xs"
                           >
-                            Prev
+                            Trước
                           </Button>
                           <Button 
                             type="button" 
@@ -224,7 +223,7 @@ const AssessmentStep = ({
                             disabled={currentIndex >= total - 1}
                             className="text-xs"
                           >
-                            Next
+                            Tiếp
                           </Button>
                         </div>
                       </motion.div>
@@ -236,7 +235,7 @@ const AssessmentStep = ({
                 {isComplete && !isExpanded && (
                   <div className="p-3 text-center">
                     <p className="text-xs font-medium text-green-700">
-                      ✨ Complete! <span className="text-[10px] text-gray-500">(Click to edit)</span>
+                      ✨ Đã hoàn tất! <span className="text-[10px] text-gray-500">(Bấm để chỉnh sửa)</span>
                     </p>
                   </div>
                 )}
@@ -268,9 +267,9 @@ const AssessmentStep = ({
               </div>
               <div>
                 <p className="text-xs font-semibold text-gray-900">
-                  {answers.length} / {relevantQuestions.length} answers
+                  {answers.length} / {relevantQuestions.length} câu trả lời
                 </p>
-                <p className="text-[10px] text-gray-500">Complete all to proceed</p>
+                <p className="text-[10px] text-gray-500">Hoàn tất tất cả để tiếp tục</p>
               </div>
             </div>
             
@@ -280,7 +279,7 @@ const AssessmentStep = ({
                 className="bg-success text-white flex items-center gap-2"
                 size="sm"
               >
-                Complete
+                Hoàn tất
                 <ChevronRight className="w-4 h-4" />
               </Button>
             )}

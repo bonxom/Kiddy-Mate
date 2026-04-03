@@ -20,11 +20,11 @@ const CTASection = () => {
         </div>
         
         <h2 className="text-4xl sm:text-5xl font-bold mb-6">
-          Ready to Transform Your Family Life? 🎉
+          Sẵn sàng thay đổi nhịp sống gia đình bạn? 🎉
         </h2>
         
         <p className="text-xl mb-8 text-blue-100">
-          Join thousands of families who have made parenting easier and childhood more fun
+          Tham gia cùng hàng nghìn gia đình đã biến việc nuôi dạy con trở nên nhẹ nhàng và tuổi thơ thêm vui
         </p>
 
         <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
@@ -35,7 +35,7 @@ const CTASection = () => {
             icon={<Sparkles className="w-5 h-5" />}
             className="text-lg shadow-soft hover:shadow-strong active:scale-95 transition-all duration-300"
           >
-            Start Your Free Trial
+            Bắt đầu dùng thử miễn phí
           </Button>
           <Button
             size="lg"
@@ -43,22 +43,22 @@ const CTASection = () => {
             className="text-lg bg-white/10 backdrop-blur-sm border-white/30 text-white hover:bg-white/20 shadow-soft hover:shadow-medium active:scale-95 transition-all duration-300"
             icon={<Heart className="w-5 h-5" />}
           >
-            Schedule a Demo
+            Đặt lịch xem demo
           </Button>
         </div>
 
         <div className="flex flex-col sm:flex-row items-center justify-center gap-6 text-blue-100">
           <div className="flex items-center gap-2">
             <CheckCircle2 className="w-5 h-5" />
-            <span>No credit card required</span>
+            <span>Không cần thẻ tín dụng</span>
           </div>
           <div className="flex items-center gap-2">
             <CheckCircle2 className="w-5 h-5" />
-            <span>14-day free trial</span>
+            <span>Dùng thử miễn phí 14 ngày</span>
           </div>
           <div className="flex items-center gap-2">
             <CheckCircle2 className="w-5 h-5" />
-            <span>Cancel anytime</span>
+            <span>Hủy bất cứ lúc nào</span>
           </div>
         </div>
       </div>
