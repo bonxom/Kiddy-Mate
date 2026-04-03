@@ -345,12 +345,15 @@ Generate a report with the following structure (JSON only):
         if "not configured" in error_msg.lower():
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="NAVER_API_KEY is not configured. Please set NAVER_API_KEY in .env file and restart the server."
+                detail=(
+                    "OPENAI_API_KEY is not configured. Please set OPENAI_API_KEY "
+                    "(or NAVER_API_KEY) in .env file and restart the server."
+                )
             )
         elif "Invalid API key" in error_msg or "401" in error_msg:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Invalid API key. Please check your NAVER_API_KEY in .env file."
+                detail="Invalid API key. Please check your OPENAI_API_KEY (or NAVER_API_KEY) in .env file."
             )
         else:
             raise HTTPException(
