@@ -42,6 +42,16 @@ async def init_db():
         ]
     )
 
+
+async def insert_documents(documents):
+    """
+    Insert documents one by one so Beanie can serialize Link fields as DBRefs
+    and keep generated ids on the in-memory objects for later references.
+    """
+    for document in documents:
+        await document.insert()
+    return documents
+
 async def seed_database():
     """Seed toàn bộ database demo với dữ liệu thực tế"""
     print("\n" + "="*60)
@@ -126,6 +136,8 @@ async def seed_database():
         name="Emma Johnson",
         parent=Link(demo_user, User),
         birth_date=datetime(2015, 3, 15),
+        username="emma",
+        password_hash=hash_password("emma123"),
         nickname="Emmy",
         gender="nữ",
         avatar_url="https://api.dicebear.com/7.x/avataaars/svg?seed=Emma",
@@ -142,6 +154,8 @@ async def seed_database():
         name="Lucas Johnson",
         parent=Link(demo_user, User),
         birth_date=datetime(2017, 7, 22),
+        username="lucas",
+        password_hash=hash_password("lucas123"),
         nickname="Luke",
         gender="nam",
         avatar_url="https://api.dicebear.com/7.x/avataaars/svg?seed=Lucas",
@@ -158,6 +172,8 @@ async def seed_database():
         name="Sophia Johnson",
         parent=Link(demo_user, User),
         birth_date=datetime(2019, 11, 5),
+        username="sophia",
+        password_hash=hash_password("sophia123"),
         nickname="Sophie",
         gender="nữ",
         avatar_url="https://api.dicebear.com/7.x/avataaars/svg?seed=Sophia",
@@ -175,6 +191,8 @@ async def seed_database():
         name="Alex Chen",
         parent=Link(parent1, User),
         birth_date=datetime(2016, 5, 10),
+        username="alex",
+        password_hash=hash_password("alex123"),
         nickname="Alex",
         gender="nam",
         avatar_url="https://api.dicebear.com/7.x/avataaars/svg?seed=Alex",
@@ -196,7 +214,7 @@ async def seed_database():
     
     
     
-    print("👤 Đang tạo tài khoản trẻ...")
+    print("👤 Creating legacy child user documents...")
     
     emma_account = User(
         email="emma@kiddymate.com",
@@ -216,7 +234,7 @@ async def seed_database():
     
     await emma_account.create()
     await lucas_account.create()
-    print(f"   ✓ Đã tạo 2 tài khoản trẻ (Emma, Lucas)\n")
+    print(f"   ✓ Created 2 legacy child user documents (Emma, Lucas)\n")
 
     
     
@@ -890,7 +908,7 @@ async def seed_database():
         ),
     ]
     
-    await RedemptionRequest.insert_many(redemption_requests)
+    await insert_documents(redemption_requests)
     pending_count = sum(1 for r in redemption_requests if r.status == 'pending')
     approved_count = sum(1 for r in redemption_requests if r.status == 'approved')
     rejected_count = sum(1 for r in redemption_requests if r.status == 'rejected')

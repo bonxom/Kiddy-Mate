@@ -1,5 +1,7 @@
 from typing import Optional
 
+from bson import DBRef
+
 from app.models.child_models import Child
 from app.models.childtask_models import ChildTask
 from app.models.user_models import User
@@ -90,18 +92,32 @@ def extract_id_from_link(link_ref) -> Optional[str]:
     Extract ID from a Beanie Link reference.
     Handles various formats: Link object, dict, or direct ID.
     """
+    if link_ref is None:
+        return None
     if hasattr(link_ref, "id"):
-        return str(link_ref.id)
+        link_id = getattr(link_ref, "id", None)
+        return str(link_id) if link_id is not None else None
     if hasattr(link_ref, "ref"):
         ref_obj = link_ref.ref
         if hasattr(ref_obj, "id"):
-            return str(ref_obj.id)
+            ref_id = getattr(ref_obj, "id", None)
+            return str(ref_id) if ref_id is not None else None
+        if isinstance(ref_obj, DBRef):
+            return str(ref_obj.id) if ref_obj.id is not None else None
         if isinstance(ref_obj, dict):
-            return str(ref_obj.get("_id", ""))
+            ref_id = ref_obj.get("_id") or ref_obj.get("$id")
+            return str(ref_id) if ref_id is not None else None
+        if ref_obj in (None, "", "None", "null"):
+            return None
         return str(ref_obj)
+    if isinstance(link_ref, DBRef):
+        return str(link_ref.id) if link_ref.id is not None else None
     if isinstance(link_ref, dict):
-        return str(link_ref.get("_id", ""))
-    return None
+        ref_id = link_ref.get("_id") or link_ref.get("$id")
+        return str(ref_id) if ref_id is not None else None
+    if link_ref in ("", "None", "null"):
+        return None
+    return str(link_ref)
 
 
 async def fetch_link_or_get_object(link_ref, model_class):
@@ -141,6 +157,12 @@ async def fetch_link_or_get_object(link_ref, model_class):
             except Exception:
                 pass
 
+    if isinstance(link_ref, DBRef):
+        try:
+            return await model_class.get(link_ref.id)
+        except Exception:
+            pass
+
     if hasattr(link_ref, "id"):
         try:
             obj_id = link_ref.id
@@ -169,6 +191,27 @@ async def ensure_link_references_for_save(child_task, child: Child) -> None:
             task_ref = await Task.get(task_id)
             if task_ref:
                 child_task.task = Link(task_ref, Task)
+        except Exception:
+            pass
+
+
+async def ensure_reward_references_for_save(child_reward, child: Child) -> None:
+    """
+    Ensure Link references are properly set before saving ChildReward.
+    Always recreate Link references from IDs to avoid serializing stale embedded data.
+    """
+    from beanie import Link
+
+    from app.models.reward_models import Reward
+
+    child_reward.child = Link(child, Child)
+
+    reward_id = extract_id_from_link(child_reward.reward)
+    if reward_id:
+        try:
+            reward_ref = await Reward.get(reward_id)
+            if reward_ref:
+                child_reward.reward = Link(reward_ref, Reward)
         except Exception:
             pass
 
