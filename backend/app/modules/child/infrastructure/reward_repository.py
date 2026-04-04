@@ -4,7 +4,7 @@ from app.modules.child.domain.reward_repositories import ChildRewardRepository
 from app.modules.children.domain.models import Child
 from app.modules.identity.domain.models import User
 from app.modules.rewards.domain.models import ChildReward, RedemptionRequest, Reward
-from app.shared.query_helpers import extract_id_from_link, fetch_link_or_get_object
+from app.shared.query_helpers import ensure_reward_references_for_save, extract_id_from_link, fetch_link_or_get_object
 
 
 class BeanieChildRewardRepository(ChildRewardRepository):
@@ -34,5 +34,8 @@ class BeanieChildRewardRepository(ChildRewardRepository):
         return [reward for reward in child_rewards if reward.is_equipped]
 
     async def save_child_reward(self, child_reward: ChildReward) -> ChildReward:
+        child_doc = await fetch_link_or_get_object(child_reward.child, Child)
+        if child_doc is not None:
+            await ensure_reward_references_for_save(child_reward, child_doc)
         await child_reward.save()
         return child_reward

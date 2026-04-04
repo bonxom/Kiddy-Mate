@@ -42,6 +42,16 @@ async def init_db():
         ]
     )
 
+
+async def insert_documents(documents):
+    """
+    Insert documents one by one so Beanie can serialize Link fields as DBRefs
+    and keep generated ids on the in-memory objects for later references.
+    """
+    for document in documents:
+        await document.insert()
+    return documents
+
 async def seed_database():
     """Seed complete demo database with realistic data"""
     print("\n" + "="*60)
@@ -126,6 +136,8 @@ async def seed_database():
         name="Emma Johnson",
         parent=Link(demo_user, User),
         birth_date=datetime(2015, 3, 15),
+        username="emma",
+        password_hash=hash_password("emma123"),
         nickname="Emmy",
         gender="female",
         avatar_url="https://api.dicebear.com/7.x/avataaars/svg?seed=Emma",
@@ -142,6 +154,8 @@ async def seed_database():
         name="Lucas Johnson",
         parent=Link(demo_user, User),
         birth_date=datetime(2017, 7, 22),
+        username="lucas",
+        password_hash=hash_password("lucas123"),
         nickname="Luke",
         gender="male",
         avatar_url="https://api.dicebear.com/7.x/avataaars/svg?seed=Lucas",
@@ -158,6 +172,8 @@ async def seed_database():
         name="Sophia Johnson",
         parent=Link(demo_user, User),
         birth_date=datetime(2019, 11, 5),
+        username="sophia",
+        password_hash=hash_password("sophia123"),
         nickname="Sophie",
         gender="female",
         avatar_url="https://api.dicebear.com/7.x/avataaars/svg?seed=Sophia",
@@ -175,6 +191,8 @@ async def seed_database():
         name="Alex Chen",
         parent=Link(parent1, User),
         birth_date=datetime(2016, 5, 10),
+        username="alex",
+        password_hash=hash_password("alex123"),
         nickname="Alex",
         gender="male",
         avatar_url="https://api.dicebear.com/7.x/avataaars/svg?seed=Alex",
@@ -196,7 +214,7 @@ async def seed_database():
     
     
     
-    print("👤 Creating child user accounts...")
+    print("👤 Creating legacy child user documents...")
     
     emma_account = User(
         email="emma@kiddymate.com",
@@ -216,7 +234,7 @@ async def seed_database():
     
     await emma_account.create()
     await lucas_account.create()
-    print(f"   ✓ Created 2 child accounts (Emma, Lucas)\n")
+    print(f"   ✓ Created 2 legacy child user documents (Emma, Lucas)\n")
 
     
     
@@ -276,7 +294,7 @@ async def seed_database():
         ),
     ]
     
-    await ChildDevelopmentAssessment.insert_many(assessments)
+    await insert_documents(assessments)
     print(f"   ✓ Created {len(assessments)} assessments\n")
 
     
@@ -591,7 +609,7 @@ async def seed_database():
     ]
     
     tasks = [Task(**task_data) for task_data in tasks_data]
-    await Task.insert_many(tasks)
+    await insert_documents(tasks)
     print(f"   ✓ Created {len(tasks)} tasks across all categories\n")
 
     
@@ -638,7 +656,7 @@ async def seed_database():
     for reward_data in rewards_data:
         reward = Reward(**reward_data, created_by=Link(demo_user, User))
         rewards.append(reward)
-    await Reward.insert_many(rewards)
+    await insert_documents(rewards)
     print(f"   ✓ Created {len(rewards)} rewards (badges, skins, items) for demo user\n")
 
     
@@ -739,7 +757,7 @@ async def seed_database():
     ]
     child_tasks.extend(alex_tasks)
     
-    await ChildTask.insert_many(child_tasks)
+    await insert_documents(child_tasks)
     print(f"   ✓ Created {len(child_tasks)} assigned tasks across all children\n")
 
     
@@ -775,7 +793,7 @@ async def seed_database():
         ChildReward(child=Link(alex, Child), reward=Link(badge_rewards[4], Reward), earned_at=now - timedelta(days=2)),
     ]
     
-    await ChildReward.insert_many(child_rewards_list)
+    await insert_documents(child_rewards_list)
     print(f"   ✓ Created {len(child_rewards_list)} owned rewards\n")
 
     
@@ -890,7 +908,7 @@ async def seed_database():
         ),
     ]
     
-    await RedemptionRequest.insert_many(redemption_requests)
+    await insert_documents(redemption_requests)
     pending_count = sum(1 for r in redemption_requests if r.status == 'pending')
     approved_count = sum(1 for r in redemption_requests if r.status == 'approved')
     rejected_count = sum(1 for r in redemption_requests if r.status == 'rejected')
@@ -910,7 +928,7 @@ async def seed_database():
         MiniGame(name="Memory Challenge", description="Train your memory with fun games", linked_skill="Logic"),
     ]
     
-    await MiniGame.insert_many(games)
+    await insert_documents(games)
     print(f"   ✓ Created {len(games)} mini games\n")
 
     
@@ -982,7 +1000,7 @@ async def seed_database():
         ),
     ]
     
-    await GameSession.insert_many(game_sessions)
+    await insert_documents(game_sessions)
     print(f"   ✓ Created {len(game_sessions)} game sessions\n")
 
     
@@ -1564,7 +1582,7 @@ async def seed_database():
         ),
     ]
     
-    await InteractionLog.insert_many(interactions)
+    await insert_documents(interactions)
     print(f"   ✓ Created {len(interactions)} interaction logs with emotion detection\n")
 
     
@@ -1655,7 +1673,7 @@ async def seed_database():
         ),
     ]
     
-    await Report.insert_many(reports_list)
+    await insert_documents(reports_list)
     print(f"   ✓ Created {len(reports_list)} progress reports\n")
 
     
@@ -1667,7 +1685,7 @@ async def seed_database():
     print(f"""
 📈 Database Statistics:
    • Parent Users: 3 (demo@kiddymate.com, parent1/2@example.com)
-   • Child Accounts: 2 (emma@kiddymate.com, lucas@kiddymate.com)
+   • Child Accounts: 4 (emma, lucas, sophia, alex)
    • Children Profiles: 4 (Emma, Lucas, Sophia, Alex)
    • Tasks in Library: {len(tasks)} (with unity types)
    • Assigned Tasks: {len(child_tasks)} (all status types)
@@ -1687,8 +1705,10 @@ async def seed_database():
    - Email: parent2@example.com / Password: password123
    
    Child Accounts:
-   - Email: emma@kiddymate.com / Password: emma123
-   - Email: lucas@kiddymate.com / Password: lucas123
+   - Username: emma / Password: emma123
+   - Username: lucas / Password: lucas123
+   - Username: sophia / Password: sophia123
+   - Username: alex / Password: alex123
 
 📝 New Features Covered:
    ✓ User roles (parent/child)
