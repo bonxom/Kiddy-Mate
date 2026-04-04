@@ -39,7 +39,11 @@ def create_app() -> FastAPI:
             "http://localhost:5173",
             "http://localhost:5174",
             "https://kiddymate.com",
+            "https://kiddymate.vercel.app",
         ],
+        # Allow Vercel preview URLs like:
+        # https://kiddymate-<hash>-bonxoms-projects.vercel.app
+        allow_origin_regex=r"^https://kiddymate(?:-[a-z0-9-]+)?(?:-bonxoms-projects)?\.vercel\.app$",
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
