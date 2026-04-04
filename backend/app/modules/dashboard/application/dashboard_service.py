@@ -17,6 +17,7 @@ from datetime import datetime, timedelta
 from app.core.time import utc_now
 import json
 import logging
+import re
 
 logger = logging.getLogger(__name__)
 
@@ -385,123 +386,379 @@ async def analyze_emotion_report_and_generate_tasks(
             if ct.custom_title:
                 existing_task_titles.add(ct.custom_title.lower())
         
-        # Build prompt for LLM to generate tasks based on emotion analysis
+        # Build compact prompt for LLM while preserving the same output schema
         system_instruction = (
-            "You are a child education expert specializing in emotional intelligence and task design. "
-            "Based on emotion analysis from a child's report, generate appropriate tasks that address emotional needs and development areas. "
-            "Return ONLY valid JSON array, no markdown, no extra text. Maximum 20 tasks. "
+            "You are a child task designer focused on emotional development. "
+            "Return exactly one valid JSON object with key 'tasks' containing 1-20 task objects. "
+            "No markdown, no prose, no reasoning text. "
+            "Do not output analysis notes, preface text, or chain-of-thought. "
             + build_output_language_instruction(json_output=True)
         )
-        
+
+        interests_text = ', '.join(child.interests or []) or 'General activities'
+        strengths_text = ', '.join(strengths) or 'Not specified'
+        improvement_text = ', '.join(areas_for_improvement) or 'Not specified'
+        summary_context = (report.summary_text or "").strip()[:700]
+        emotional_analysis_context = (emotional_analysis or "").strip()[:500]
+        suggestions_context = json.dumps(report.suggestions or {}, ensure_ascii=False)[:700]
+        existing_titles_context = ', '.join(list(existing_task_titles)[:20]) or 'None'
+
         prompt = f"""
-CHILD INFORMATION:
-- Name: {child.name}
-- Age: {age}
-- Interests: {', '.join(child.interests or []) or 'Not specified'}
-- Strengths: {', '.join(strengths) or 'Not specified'}
-- Areas for Improvement: {', '.join(areas_for_improvement) or 'Not specified'}
+CONTEXT
+- child_name: {child.name}
+- age: {age}
+- interests: {interests_text}
+- strengths: {strengths_text}
+- areas_for_improvement: {improvement_text}
+- most_common_emotion: {most_common_emotion}
+- emotion_trends: {json.dumps(emotion_trends, ensure_ascii=False)}
+- emotional_analysis: {emotional_analysis_context}
+- report_summary: {summary_context}
+- report_suggestions: {suggestions_context}
+- existing_task_titles: {existing_titles_context}
 
-EMOTION ANALYSIS FROM REPORT:
-- Most Common Emotion: {most_common_emotion}
-- Emotion Trends: {json.dumps(emotion_trends, ensure_ascii=False)}
-- Emotional Analysis: {emotional_analysis}
-
-REPORT SUMMARY:
-{report.summary_text}
-
-REPORT SUGGESTIONS:
-{json.dumps(report.suggestions, ensure_ascii=False, indent=2) if report.suggestions else 'None'}
-
-EXISTING TASK TITLES (avoid duplicates):
-{', '.join(list(existing_task_titles)[:20]) or 'None'}
-
-REQUIREMENT:
-Generate tasks (maximum 20) that:
-1. Address the emotional patterns identified in the report
-2. Support areas for improvement
-3. Build on the child's strengths
-4. Are appropriate for age {age}
-5. Match the child's interests: {', '.join(child.interests or []) or 'General activities'}
-6. Have unique titles (not in existing tasks list)
-
-Return a JSON array of task objects. Each task must have:
+OUTPUT SCHEMA (KEEP EXACT KEYS)
 {{
-  "title": "Unique task title",
-  "description": "Detailed description",
-  "category": "One of: Independence, Logic, Physical, Creativity, Social, Academic",
-  "type": "logic" or "emotion",
-  "difficulty": 1-5,
-  "suggested_age_range": "e.g., 6-10",
-  "reward_coins": 0-1000,
-  "unity_type": "life" or "choice" or "talk"
+  "tasks": [
+    {{
+      "title": "string",
+      "description": "string",
+      "category": "Independence|Logic|Physical|Creativity|Social|Academic",
+      "type": "logic|emotion",
+      "difficulty": 1,
+      "suggested_age_range": "6-10",
+      "reward_coins": 10,
+      "unity_type": "life|choice|talk"
+    }}
+  ]
 }}
 
-Generate up to 20 tasks. Focus on emotional development and addressing the insights from the report.
-
-LANGUAGE REQUIREMENT:
-{build_output_language_instruction(json_output=True)}
+RULES
+- Generate 1-20 tasks.
+- Prefer 8-10 tasks (minimum 5) to keep output concise and stable.
+- Titles must be unique and not in existing_task_titles.
+- Prioritize emotional needs, areas_for_improvement, strengths, and interests.
+- All tasks must be age-appropriate for age {age}.
+- description: one short sentence, max 140 characters, avoid double quote characters.
+- difficulty: integer 1-5.
+- reward_coins: integer 0-1000.
+- Return JSON object only. No text before or after.
 """
         
-        # Call LLM
+        # Call LLM (with retry on gateway/HTML upstream failures)
         logger.info(f"Analyzing emotion report and generating tasks for child {child.name}")
-        llm_response = generate_openai_response(prompt, system_instruction, max_tokens=4000)
-        
-        # Parse JSON response
         try:
-            # Clean response - remove markdown code blocks
-            response_text = llm_response.strip()
+            llm_response = generate_openai_response(
+                prompt,
+                system_instruction,
+                max_tokens=2200,
+                temperature=0.3,
+                response_format={"type": "json_object"},
+            )
+        except RuntimeError as llm_err:
+            err_text = str(llm_err)
+            lower_err = err_text.lower()
+            retriable = any(
+                marker in lower_err
+                for marker in [
+                    "html error page",
+                    "<!doctype html",
+                    "<html",
+                    "gateway",
+                    "timeout",
+                    "timed out",
+                    "502",
+                    "503",
+                    "504",
+                    "520",
+                    "521",
+                    "522",
+                    "524",
+                ]
+            )
+            if not retriable:
+                raise
+
+            logger.warning(
+                "Primary task generation call failed (%s). Retrying with smaller output budget.",
+                err_text[:200],
+            )
+            retry_prompt = (
+                prompt
+                + "\n\nRETRY MODE:\n"
+                  "- Generate at most 10 tasks.\n"
+                  "- Keep each description concise (1 short sentence).\n"
+                  "- Keep the exact same JSON schema and rules.\n"
+                  "- Return JSON object only in format {\"tasks\": [...]}.\n"
+            )
+            llm_response = generate_openai_response(
+                retry_prompt,
+                system_instruction,
+                max_tokens=1200,
+                temperature=0.2,
+                response_format={"type": "json_object"},
+            )
+        
+        def _repair_json_like_text(text: str) -> str:
+            """
+            Best-effort JSON repair for common LLM formatting mistakes:
+            - raw newline/tab chars inside quoted strings
+            - unescaped quote chars inside quoted strings
+            - trailing commas before } or ]
+            """
+            if not text:
+                return text
+
+            out: List[str] = []
+            in_string = False
+            escape = False
+            n = len(text)
+            i = 0
+
+            while i < n:
+                ch = text[i]
+
+                if in_string:
+                    if escape:
+                        out.append(ch)
+                        escape = False
+                        i += 1
+                        continue
+
+                    if ch == "\\":
+                        out.append(ch)
+                        escape = True
+                        i += 1
+                        continue
+
+                    if ch == '"':
+                        # If next meaningful char is a structural separator,
+                        # treat this quote as a proper string terminator.
+                        j = i + 1
+                        while j < n and text[j].isspace():
+                            j += 1
+                        if j >= n or text[j] in [",", "}", "]", ":"]:
+                            out.append(ch)
+                            in_string = False
+                        else:
+                            out.append('\\"')
+                        i += 1
+                        continue
+
+                    if ch == "\n":
+                        out.append("\\n")
+                        i += 1
+                        continue
+                    if ch == "\r":
+                        out.append("\\r")
+                        i += 1
+                        continue
+                    if ch == "\t":
+                        out.append("\\t")
+                        i += 1
+                        continue
+
+                    out.append(ch)
+                    i += 1
+                    continue
+
+                # outside quoted string
+                if ch == '"':
+                    in_string = True
+                out.append(ch)
+                i += 1
+
+            repaired = "".join(out)
+            repaired = re.sub(r",\s*([}\]])", r"\1", repaired)
+            return repaired
+
+        def _json_loads_with_repair(candidate: str) -> Any:
+            try:
+                return json.loads(candidate)
+            except json.JSONDecodeError as first_error:
+                repaired = _repair_json_like_text(candidate)
+                if repaired != candidate:
+                    try:
+                        return json.loads(repaired)
+                    except json.JSONDecodeError as second_error:
+                        logger.warning(
+                            "JSON repair attempt failed. first_error=%s second_error=%s",
+                            first_error,
+                            second_error,
+                        )
+                raise first_error
+
+        def _extract_task_objects_fallback(text: str) -> List[Dict[str, Any]]:
+            """
+            Recover individual task objects from malformed JSON by scanning balanced braces.
+            Useful when list commas/closing brackets are malformed but object bodies are valid enough.
+            """
+            if not text:
+                return []
+
+            start_idx = text.find("[")
+            if start_idx == -1:
+                return []
+
+            results: List[Dict[str, Any]] = []
+            in_string = False
+            escape = False
+            depth = 0
+            obj_start = -1
+            i = start_idx + 1
+            n = len(text)
+
+            while i < n:
+                ch = text[i]
+                if in_string:
+                    if escape:
+                        escape = False
+                    elif ch == "\\":
+                        escape = True
+                    elif ch == '"':
+                        in_string = False
+                    i += 1
+                    continue
+
+                if ch == '"':
+                    in_string = True
+                elif ch == "{":
+                    if depth == 0:
+                        obj_start = i
+                    depth += 1
+                elif ch == "}":
+                    if depth > 0:
+                        depth -= 1
+                        if depth == 0 and obj_start != -1:
+                            candidate = text[obj_start:i + 1]
+                            try:
+                                parsed_candidate = _json_loads_with_repair(candidate)
+                                if isinstance(parsed_candidate, dict):
+                                    results.append(parsed_candidate)
+                            except json.JSONDecodeError:
+                                pass
+                            obj_start = -1
+                elif ch == "]" and depth == 0:
+                    break
+                i += 1
+
+            return results
+
+        def _parse_tasks_payload(raw_text: str) -> List[Dict[str, Any]]:
+            """Parse tasks from LLM response supporting both object and array forms."""
+            response_text = (raw_text or "").strip()
+
+            # Clean markdown code blocks if model still returns them
             if "```json" in response_text:
                 start = response_text.find("```json") + 7
                 end = response_text.find("```", start)
-                if end == -1:
-                    response_text = response_text[start:].strip()
-                else:
-                    response_text = response_text[start:end].strip()
+                response_text = response_text[start:].strip() if end == -1 else response_text[start:end].strip()
             elif "```" in response_text:
                 start = response_text.find("```") + 3
                 end = response_text.find("```", start)
-                if end == -1:
-                    response_text = response_text[start:].strip()
-                else:
-                    response_text = response_text[start:end].strip()
-            
-            # Extract JSON array
-            first_bracket = response_text.find('[')
-            last_bracket = response_text.rfind(']')
-            if first_bracket != -1 and last_bracket != -1 and last_bracket > first_bracket:
-                response_text = response_text[first_bracket:last_bracket + 1]
-            else:
-                # Try to find JSON object instead
+                response_text = response_text[start:].strip() if end == -1 else response_text[start:end].strip()
+
+            # Try direct JSON parse first
+            try:
+                parsed = _json_loads_with_repair(response_text)
+            except json.JSONDecodeError as initial_error:
+                # Best-effort extraction if there is extra surrounding text
+                first_bracket = response_text.find('[')
+                last_bracket = response_text.rfind(']')
                 first_brace = response_text.find('{')
                 last_brace = response_text.rfind('}')
+
+                candidates: List[str] = []
+                if first_bracket != -1 and last_bracket != -1 and last_bracket > first_bracket:
+                    candidates.append(response_text[first_bracket:last_bracket + 1])
                 if first_brace != -1 and last_brace != -1 and last_brace > first_brace:
-                    # Single object, wrap in array
-                    response_text = '[' + response_text[first_brace:last_brace + 1] + ']'
-            
-            response_text = response_text.strip()
-            
-            # Remove trailing commas
-            import re
-            response_text = re.sub(r',\s*}', '}', response_text)
-            response_text = re.sub(r',\s*]', ']', response_text)
-            
-            tasks_data = json.loads(response_text)
-            
-            if not isinstance(tasks_data, list):
-                tasks_data = [tasks_data]
-            
-            # Limit to 20 tasks
-            tasks_data = tasks_data[:20]
-            
+                    candidates.append(response_text[first_brace:last_brace + 1])
+
+                parsed = None
+                last_error: json.JSONDecodeError = initial_error
+                for candidate in candidates:
+                    try:
+                        parsed = _json_loads_with_repair(candidate)
+                        break
+                    except json.JSONDecodeError as candidate_error:
+                        last_error = candidate_error
+
+                if parsed is None:
+                    fallback_tasks = _extract_task_objects_fallback(response_text)
+                    if fallback_tasks:
+                        logger.warning(
+                            "Recovered %d task objects from malformed JSON response.",
+                            len(fallback_tasks),
+                        )
+                        return fallback_tasks[:20]
+                    raise last_error
+
+            if isinstance(parsed, dict):
+                if isinstance(parsed.get("tasks"), list):
+                    tasks = parsed["tasks"]
+                elif all(k in parsed for k in ("title", "description", "category")):
+                    tasks = [parsed]
+                else:
+                    list_values = [v for v in parsed.values() if isinstance(v, list)]
+                    if not list_values:
+                        raise json.JSONDecodeError("Missing tasks array in response object", response_text, 0)
+                    tasks = list_values[0]
+            elif isinstance(parsed, list):
+                tasks = parsed
+            else:
+                raise json.JSONDecodeError("Response is not JSON object/array", response_text, 0)
+
+            tasks = [t for t in tasks if isinstance(t, dict)]
+            if not tasks:
+                fallback_tasks = _extract_task_objects_fallback(response_text)
+                if fallback_tasks:
+                    return fallback_tasks[:20]
+            return tasks[:20]
+
+        # Parse JSON response
+        try:
+            tasks_data = _parse_tasks_payload(llm_response)
             logger.info(f"Parsed {len(tasks_data)} tasks from LLM response")
             
         except json.JSONDecodeError as e:
-            logger.error(f"Failed to parse LLM response: {e}")
+            logger.error(f"Failed to parse LLM response (first attempt): {e}")
             logger.error(f"Response (first 1000 chars): {llm_response[:1000]}")
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Failed to parse LLM response: {str(e)}"
+
+            retry_instruction = (
+                system_instruction
+                + " CRITICAL: Return exactly one JSON object with key 'tasks' and no extra text."
             )
+            retry_prompt = (
+                prompt
+                + "\n\nFINAL REMINDER: Output only a JSON object in format {\"tasks\": [...]} now."
+            )
+            retry_response = ""
+            try:
+                retry_response = generate_openai_response(
+                    retry_prompt,
+                    retry_instruction,
+                    max_tokens=1200,
+                    temperature=0.0,
+                    response_format={"type": "json_object"},
+                )
+                tasks_data = _parse_tasks_payload(retry_response)
+                logger.info(f"Parsed {len(tasks_data)} tasks from retry response")
+            except Exception as retry_error:
+                logger.error(f"Retry parse failed: {retry_error}")
+                recovered_tasks = _extract_task_objects_fallback(retry_response)
+                if not recovered_tasks:
+                    recovered_tasks = _extract_task_objects_fallback(llm_response)
+                if recovered_tasks:
+                    tasks_data = recovered_tasks[:20]
+                    logger.warning(
+                        "Recovered %d task objects after retry parse failure; continuing with partial valid output.",
+                        len(tasks_data),
+                    )
+                else:
+                    raise HTTPException(
+                        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                        detail=f"Failed to parse LLM response: {str(e)}"
+                    )
         
         # Create tasks
         created_tasks = []

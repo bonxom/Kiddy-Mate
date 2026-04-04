@@ -6,23 +6,26 @@ from app.config import settings
 from app.core.locale import build_output_language_instruction, get_current_locale
 
 DEFAULT_TIMEOUT = 30.0
+DEFAULT_MODEL = "DeepSeek-V3.2-Speciale"
 
 
 def _default_system_instruction() -> str:
-    if get_current_locale() == "vi":
-        return (
-            "You are a friendly assistant named Dat, helping children. "
-            "Please answer in Vietnamese, easy to understand, using 3-5 sentences, and be encouraging. "
-            "When asked who you are, briefly introduce yourself (name is Dat)."
-        )
     return (
-        "You are a friendly assistant named Dat, helping children. "
-        "Please answer in English, easy to understand, using 3-5 sentences, and be encouraging. "
-        "When asked who you are, briefly introduce yourself (name is Dat)."
+        "You are a friendly assistant named Kiddymate, helping children. "
+        "Please answer in Vietnamese, easy to understand, using 3-5 sentences, and be encouraging. "
+        "When asked who you are, briefly introduce yourself." \
+        "Do not return your reasoning"
     )
 
 
-def generate_openai_response(prompt: str, system_instruction: Optional[str] = None, max_tokens: int = 1024) -> str:
+def generate_openai_response(
+    prompt: str,
+    system_instruction: Optional[str] = None,
+    max_tokens: int = 1024,
+    *,
+    temperature: float = 0.7,
+    response_format: Optional[Dict[str, Any]] = None,
+) -> str:
     """
     Generate a response using OpenAI API.
     
@@ -30,24 +33,30 @@ def generate_openai_response(prompt: str, system_instruction: Optional[str] = No
         prompt: User prompt
         system_instruction: System instruction (optional)
         max_tokens: Maximum tokens in response (default: 1024)
+        temperature: Sampling temperature
+        response_format: Optional response format (e.g. {"type": "json_object"})
     
     Returns:
         Generated text response
     """
-    api_key = settings.NAVER_API_KEY
-    if not api_key:
-        raise RuntimeError("NAVER_API_KEY is not configured in environment variables")
+    API_KEY = settings.NCP_API_KEY
+    BASE_URL = settings.NCP_CLOVASTUDIO_ENDPOINT
+
+    if not API_KEY:
+        raise RuntimeError("NCP_API_KEY is not configured in environment variables")
+    if not BASE_URL:
+        raise RuntimeError("NCP_CLOVASTUDIO_ENDPOINT is not configured in environment variables")
     
     instruction = system_instruction or _default_system_instruction()
     
     try:
         from openai import OpenAI
         
-        client = OpenAI(api_key=api_key)
+        client = OpenAI(api_key=API_KEY, base_url=BASE_URL)
         
-        response = client.chat.completions.create(
-            model="gpt-4o-mini",  # Use cheaper model, can change to "gpt-4o" for better quality
-            messages=[
+        request_payload: Dict[str, Any] = {
+            "model": DEFAULT_MODEL,
+            "messages": [
                 {
                     "role": "system",
                     "content": instruction
@@ -57,9 +66,13 @@ def generate_openai_response(prompt: str, system_instruction: Optional[str] = No
                     "content": prompt
                 }
             ],
-            temperature=0.7,
-            max_tokens=max_tokens
-        )
+            "temperature": temperature,
+            "max_tokens": max_tokens,
+        }
+        if response_format is not None:
+            request_payload["response_format"] = response_format
+
+        response = client.chat.completions.create(**request_payload)
         
         text = response.choices[0].message.content
         if not text:
@@ -72,10 +85,40 @@ def generate_openai_response(prompt: str, system_instruction: Optional[str] = No
         raise RuntimeError("openai package not installed. Run: pip install openai")
     except Exception as e:
         error_msg = str(e)
-        if "401" in error_msg or "Invalid API key" in error_msg:
+        lowered = error_msg.lower()
+        status_code = getattr(e, "status_code", None)
+        response_text = ""
+        response_obj = getattr(e, "response", None)
+        if response_obj is not None:
+            try:
+                response_text = getattr(response_obj, "text", "") or ""
+            except Exception:
+                response_text = ""
+        combined_text = f"{error_msg}\n{response_text}".lower()
+
+        if "model" in lowered and "not available" in lowered:
+            raise RuntimeError(
+                f"LLM model '{DEFAULT_MODEL}' is not available. Please check the model name in app/services/llm.py."
+            ) from e
+        if "401" in error_msg or "invalid api key" in lowered:
             raise RuntimeError(f"Invalid OpenAI API key. Please check your NAVER_API_KEY in .env file.") from e
-        elif "429" in error_msg or "quota" in error_msg.lower() or "rate limit" in error_msg.lower():
+        elif "429" in error_msg or "quota" in lowered or "rate limit" in lowered:
             raise RuntimeError(f"OpenAI API quota/rate limit exceeded. Please check your billing/quota settings.") from e
+        elif "<!doctype html" in combined_text or "<html" in combined_text:
+            logging.error(
+                "OpenAI upstream returned HTML page (status=%s). Error snippet: %s",
+                status_code,
+                error_msg[:200],
+            )
+            raise RuntimeError(
+                "LLM gateway returned an HTML error page (likely timeout/proxy issue)."
+            ) from e
+        elif (
+            status_code in {500, 502, 503, 504, 520, 521, 522, 524}
+            or any(code in combined_text for code in [" 500", " 502", " 503", " 504", " 520", " 521", " 522", " 524"])
+        ):
+            logging.error(f"OpenAI gateway/server error (status={status_code}): {error_msg[:200]}")
+            raise RuntimeError("LLM upstream is temporarily unavailable. Please retry.") from e
         else:
             logging.error(f"OpenAI API error: {error_msg[:200]}")
             raise RuntimeError(f"Failed to call OpenAI API: {error_msg[:200]}") from e
@@ -113,9 +156,12 @@ def analyze_assessment_with_chatgpt(
     Returns:
         Dictionary with overall_traits, explanations, and recommended_focus
     """
-    api_key = settings.NAVER_API_KEY
-    if not api_key:
-        raise RuntimeError("NAVER_API_KEY is not configured in environment variables")
+    API_KEY = settings.NCP_API_KEY
+    BASE_URL = settings.NCP_CLOVASTUDIO_ENDPOINT
+    if not API_KEY:
+        raise RuntimeError("NCP_API_KEY is not configured in environment variables")
+    if not BASE_URL:
+        raise RuntimeError("NCP_CLOVASTUDIO_ENDPOINT is not configured in environment variables")
     
     # Build the prompt for OpenAI
     prompt = _build_assessment_prompt(child_info, assessment_answers, questions_data)
@@ -123,10 +169,10 @@ def analyze_assessment_with_chatgpt(
     try:
         from openai import OpenAI
         
-        client = OpenAI(api_key=api_key)
+        client = OpenAI(api_key=API_KEY, base_url=BASE_URL)
         
         response = client.chat.completions.create(
-            model="gpt-4o-mini",  # Use cheaper model, can change to "gpt-4o" for better quality
+            model=DEFAULT_MODEL,
             messages=[
                 {
                     "role": "system",
@@ -153,6 +199,10 @@ def analyze_assessment_with_chatgpt(
         raise RuntimeError("openai package not installed. Run: pip install openai")
     except Exception as e:
         error_msg = str(e)
+        if "model" in error_msg.lower() and "not available" in error_msg.lower():
+            raise RuntimeError(
+                f"LLM model '{DEFAULT_MODEL}' is not available. Please check the model name in app/services/llm.py."
+            ) from e
         if "401" in error_msg or "Invalid API key" in error_msg:
             raise RuntimeError(f"Invalid OpenAI API key. Please check your NAVER_API_KEY in .env file.") from e
         elif "429" in error_msg or "quota" in error_msg.lower() or "rate limit" in error_msg.lower():

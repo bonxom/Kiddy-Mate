@@ -19,6 +19,42 @@ import json
 
 logger = logging.getLogger(__name__)
 
+
+def _parse_json_object_from_llm_response(raw_response: str) -> Dict[str, Any]:
+    """
+    Parse JSON object from LLM response.
+    Supports plain JSON, fenced JSON, and responses with accidental prefix/suffix text.
+    """
+    response_text = (raw_response or "").strip()
+    if not response_text:
+        raise json.JSONDecodeError("Empty LLM response", response_text, 0)
+
+    # Remove markdown fences if present
+    if response_text.startswith("```json"):
+        response_text = response_text[7:]
+    if response_text.startswith("```"):
+        response_text = response_text[3:]
+    if response_text.endswith("```"):
+        response_text = response_text[:-3]
+    response_text = response_text.strip()
+
+    try:
+        parsed = json.loads(response_text)
+        if isinstance(parsed, dict):
+            return parsed
+        raise json.JSONDecodeError("Top-level JSON is not an object", response_text, 0)
+    except json.JSONDecodeError:
+        # Try extracting the first JSON object from noisy text
+        start = response_text.find("{")
+        end = response_text.rfind("}")
+        if start == -1 or end == -1 or end <= start:
+            raise
+        candidate = response_text[start : end + 1]
+        parsed = json.loads(candidate)
+        if not isinstance(parsed, dict):
+            raise json.JSONDecodeError("Extracted JSON is not an object", candidate, 0)
+        return parsed
+
 async def get_reports(
     child: Child = None
 ):
@@ -234,6 +270,8 @@ async def _generate_report_internal(child: Child) -> Report:
         "4. Child's personality, interests, and strengths "
         "Always provide emotion_trends with at least 2-3 emotions inferred from task patterns, even if no direct emotion data exists. "
         "Return ONLY valid JSON, no markdown, no extra text. "
+        "Do NOT output analysis notes, preface text, or reasoning traces (e.g., 'We need to...', 'I will...', 'Let's...'). "
+        "If information is missing, use conservative defaults but still return the JSON schema only. "
         + build_output_language_instruction(json_output=True)
     )
     
@@ -335,11 +373,23 @@ Generate a report with the following structure (JSON only):
 
 LANGUAGE REQUIREMENT:
 {build_output_language_instruction(json_output=True)}
+
+STRICT OUTPUT RULES:
+- Output ONE JSON object only.
+- No prose before JSON.
+- No prose after JSON.
+- No markdown/code fences.
 """
     
     # Call LLM
     try:
-        llm_response = generate_openai_response(prompt, system_instruction, max_tokens=2000)
+        llm_response = generate_openai_response(
+            prompt,
+            system_instruction,
+            max_tokens=2000,
+            temperature=0.2,
+            response_format={"type": "json_object"},
+        )
     except RuntimeError as e:
         error_msg = str(e)
         logger.error(f"LLM API error: {error_msg}")
@@ -366,26 +416,35 @@ LANGUAGE REQUIREMENT:
             detail=f"Failed to generate report: {str(e)}"
         )
     
-    # Parse JSON response
+    # Parse JSON response (with one strict retry on malformed output)
     try:
-        # Clean response
-        response_text = llm_response.strip()
-        if response_text.startswith("```json"):
-            response_text = response_text[7:]
-        if response_text.startswith("```"):
-            response_text = response_text[3:]
-        if response_text.endswith("```"):
-            response_text = response_text[:-3]
-        response_text = response_text.strip()
-        
-        report_data = json.loads(response_text)
+        report_data = _parse_json_object_from_llm_response(llm_response)
     except json.JSONDecodeError as e:
-        logger.error(f"Failed to parse LLM response as JSON: {e}")
+        logger.error(f"Failed to parse LLM response as JSON (first attempt): {e}")
         logger.error(f"LLM response (first 500 chars): {llm_response[:500] if llm_response else 'None'}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to parse report data: {str(e)}"
+        retry_instruction = (
+            system_instruction
+            + " CRITICAL: Return exactly one JSON object and nothing else."
         )
+        retry_prompt = (
+            prompt
+            + "\n\nFINAL REMINDER: Return ONLY the JSON object now. No extra text."
+        )
+        try:
+            retry_response = generate_openai_response(
+                retry_prompt,
+                retry_instruction,
+                max_tokens=2000,
+                temperature=0.0,
+                response_format={"type": "json_object"},
+            )
+            report_data = _parse_json_object_from_llm_response(retry_response)
+        except Exception as retry_error:
+            logger.error(f"Retry parse failed: {retry_error}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to parse report data: {str(e)}"
+            )
     
     # Ensure insights exist
     insights = report_data.get("insights", {})
