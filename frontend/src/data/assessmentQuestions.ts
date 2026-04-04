@@ -1,8 +1,10 @@
-import i18n from '../i18n';
 import { normalizeLanguage, type AppLanguage } from '../i18n/language';
 import type { AssessmentQuestion } from '../types/auth.types';
 
-type LocalizedText = Record<AppLanguage, string>;
+type LocalizedText = {
+  vi: string;
+  en?: string;
+};
 
 interface LocalizedAssessmentQuestion {
   id: string;
@@ -25,9 +27,10 @@ interface LocalizedRatingLabel {
 }
 
 const resolveLanguage = (language?: AppLanguage): AppLanguage =>
-  normalizeLanguage(language ?? i18n.resolvedLanguage ?? i18n.language);
+  language ?? normalizeLanguage();
 
-const localizeText = (value: LocalizedText, language?: AppLanguage): string => value[resolveLanguage(language)];
+const localizeText = (value: LocalizedText, language?: AppLanguage): string =>
+  value[resolveLanguage(language)] ?? value.vi;
 
 const mapQuestions = (
   questions: LocalizedAssessmentQuestion[],
