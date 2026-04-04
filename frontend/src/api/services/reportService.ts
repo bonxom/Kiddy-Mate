@@ -48,7 +48,11 @@ export const getLatestReport = async (childId: string): Promise<Report | null> =
  * Collects data from tasks, interactions, and emotions, then uses LLM to analyze and create insights
  */
 export const generateReport = async (childId: string): Promise<Report> => {
-  const response = await axiosClient.post<Report>(parentApi.reports.generate(childId));
+  const response = await axiosClient.post<Report>(
+    parentApi.reports.generate(childId),
+    undefined,
+    { timeout: 0 }
+  );
   return response.data;
 };
 

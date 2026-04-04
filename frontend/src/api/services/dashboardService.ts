@@ -451,7 +451,8 @@ export const analyzeEmotionReportAndGenerateTasks = async (
 ): Promise<ChildTaskWithDetails[]> => {
   const response = await axiosClient.post<ChildTaskWithDetails[]>(
     parentApi.dashboard.analyzeEmotionReport(childId),
-    { report_id: reportId || null }
+    { report_id: reportId || null },
+    { timeout: 0 }
   );
   return response.data;
 };

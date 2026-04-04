@@ -49,6 +49,7 @@ _EXACT_EN_TO_VI: Final[dict[str, str]] = {
     "Report does not belong to this child.": "Bao cao nay khong thuoc ve be nay.",
     "Invalid API key. Please check your NAVER_API_KEY in .env file.": "API key khong hop le. Vui long kiem tra NAVER_API_KEY trong file .env.",
     "NAVER_API_KEY is not configured. Please set NAVER_API_KEY in .env file and restart the server.": "NAVER_API_KEY chua duoc cau hinh. Vui long them NAVER_API_KEY vao file .env va khoi dong lai server.",
+    "NCP_CLOVASTUDIO_ENDPOINT is not configured in environment variables": "NCP_CLOVASTUDIO_ENDPOINT chua duoc cau hinh trong bien moi truong",
     "Skills updated successfully": "Da cap nhat ky nang thanh cong.",
     "No significant changes detected, skills remain the same": "Khong co thay doi dang ke, ky nang duoc giu nguyen.",
     "No categories need task generation": "Khong co nhom nao can sinh them nhiem vu.",
@@ -123,7 +124,8 @@ def get_current_locale() -> str:
 
 
 def get_current_language_name() -> str:
-    return "Vietnamese" if get_current_locale() == "vi" else "English"
+    # Force LLM user-facing output language to Vietnamese across all locales.
+    return "Vietnamese"
 
 
 def localize_message(english: str, vietnamese: str) -> str:

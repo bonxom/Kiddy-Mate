@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import Calendar from '../../../components/ui/Calendar';
 import { RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, ResponsiveContainer, Tooltip } from 'recharts';
 import { TrendingUp, FileText, CheckCircle2, Heart } from 'lucide-react';
@@ -12,6 +12,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import ReportsList from './ReportsList';
 import ChatHistory from './ChatHistory';
 import toast from 'react-hot-toast';
+import { localizeSkillName } from '../../../utils/dashboardLocalization';
 
 interface DashboardSidebarProps {
   skillData: SkillRadarData[];
@@ -85,12 +86,21 @@ const DashboardSidebar = ({ skillData, onViewReport }: DashboardSidebarProps) =>
     return `${config.text} ${config.bg}`;
   };
 
+  const localizedSkillData = useMemo(
+    () =>
+      skillData.map((item) => ({
+        ...item,
+        skillLabel: localizeSkillName(item.skill),
+      })),
+    [skillData]
+  );
+
   // Custom tooltip
   const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
       return (
         <div className="bg-white rounded-lg shadow-xl border border-gray-200 p-3">
-          <p className="font-bold text-gray-900 mb-2">{payload[0].payload.skill}</p>
+          <p className="font-bold text-gray-900 mb-2">{payload[0].payload.skillLabel || localizeSkillName(payload[0].payload.skill)}</p>
           <div className="flex items-center gap-2">
             <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
               <div 
@@ -187,7 +197,7 @@ const DashboardSidebar = ({ skillData, onViewReport }: DashboardSidebarProps) =>
         {/* Radar Chart */}
         <div className="relative">
           <ResponsiveContainer width="100%" height={240}>
-            <RadarChart data={skillData}>
+            <RadarChart data={localizedSkillData}>
               <defs>
                 <linearGradient id="radarGradient" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor="#3b82f6" stopOpacity={0.6}/>
@@ -199,7 +209,7 @@ const DashboardSidebar = ({ skillData, onViewReport }: DashboardSidebarProps) =>
                 strokeWidth={1.5}
               />
               <PolarAngleAxis 
-                dataKey="skill" 
+                dataKey="skillLabel" 
                 tick={{ fill: '#4b5563', fontSize: 11, fontWeight: 600 }}
                 tickLine={false}
               />
@@ -233,7 +243,7 @@ const DashboardSidebar = ({ skillData, onViewReport }: DashboardSidebarProps) =>
               </div>
               <div className="flex-1">
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-xs font-semibold text-gray-700">{skill.skill}</span>
+                  <span className="text-xs font-semibold text-gray-700">{localizeSkillName(skill.skill)}</span>
                   <span className="text-xs font-bold text-gray-900">{skill.value}%</span>
                 </div>
                 <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
