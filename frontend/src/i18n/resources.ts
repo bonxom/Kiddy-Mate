@@ -391,7 +391,6 @@ export const literalTranslations: Record<string, string> = {
     'Failed to update assigned task': 'Không thể cập nhật nhiệm vụ đã giao',
     'Failed to unassign task': 'Không thể hủy giao nhiệm vụ',
     'Failed to complete task': 'Không thể hoàn tất nhiệm vụ',
-    'Failed to verify task': 'Không thể xác thực nhiệm vụ',
     'Failed to give up task': 'Không thể bỏ nhiệm vụ',
     'Failed to fetch suggested tasks': 'Không thể tải các nhiệm vụ gợi ý',
     'Task created and assigned successfully! 🎉': 'Đã tạo và giao nhiệm vụ thành công! 🎉',

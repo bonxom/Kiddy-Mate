@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import Modal from '../../../components/ui/Modal';
 import { FileText, ChevronDown } from 'lucide-react';
 import type { Report } from '../../../api/services/reportService';
+import { localizeEmotionName, localizeEmotionText } from '../../../utils/dashboardLocalization';
 
 interface ReportDetailModalProps {
   isOpen: boolean;
@@ -132,7 +133,7 @@ const ReportDetailModal = ({ isOpen, onClose, report }: ReportDetailModalProps) 
                     </div>
                     <span className="text-sm font-semibold text-purple-900">Dominant Emotion</span>
                   </div>
-                  <p className="text-xl font-bold text-purple-700 capitalize">{report.insights.most_common_emotion}</p>
+                  <p className="text-xl font-bold text-purple-700 capitalize">{localizeEmotionName(report.insights.most_common_emotion)}</p>
                   <p className="text-xs text-purple-600 mt-1">Most frequently detected</p>
                 </div>
               )}
@@ -148,7 +149,7 @@ const ReportDetailModal = ({ isOpen, onClose, report }: ReportDetailModalProps) 
                       key={emotion}
                       className="bg-white px-3 py-2 rounded-lg border border-purple-200 flex items-center gap-2"
                     >
-                      <span className="text-xs font-medium text-purple-700 capitalize">{emotion}</span>
+                      <span className="text-xs font-medium text-purple-700 capitalize">{localizeEmotionName(emotion)}</span>
                       <span className="text-xs font-bold text-purple-900 bg-purple-100 px-2 py-0.5 rounded-full">
                         {count as number}
                       </span>
@@ -163,7 +164,7 @@ const ReportDetailModal = ({ isOpen, onClose, report }: ReportDetailModalProps) 
               <div className="mt-4 bg-green-50 border border-green-200 rounded-lg p-4">
                 <span className="text-sm font-semibold text-green-900 block mb-2">Emotional Analysis</span>
                 <p className="text-sm text-green-800 leading-relaxed">
-                  {report.insights.emotional_analysis}
+                  {localizeEmotionText(report.insights.emotional_analysis)}
                 </p>
               </div>
             )}
@@ -291,4 +292,3 @@ const ReportDetailModal = ({ isOpen, onClose, report }: ReportDetailModalProps) 
 };
 
 export default ReportDetailModal;
-

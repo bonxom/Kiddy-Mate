@@ -6,8 +6,14 @@
 import { childApi } from '../childApi';
 import { parentApi } from '../parentApi';
 
-// Get API base URL from environment variable or use default
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+// Normalize base URL from env. If protocol is missing, default to https.
+const rawApiBaseUrl = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim();
+
+export const API_BASE_URL = rawApiBaseUrl
+  ? /^https?:\/\//i.test(rawApiBaseUrl)
+    ? rawApiBaseUrl
+    : `https://${rawApiBaseUrl}`
+  : 'http://localhost:8000';
 
 // Central endpoint exports
 export const API_ENDPOINTS = {

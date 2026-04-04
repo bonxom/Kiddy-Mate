@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import { useQueryClient } from '@tanstack/react-query';
 import { handleApiError } from '../../../utils/errorHandler';
@@ -21,17 +21,38 @@ interface AssignTaskModalProps {
 }
 
 const AssignTaskModal = ({ isOpen, onClose, task, onSuccess }: AssignTaskModalProps) => {
-  const { children } = useChildContext();
+  const { children, selectedChildId } = useChildContext();
   const queryClient = useQueryClient();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const defaultChildId = selectedChildId || children[0]?.id || '';
   const [formData, setFormData] = useState({
-    childId: '',
+    childId: defaultChildId,
     taskName: task.task,
     category: task.category,
     priority: 'medium' as 'high' | 'medium' | 'low',
     reward: task.suggestedReward || 10,
     dueDate: '',
   });
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    setFormData({
+      childId: selectedChildId || children[0]?.id || '',
+      taskName: task.task,
+      category: task.category,
+      priority: 'medium',
+      reward: task.suggestedReward || 10,
+      dueDate: '',
+    });
+  }, [
+    isOpen,
+    selectedChildId,
+    children,
+    task.task,
+    task.category,
+    task.suggestedReward,
+  ]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -1,14 +1,15 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Search, Filter, Star, Library, Sparkles, CheckCircle2, ChevronDown } from 'lucide-react';
+import { Search, Filter, Star, Library, Sparkles, CheckCircle2, ChevronDown, Trash2 } from 'lucide-react';
 import Input from '../../../components/ui/Input';
 import Button from '../../../components/ui/Button';
 import Loading from '../../../components/ui/Loading';
+import Modal from '../../../components/ui/Modal';
 import type { LibraryTask, TaskCategory } from '../../../types/task.types';
 import AssignTaskModal from './AssignTaskModal';
 import { getCategoryConfig, TASK_CATEGORY_LABELS, ICON_SIZES } from '../../../constants/taskConfig';
 import { useChildContext } from '../../../providers/ChildProvider';
-import { getChildTasks } from '../../../api/services/taskService';
+import { getChildTasks, unassignTask } from '../../../api/services/taskService';
 import { analyzeEmotionReportAndGenerateTasks } from '../../../api/services/dashboardService';
 import { TaskEvents } from '../../../utils/events';
 
@@ -112,6 +113,9 @@ const TaskLibraryTab = ({ onCountChange, onTaskAssigned }: TaskLibraryTabProps) 
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<LibraryTask | null>(null);
   const [isGeneratingTasks, setIsGeneratingTasks] = useState(false);
+  const [deletingTaskId, setDeletingTaskId] = useState<string | null>(null);
+  const [taskToDelete, setTaskToDelete] = useState<LibraryTask | null>(null);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isChildSelectorOpen, setIsChildSelectorOpen] = useState(false);
 
@@ -209,6 +213,52 @@ const TaskLibraryTab = ({ onCountChange, onTaskAssigned }: TaskLibraryTabProps) 
     setIsAssignModalOpen(true);
   };
 
+  const handleDeleteClick = (task: LibraryTask, e: React.MouseEvent<HTMLButtonElement>) => {
+    e.stopPropagation();
+    setTaskToDelete(task);
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!taskToDelete) return;
+    if (!selectedChildId) {
+      setSuccessMessage('Vui lòng chọn trẻ trước.');
+      setTimeout(() => setSuccessMessage(null), 3000);
+      setIsDeleteModalOpen(false);
+      return;
+    }
+
+    if (!taskToDelete.childTaskId) {
+      setSuccessMessage('Không tìm thấy thông tin nhiệm vụ để xóa.');
+      setTimeout(() => setSuccessMessage(null), 3000);
+      setIsDeleteModalOpen(false);
+      return;
+    }
+
+    setDeletingTaskId(taskToDelete.childTaskId);
+    try {
+      await unassignTask(selectedChildId, taskToDelete.childTaskId);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['task-library', selectedChildId] }),
+        queryClient.invalidateQueries({ queryKey: ['assigned-task-ids'] }),
+        queryClient.invalidateQueries({ queryKey: ['assigned-tasks'] }),
+      ]);
+      await queryClient.refetchQueries({ queryKey: ['task-library', selectedChildId] });
+      TaskEvents.emit(TaskEvents.TASK_UNASSIGNED, { childId: selectedChildId });
+
+      setSuccessMessage('Đã xóa nhiệm vụ thành công.');
+      setTimeout(() => setSuccessMessage(null), 3000);
+    } catch (error) {
+      console.error('Failed to delete task from library:', error);
+      setSuccessMessage('Không thể xóa nhiệm vụ. Vui lòng thử lại.');
+      setTimeout(() => setSuccessMessage(null), 4000);
+    } finally {
+      setDeletingTaskId(null);
+      setIsDeleteModalOpen(false);
+      setTaskToDelete(null);
+    }
+  };
+
   return (
     <div>
       {/* Loading State */}
@@ -247,7 +297,7 @@ const TaskLibraryTab = ({ onCountChange, onTaskAssigned }: TaskLibraryTabProps) 
                   AI Task Generation
                 </h3>
                 <p className="text-xs text-gray-600">
-                  Generate personalized tasks based on emotion analysis from your child's latest report
+                  Sinh nhiệm vụ cá nhân hóa dựa trên phân tích cảm xúc từ báo cáo mới nhất của trẻ
                 </p>
               </div>
               
@@ -327,14 +377,18 @@ const TaskLibraryTab = ({ onCountChange, onTaskAssigned }: TaskLibraryTabProps) 
                     disabled={!selectedChildId || isGeneratingTasks}
                     className="whitespace-nowrap"
                   >
-                    Generate Tasks
+                    Sinh nhiệm vụ
                   </Button>
                 </div>
               </div>
             </div>
-            {successMessage && (
+              {successMessage && (
               <div className={`mt-3 p-2 rounded-lg text-xs flex items-center gap-2 ${
-                successMessage.includes('Failed') || successMessage.includes('Please select')
+                successMessage.includes('Failed') ||
+                successMessage.includes('Please select') ||
+                successMessage.includes('Không thể') ||
+                successMessage.includes('Vui lòng') ||
+                successMessage.includes('Không tìm thấy')
                   ? 'bg-red-50 text-red-700' 
                   : 'bg-green-50 text-green-700'
               }`}>
@@ -379,26 +433,26 @@ const TaskLibraryTab = ({ onCountChange, onTaskAssigned }: TaskLibraryTabProps) 
 
       {/* Table */}
       <div className="overflow-x-auto border border-gray-200 rounded-2xl shadow-soft">
-        <table className="w-full">
+        <table className="w-full table-fixed">
           <thead className="bg-linear-to-r from-gray-50 to-gray-100 border-b border-gray-200">
             <tr>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                Suggested Child
+              <th className="w-[12%] px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                Tên trẻ
               </th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+              <th className="w-[21%] px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                 Task Name
               </th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+              <th className="w-[14%] px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                 Category
               </th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                Description
+              <th className="w-[23%] px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                Mô tả
               </th>
-              <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider">
+              <th className="w-[12%] px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider">
                 Suggested Reward
               </th>
-              <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                Action
+              <th className="w-[18%] px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                Hành động
               </th>
             </tr>
           </thead>
@@ -465,16 +519,29 @@ const TaskLibraryTab = ({ onCountChange, onTaskAssigned }: TaskLibraryTabProps) 
                   </div>
                 </td>
                 <td className="px-4 py-4 text-center">
-                  <Button
-                    size="sm"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleAssignClick(task);
-                    }}
-                    className="group-hover:scale-105 transition-transform duration-200"
-                  >
-                    Assign Task
-                  </Button>
+                  <div className="flex items-center justify-center gap-2 whitespace-nowrap">
+                    <Button
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleAssignClick(task);
+                      }}
+                      className="group-hover:scale-105 transition-transform duration-200"
+                    >
+                      Đề xuất
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="danger"
+                      icon={<Trash2 className="w-4 h-4" />}
+                      title="Xóa nhiệm vụ"
+                      onClick={(e) => handleDeleteClick(task, e)}
+                      disabled={deletingTaskId === task.childTaskId}
+                      className="px-2.5"
+                    >
+                      <span className="sr-only">Xóa</span>
+                    </Button>
+                  </div>
                 </td>
               </tr>
             ))}
@@ -533,6 +600,52 @@ const TaskLibraryTab = ({ onCountChange, onTaskAssigned }: TaskLibraryTabProps) 
           }}
         />
       )}
+
+      <Modal
+        isOpen={isDeleteModalOpen}
+        onClose={() => {
+          if (deletingTaskId) return;
+          setIsDeleteModalOpen(false);
+          setTaskToDelete(null);
+        }}
+        title="Xác nhận xóa"
+        size="sm"
+      >
+        <div className="space-y-4">
+          <div className="p-4 bg-red-50 border border-red-200 rounded-xl">
+            <p className="text-gray-900 font-semibold text-base">
+              Xóa nhiệm vụ này?
+            </p>
+            <p className="text-sm text-gray-600 mt-2">
+              {taskToDelete
+                ? `Nhiệm vụ "${taskToDelete.task}" sẽ bị xóa khỏi thư viện của trẻ đang chọn.`
+                : 'Nhiệm vụ sẽ bị xóa khỏi thư viện của trẻ đang chọn.'}
+            </p>
+            <p className="text-xs text-red-600 mt-2">
+              Hành động này không thể hoàn tác.
+            </p>
+          </div>
+          <div className="flex gap-3 justify-end">
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setIsDeleteModalOpen(false);
+                setTaskToDelete(null);
+              }}
+              disabled={!!deletingTaskId}
+            >
+              Hủy
+            </Button>
+            <Button
+              variant="danger"
+              onClick={handleConfirmDelete}
+              loading={!!deletingTaskId}
+            >
+              Xóa nhiệm vụ
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 };

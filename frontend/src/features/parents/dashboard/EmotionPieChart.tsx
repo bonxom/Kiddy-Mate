@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
 import type { EmotionData } from '../../../api/services/interactionService';
 import { EMOTION_COLORS } from '../../../constants/categoryConfig';
+import { localizeEmotionName } from '../../../utils/dashboardLocalization';
 
 interface EmotionPieChartProps {
   data: EmotionData[];
@@ -9,13 +10,17 @@ interface EmotionPieChartProps {
 
 const EmotionPieChart = ({ data }: EmotionPieChartProps) => {
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
+  const localizedData = data.map((item) => ({
+    ...item,
+    name: localizeEmotionName(item.name),
+  }));
 
   // Check for empty array OR all values are 0 (newly registered children)
-  const hasData = data && data.length > 0 && data.some(item => item.value > 0);
+  const hasData = localizedData && localizedData.length > 0 && localizedData.some(item => item.value > 0);
   
   // Calculate total for percentage calculation
   const totalEmotions = hasData 
-    ? data.reduce((sum, item) => sum + item.value, 0)
+    ? localizedData.reduce((sum, item) => sum + item.value, 0)
     : 0;
   
   // Show "no data" state if no real data
@@ -85,7 +90,7 @@ const EmotionPieChart = ({ data }: EmotionPieChartProps) => {
         <ResponsiveContainer width="100%" height="100%">
           <PieChart margin={{ top: 10, right: 10, bottom: 10, left: 10 }}>
             <Pie
-              data={data as any}
+              data={localizedData as any}
               cx="50%"
               cy="50%"
               labelLine={false}
@@ -97,7 +102,7 @@ const EmotionPieChart = ({ data }: EmotionPieChartProps) => {
               onMouseEnter={(_, index) => setActiveIndex(index)}
               onMouseLeave={() => setActiveIndex(null)}
             >
-              {data.map((_entry, index) => (
+              {localizedData.map((_entry, index) => (
                 <Cell
                   key={`cell-${index}`}
                   fill={EMOTION_COLORS[index % EMOTION_COLORS.length]}
@@ -122,16 +127,12 @@ const EmotionPieChart = ({ data }: EmotionPieChartProps) => {
                 if (active && payload && payload.length) {
                   const item = payload[0].payload;
                   const percentage = totalEmotions > 0 
-                    ? ((item.value / totalEmotions) * 100).toFixed(1) 
+                    ? ((item.value / totalEmotions) * 100).toFixed(0) 
                     : '0';
                   return (
                     <div className="bg-white rounded-lg shadow-lg border border-gray-200 p-3">
-                      <p className="font-bold text-gray-900 mb-1">{item.name}</p>
-                      <p className="text-sm text-gray-600">
-                        Số lần: <span className="font-semibold text-primary-600">{item.value}</span>
-                      </p>
-                      <p className="text-xs text-gray-500 mt-1">
-                        {percentage}% tổng số
+                      <p className="text-sm font-semibold text-gray-900">
+                        {item.name} chiếm {percentage}%
                       </p>
                     </div>
                   );
