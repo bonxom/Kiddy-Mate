@@ -14,5 +14,6 @@ apscheduler
 httpx
 openai
 google-auth
+requests
 pytest
 pytest-asyncio
