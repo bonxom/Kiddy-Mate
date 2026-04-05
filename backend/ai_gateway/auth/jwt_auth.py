@@ -90,8 +90,8 @@ class JwtAuthMiddleware(BaseHTTPMiddleware):
 
         return await call_next(request)
 
-    @staticmethod
     def _build_error_response(
+        self,
         request: Request,
         *,
         code: str,
@@ -100,6 +100,16 @@ class JwtAuthMiddleware(BaseHTTPMiddleware):
         details: dict[str, Any] | None = None,
     ):
         from fastapi.responses import JSONResponse
+        headers = {
+            "WWW-Authenticate": "Bearer",
+            "X-Request-Id": get_request_id(request),
+        }
+
+        origin = request.headers.get("Origin")
+        if self.settings.is_origin_allowed(origin):
+            headers["Access-Control-Allow-Origin"] = origin.strip()
+            headers["Access-Control-Allow-Credentials"] = "true"
+            headers["Vary"] = "Origin"
 
         return JSONResponse(
             status_code=status_code,
@@ -109,7 +119,7 @@ class JwtAuthMiddleware(BaseHTTPMiddleware):
                 message=message,
                 details=details,
             ),
-            headers={"WWW-Authenticate": "Bearer", "X-Request-Id": get_request_id(request)},
+            headers=headers,
         )
 
 

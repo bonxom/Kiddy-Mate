@@ -73,6 +73,8 @@ def test_settings() -> GatewaySettings:
         SECRET_KEY="test-secret-key",
         ALGORITHM="HS256",
         AI_GATEWAY_REQUIRE_AUTH=True,
+        AI_GATEWAY_ALLOWED_ORIGINS="https://kiddymate.netlify.app,https://kiddymate.vercel.app",
+        AI_GATEWAY_ALLOWED_ORIGIN_REGEX=r"^https://(?:[a-z0-9-]+--)?kiddymate\.netlify\.app$",
         GEMINI_API_KEY="test-gemini-key",
         GOOGLE_SERVICE_ACCOUNT_JSON_B64="e30=",
     )

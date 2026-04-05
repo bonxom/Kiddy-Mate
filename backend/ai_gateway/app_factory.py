@@ -41,17 +41,19 @@ def create_app(settings: GatewaySettings | None = None) -> FastAPI:
     app.add_exception_handler(RequestValidationError, validation_error_handler)
     app.add_exception_handler(Exception, unhandled_exception_handler)
 
-    if settings.allowed_origins:
+    app.add_middleware(RequestContextMiddleware)
+    app.add_middleware(JwtAuthMiddleware, settings=settings)
+
+    if settings.allow_all_origins or settings.allowed_origins or settings.AI_GATEWAY_ALLOWED_ORIGIN_REGEX:
         app.add_middleware(
             CORSMiddleware,
             allow_origins=settings.allowed_origins,
+            allow_origin_regex=".*" if settings.allow_all_origins else settings.AI_GATEWAY_ALLOWED_ORIGIN_REGEX,
             allow_credentials=True,
             allow_methods=["*"],
             allow_headers=["*"],
-            expose_headers=["X-Request-Id", "X-Process-Time-Ms", "X-Latency-Ms", "X-Provider"],
+            expose_headers=["X-Request-Id", "X-Process-Time-Ms", "X-Latency-Ms", "X-Provider", "WWW-Authenticate"],
         )
 
-    app.add_middleware(JwtAuthMiddleware, settings=settings)
-    app.add_middleware(RequestContextMiddleware)
     app.include_router(runtime_router)
     return app

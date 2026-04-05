@@ -68,6 +68,37 @@ async def test_runtime_endpoints_require_bearer_token(gateway_client):
 
 
 @pytest.mark.asyncio
+async def test_runtime_unauthorized_responses_preserve_cors_headers(gateway_client):
+    client, _ = gateway_client
+    response = await client.post(
+        "/runtime/v1/tts/synthesize",
+        json={"text": "xin chao", "voiceName": "vi-VN-Standard-A"},
+        headers={"Origin": "https://kiddymate.netlify.app"},
+    )
+
+    assert response.status_code == 401
+    assert response.headers["access-control-allow-origin"] == "https://kiddymate.netlify.app"
+    assert response.headers["access-control-allow-credentials"] == "true"
+    assert response.json()["error"]["code"] == "missing_bearer_token"
+
+
+@pytest.mark.asyncio
+async def test_runtime_preflight_allows_netlify_origin(gateway_client):
+    client, _ = gateway_client
+    response = await client.options(
+        "/runtime/v1/tts/synthesize",
+        headers={
+            "Origin": "https://kiddymate.netlify.app",
+            "Access-Control-Request-Method": "POST",
+            "Access-Control-Request-Headers": "content-type,authorization",
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.headers["access-control-allow-origin"] == "https://kiddymate.netlify.app"
+
+
+@pytest.mark.asyncio
 async def test_gateway_errors_are_standardized(gateway_client, auth_header):
     client, fake_service = gateway_client
     fake_service.raise_error = GatewayError(code="provider_down", message="Gateway provider failed.", status_code=503)
