@@ -1,7 +1,18 @@
 import pytest
+from beanie import Link
 
-from app.models.beanie_models import Child, ChildReward, ChildTask, GameSession, InteractionLog, RedemptionRequest
+from app.models.beanie_models import (
+    Child,
+    ChildReward,
+    ChildTask,
+    GameSession,
+    InteractionLog,
+    RedemptionRequest,
+    User,
+    UserRole,
+)
 from app.models.childtask_models import ChildTaskStatus
+from app.services.auth import hash_password
 from app.shared.query_helpers import extract_id_from_link
 
 
@@ -34,6 +45,36 @@ async def test_child_auth_and_profile_module_flow(api_context):
     assert payload["name"] == api_context.child.name
     assert payload["username"] == api_context.child.username
     assert payload["current_coins"] == api_context.child.current_coins
+
+
+@pytest.mark.asyncio
+async def test_child_auth_accepts_legacy_child_email_credentials(api_context):
+    client = api_context.client
+
+    # Simulate legacy data where Child has no username/password credentials.
+    api_context.child.username = None
+    api_context.child.password_hash = None
+    await api_context.child.save()
+
+    legacy_email = "legacy-child@example.com"
+    legacy_password = "legacy-pass-123"
+    legacy_user = User(
+        email=legacy_email,
+        password_hash=hash_password(legacy_password),
+        full_name=api_context.child.name,
+        role=UserRole.CHILD,
+        child_profile=Link(api_context.child, Child),
+    )
+    await legacy_user.insert()
+
+    response = await client.post(
+        "/child/auth/login",
+        json={"username": legacy_email, "password": legacy_password},
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["user_type"] == "child"
+    assert payload["child_id"] == str(api_context.child.id)
 
 
 @pytest.mark.asyncio
@@ -233,4 +274,3 @@ async def test_child_games_module_flow(api_context):
     assert game_session.score == 95
     assert game_session.end_time is not None
     assert game_session.behavior_data["focus"] == "high"
-

@@ -40,13 +40,19 @@ def create_app() -> FastAPI:
             "http://localhost:5174",
             "https://kiddymate.com",
             "https://kiddymate.vercel.app",
+            "https://kiddymate.netlify.app",
         ],
         # Allow Vercel preview URLs like:
         # https://kiddymate-<hash>-bonxoms-projects.vercel.app
         allow_origin_regex=r"^https://kiddymate(?:-[a-z0-9-]+)?(?:-bonxoms-projects)?\.vercel\.app$",
         allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
+        allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+        allow_headers=[
+            "Content-Type",
+            "Authorization",
+            "Accept",
+            "X-Language",
+        ],
     )
 
     register_dependencies(app)

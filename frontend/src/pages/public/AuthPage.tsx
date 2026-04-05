@@ -168,23 +168,13 @@ const AuthPage = () => {
         username: childCredentials.username
       }));
 
-      // Redirect to CHILD_FRONTEND from .env
-      const childFrontendUrl = import.meta.env.VITE_CHILD_FRONTEND || '/child/home';
-      
-      // Debug logging
-      console.log('Child login successful');
-      console.log('VITE_CHILD_FRONTEND from env:', import.meta.env.VITE_CHILD_FRONTEND);
-      console.log('Final redirect URL:', childFrontendUrl);
-      
+      const childFrontendUrl = import.meta.env.VITE_CHILD_BASE_URL || '/child/home';
+
       // Use setTimeout to ensure state updates complete before redirect
       setTimeout(() => {
         if (childFrontendUrl.startsWith('http')) {
-          // External URL - redirect to it
-          console.log('Redirecting to external URL:', childFrontendUrl);
           window.location.href = childFrontendUrl;
         } else {
-          // Internal route - use navigate
-          console.log('Navigating to internal route:', childFrontendUrl);
           navigate(childFrontendUrl, { replace: true });
         }
       }, 100);

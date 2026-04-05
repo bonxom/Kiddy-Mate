@@ -50,9 +50,20 @@ axiosClient.interceptors.response.use(
   },
   async (error: AxiosError) => {
     const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
+    const requestUrl = originalRequest?.url ?? '';
+    const isLoginRequest =
+      requestUrl.includes('/parent/auth/login') ||
+      requestUrl.includes('/child/auth/login') ||
+      requestUrl.includes('/parent/auth/token');
 
     // Handle 401 Unauthorized
     if (error.response?.status === 401 && !originalRequest._retry) {
+      // Login endpoints should surface validation errors on the form,
+      // not trigger global auth redirect/reload.
+      if (isLoginRequest) {
+        return Promise.reject(error);
+      }
+
       originalRequest._retry = true;
 
       // Clear auth data and redirect to login

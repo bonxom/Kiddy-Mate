@@ -31,8 +31,12 @@ const ChildLoginPage = () => {
         username: username
       }));
 
-      // Navigate to child dashboard
-      navigate('/child/dashboard');
+      const childFrontendUrl = import.meta.env.VITE_CHILD_BASE_URL || '/child/home';
+      if (childFrontendUrl.startsWith('http')) {
+        window.location.href = childFrontendUrl;
+      } else {
+        navigate(childFrontendUrl, { replace: true });
+      }
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Tên đăng nhập hoặc mật khẩu không đúng');
     } finally {
