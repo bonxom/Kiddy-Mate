@@ -45,9 +45,6 @@ const LandingNavbar = () => {
             <a href="#how-it-works" className="text-gray-700 hover:text-primary-600 font-medium transition-colors">
               {t('landing.nav.howItWorks', { defaultValue: 'How It Works' })}
             </a>
-            <a href="#pricing" className="text-gray-700 hover:text-primary-600 font-medium transition-colors">
-              {t('landing.nav.pricing', { defaultValue: 'Pricing' })}
-            </a>
             <a href="#testimonials" className="text-gray-700 hover:text-primary-600 font-medium transition-colors">
               {t('landing.nav.reviews', { defaultValue: 'Reviews' })}
             </a>
@@ -85,9 +82,6 @@ const LandingNavbar = () => {
             </a>
             <a href="#how-it-works" className="block text-gray-700 hover:text-primary-600 font-medium">
               {t('landing.nav.howItWorks', { defaultValue: 'How It Works' })}
-            </a>
-            <a href="#pricing" className="block text-gray-700 hover:text-primary-600 font-medium">
-              {t('landing.nav.pricing', { defaultValue: 'Pricing' })}
             </a>
             <a href="#testimonials" className="block text-gray-700 hover:text-primary-600 font-medium">
               {t('landing.nav.reviews', { defaultValue: 'Reviews' })}

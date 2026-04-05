@@ -2,7 +2,6 @@ import { useNavigate } from 'react-router-dom';
 import { useEffect, useRef, useState } from 'react';
 import { Sparkles, Star, CheckCircle2, ArrowRight } from 'lucide-react';
 import Button from '../../components/ui/Button';
-import Badge from '../../components/ui/Badge';
 import RobotCanvasLazy from '../../components/common/RobotCanvasLazy';
 
 const HeroSection = () => {
@@ -62,14 +61,6 @@ const HeroSection = () => {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center min-h-[calc(100vh-5rem)]">
           {/* Left Content */}
           <div className="flex flex-col justify-center text-center lg:text-left space-y-6 animate-fade-in">
-            {/* Badge */}
-            <div className="inline-flex justify-center lg:justify-start">
-              <Badge variant="primary" className="mb-2 inline-flex shadow-soft hover:shadow-medium transition-shadow">
-                <Sparkles className="w-3 h-3" />
-                Được hơn 10.000 gia đình tin dùng
-              </Badge>
-            </div>
-            
             {/* Main Headline */}
             <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-gray-900 leading-tight">
               Biến việc nhà thành những{' '}

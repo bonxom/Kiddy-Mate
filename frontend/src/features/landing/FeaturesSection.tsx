@@ -31,7 +31,7 @@ const FeaturesSection = () => {
     {
       icon: TrendingUp,
       title: 'Phát triển kỹ năng',
-      description: 'Theo dõi sự tiến bộ ở 6 lĩnh vực chính: Logic, Sáng tạo, Thể chất, Xã hội, Tự lập và Học thuật',
+      description: 'Theo dõi sự tiến bộ của trẻ, đặc biệt là IQ và EQ, để hỗ trợ phát triển toàn diện',
       iconBg: 'bg-linear-to-br from-green-100 to-emerald-200',
       iconColor: 'text-green-700',
       cardGradient: 'hover:bg-linear-to-br hover:from-green-50 hover:to-transparent',
@@ -39,7 +39,14 @@ const FeaturesSection = () => {
   ];
 
   return (
-    <section id="features" className="py-20 px-4 sm:px-6 lg:px-8 bg-linear-to-br from-white via-blue-50 to-purple-50">
+    <section id="features" className="group relative overflow-hidden py-20 px-4 sm:px-6 lg:px-8 bg-linear-to-br from-white via-blue-50 to-purple-50">
+      <img
+        src="/math.png"
+        alt=""
+        aria-hidden="true"
+        className="pointer-events-none absolute z-30 translate-y-15 right-30 w-28 sm:w-36 md:w-44 lg:w-52 opacity-100 scale-100 select-none"
+      />
+
       <div className="max-w-7xl mx-auto">
         <div className="text-center mb-16">
           <Badge variant="primary" className="mb-4">

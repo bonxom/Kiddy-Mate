@@ -5,24 +5,24 @@ import Badge from '../../components/ui/Badge';
 const TestimonialsSection = () => {
   const testimonials = [
     {
-      name: 'Sarah Mitchell',
-      role: 'Mẹ của 2 bé',
+      name: 'Hồ Minh Hiếu',
+      role: 'Bố của 1 bé',
       avatar: 'S',
       avatarGradient: 'bg-linear-to-br from-pink-500 to-rose-600',
       rating: 5,
-      text: 'Thật sự thay đổi cuộc chơi! Giờ các con mình còn chủ động xin làm việc nhà. Hệ thống xu đúng là phép màu! ✨',
+      text: 'Giải pháp này đã thay đổi cách con tôi suy nghĩ, con tôi trở nên kiên nhẫn hơn, biết bày tỏ cảm xúc với bố mẹ. Tôi đánh giá rất cao KiddyMate.',
     },
     {
-      name: 'John Davis',
-      role: 'Bố của 3 bé',
+      name: 'Gia Linh',
+      role: 'Mẹ của 3 bé',
       avatar: 'J',
       avatarGradient: 'bg-linear-to-br from-blue-500 to-indigo-600',
       rating: 5,
       text: 'Cuối cùng cũng có một giải pháp thực sự hiệu quả! Bảng điều khiển giúp tôi biết bé nào đang cần được động viên thêm.',
     },
     {
-      name: 'Lisa Chen',
-      role: 'Mẹ của 1 bé',
+      name: 'Đức Lưu',
+      role: 'Bố của 1 bé',
       avatar: 'L',
       avatarGradient: 'bg-linear-to-br from-purple-500 to-violet-600',
       rating: 5,
@@ -31,8 +31,15 @@ const TestimonialsSection = () => {
   ];
 
   return (
-    <section id="testimonials" className="py-20 px-4 sm:px-6 lg:px-8 bg-linear-to-br from-amber-50 via-orange-50 to-pink-50">
-      <div className="max-w-7xl mx-auto">
+    <section id="testimonials" className="relative overflow-hidden py-20 px-4 sm:px-6 lg:px-8 bg-linear-to-br from-amber-50 via-orange-50 to-pink-50">
+      <img
+        src="/lay.png"
+        alt=""
+        aria-hidden="true"
+        className="pointer-events-none select-none absolute z-30 -top-10 translate-y-50 right-2 sm:right-40 w-24 sm:w-32 md:w-44 opacity-100 rotate-6"
+      />
+
+      <div className="relative z-10 max-w-7xl mx-auto">
         <div className="text-center mb-16">
           <Badge variant="success" className="mb-4">
             Phản hồi thực tế
@@ -41,7 +48,7 @@ const TestimonialsSection = () => {
             Phụ huynh đang nói gì
           </h2>
           <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-            Tham gia cùng hàng nghìn gia đình đang sử dụng Kiddy-Mate mỗi ngày
+            Kiddy-Mate đang được tin tưởng bởi cộng đồng
           </p>
         </div>
 
