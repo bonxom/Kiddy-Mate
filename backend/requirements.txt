@@ -13,5 +13,6 @@ python-multipart
 apscheduler
 httpx
 openai
+google-auth
 pytest
 pytest-asyncio

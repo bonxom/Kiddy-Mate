@@ -49,7 +49,12 @@ async def test_root_and_errors_respect_request_locale(api_context):
 async def test_report_generation_passes_language_requirement_to_llm(api_context, monkeypatch):
     captured: dict[str, str] = {}
 
-    def localized_report_stub(prompt: str, system_instruction: str | None = None, max_tokens: int = 1024) -> str:
+    def localized_report_stub(
+        prompt: str,
+        system_instruction: str | None = None,
+        max_tokens: int = 1024,
+        **_: object,
+    ) -> str:
         captured["prompt"] = prompt
         captured["system_instruction"] = system_instruction or ""
         return json.dumps(

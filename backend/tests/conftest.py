@@ -68,7 +68,12 @@ def _stub_assessment_analysis(*args, **kwargs):
     }
 
 
-def _stub_openai_response(prompt: str, system_instruction: str | None = None, max_tokens: int = 1024) -> str:
+def _stub_openai_response(
+    prompt: str,
+    system_instruction: str | None = None,
+    max_tokens: int = 1024,
+    **kwargs: object,
+) -> str:
     if "Generate a report with the following structure" in prompt:
         return json.dumps(
             {
@@ -106,6 +111,29 @@ def _stub_openai_response(prompt: str, system_instruction: str | None = None, ma
                     "unity_type": "talk",
                 }
             ]
+        )
+
+    if (
+        "EMOTION ANALYSIS FROM REPORT" in prompt
+        or "Generate 1-20 tasks." in prompt
+        or "Output only a JSON object in format {\"tasks\": [...]}" in prompt
+        or kwargs.get("response_format") is not None
+    ):
+        return json.dumps(
+            {
+                "tasks": [
+                    {
+                        "title": "Feelings Story Time",
+                        "description": "Read a story and talk about how characters feel.",
+                        "category": "Social",
+                        "type": "emotion",
+                        "difficulty": 2,
+                        "suggested_age_range": "6-8",
+                        "reward_coins": 80,
+                        "unity_type": "talk",
+                    }
+                ]
+            }
         )
 
     return "Stub response"

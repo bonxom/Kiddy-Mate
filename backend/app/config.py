@@ -12,5 +12,10 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     NCP_API_KEY: Optional[str] = None
     NCP_CLOVASTUDIO_ENDPOINT: Optional[str] = None
+    NAVER_API_KEY: Optional[str] = None
+
+    def model_post_init(self, __context) -> None:
+        if self.NAVER_API_KEY is None and self.NCP_API_KEY:
+            self.NAVER_API_KEY = self.NCP_API_KEY
 
 settings = Settings()
