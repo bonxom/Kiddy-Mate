@@ -63,10 +63,10 @@ const HeroSection = () => {
           <div className="flex flex-col justify-center text-center lg:text-left space-y-6 animate-fade-in">
             {/* Main Headline */}
             <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-gray-900 leading-tight">
-              Biến việc nhà thành những{' '}
+              Little Mate{' '}
               <span className="relative inline-block">
                 <span className="bg-linear-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent animate-pulse-soft">
-                  cuộc phiêu lưu
+                  Golden Gate!
                 </span>
                 <svg className="absolute -bottom-2 left-0 w-full" height="12" viewBox="0 0 200 12" xmlns="http://www.w3.org/2000/svg">
                   <path d="M0 8 Q50 2, 100 8 T200 8" stroke="url(#gradient)" strokeWidth="3" fill="none" strokeLinecap="round"/>
@@ -79,13 +79,13 @@ const HeroSection = () => {
                   </defs>
                 </svg>
               </span>
-              ! 🚀
+               🚀
             </h1>
             
             {/* Subtitle */}
             <p className="text-lg sm:text-xl md:text-2xl text-gray-600 max-w-2xl mx-auto lg:mx-0 leading-relaxed">
               Quản lý nhiệm vụ cho bé theo phong cách trò chơi cùng phần thưởng được hỗ trợ bởi AI.
-              Giúp việc nuôi dạy con nhẹ nhàng hơn và tuổi thơ vui hơn mỗi ngày!
+              Tham gia cùng Kiddy-Mate để biến việc nuôi dạy con trở nên nhẹ nhàng và vui vẻ hơn bao giờ hết
             </p>
 
             {/* CTA Buttons */}

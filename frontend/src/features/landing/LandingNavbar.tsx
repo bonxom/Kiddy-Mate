@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bot, Menu, X } from 'lucide-react';
+import { Menu, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import Button from '../../components/ui/Button';
 
@@ -29,9 +29,11 @@ const LandingNavbar = () => {
         <div className="flex items-center justify-between h-20">
           {/* Logo */}
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-white border-2 border-primary-200 flex items-center justify-center shadow-soft hover:shadow-medium transition-shadow">
-              <Bot className="w-6 h-6 text-primary-700" />
-            </div>
+            <img
+              src="/icon.png"
+              alt="Kiddy-Mate icon"
+              className="w-10 h-10 rounded-xl object-cover -primary-200 shadow-soft hover:shadow-medium transition-shadow"
+            />
             <span className="text-2xl font-bold text-primary-700 drop-shadow-sm">
               Kiddy-Mate
             </span>
