@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import asyncio
 import base64
-from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 
 import httpx
@@ -12,25 +11,9 @@ from google.oauth2 import service_account
 from ai_gateway.config import GatewaySettings
 from ai_gateway.errors import GatewayError
 from ai_gateway.providers.http import execute_with_retry
+from ai_gateway.providers.speech_models import SttResult, TtsResult
 
 GOOGLE_CLOUD_SCOPE = "https://www.googleapis.com/auth/cloud-platform"
-
-
-@dataclass(slots=True)
-class SttResult:
-    transcript: str
-    confidence: float | None
-    provider: str
-    language_code: str
-
-
-@dataclass(slots=True)
-class TtsResult:
-    audio_bytes: bytes
-    provider: str
-    audio_encoding: str
-    voice_name: str
-    language_code: str
 
 
 class GoogleAccessTokenProvider:

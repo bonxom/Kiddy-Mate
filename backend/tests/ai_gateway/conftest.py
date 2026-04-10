@@ -59,6 +59,7 @@ class FakeRuntimeService:
             audio_encoding = kwargs.get("audio_encoding") or "MP3"
             voice_name = kwargs.get("voice_name") or "vi-VN-Standard-A"
             language_code = kwargs.get("language_code") or "vi-VN"
+            fallback_from = None
 
         class Result:
             value = Value()

@@ -16,6 +16,15 @@ from ai_gateway.services import RuntimeGatewayService
 router = APIRouter(prefix="/runtime/v1", tags=["runtime"])
 
 
+def _media_type_for_audio_encoding(audio_encoding: str) -> str:
+    normalized = audio_encoding.strip().upper()
+    if normalized in {"MP3", "MPEG"}:
+        return "audio/mpeg"
+    if normalized in {"WAV", "LINEAR16"}:
+        return "audio/wav"
+    return "application/octet-stream"
+
+
 @router.get("/health")
 async def health(settings: GatewaySettings = Depends(get_settings)) -> dict[str, object]:
     return {
@@ -24,7 +33,12 @@ async def health(settings: GatewaySettings = Depends(get_settings)) -> dict[str,
         "authRequired": settings.AI_GATEWAY_REQUIRE_AUTH,
         "providers": {
             "gemini": bool(settings.GEMINI_API_KEY),
-            "googleSpeech": settings.google_service_account_info is not None,
+            "googleStt": settings.is_google_stt_configured,
+            "googleTts": settings.is_google_tts_configured,
+            "vbeeTts": settings.is_vbee_tts_configured,
+            "ttsPrimary": settings.tts_primary_provider,
+            "ttsFallback": settings.tts_fallback_provider,
+            "ttsProviderChain": settings.tts_provider_chain,
         },
     }
 
@@ -123,16 +137,19 @@ async def synthesize_speech(
     )
 
     value = result.value
-    media_type = "audio/mpeg" if value.audio_encoding.upper() == "MP3" else "application/octet-stream"
+    headers = {
+        "X-Request-Id": request_id,
+        "X-Latency-Ms": str(result.latency_ms),
+        "X-Provider": value.provider,
+        "X-Audio-Encoding": value.audio_encoding,
+        "X-Voice-Name": value.voice_name,
+        "X-Language-Code": value.language_code,
+    }
+    if value.fallback_from:
+        headers["X-Tts-Fallback-From"] = value.fallback_from
+
     return Response(
         content=value.audio_bytes,
-        media_type=media_type,
-        headers={
-            "X-Request-Id": request_id,
-            "X-Latency-Ms": str(result.latency_ms),
-            "X-Provider": value.provider,
-            "X-Audio-Encoding": value.audio_encoding,
-            "X-Voice-Name": value.voice_name,
-            "X-Language-Code": value.language_code,
-        },
+        media_type=_media_type_for_audio_encoding(value.audio_encoding),
+        headers=headers,
     )

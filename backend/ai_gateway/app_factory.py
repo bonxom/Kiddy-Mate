@@ -18,9 +18,9 @@ logger = logging.getLogger("ai_gateway.app")
 
 
 def create_app(settings: GatewaySettings | None = None) -> FastAPI:
-    from ai_gateway.providers import GeminiProvider, GoogleSpeechProvider
+    from ai_gateway.providers import GeminiProvider, GoogleSpeechProvider, VbeeTtsProvider
     from ai_gateway.routes import router as runtime_router
-    from ai_gateway.services import RuntimeGatewayService
+    from ai_gateway.services import RuntimeGatewayService, TtsGatewayService
 
     settings = settings or get_settings()
     configure_logging(settings.AI_GATEWAY_LOG_LEVEL)
@@ -29,9 +29,15 @@ def create_app(settings: GatewaySettings | None = None) -> FastAPI:
     async def lifespan(app: FastAPI):
         async with httpx.AsyncClient(timeout=settings.AI_GATEWAY_HTTP_TIMEOUT_SECONDS) as client:
             app.state.gateway_settings = settings
+            google_speech_provider = GoogleSpeechProvider(client=client, settings=settings)
             app.state.runtime_service = RuntimeGatewayService(
                 gemini_provider=GeminiProvider(client=client, settings=settings),
-                google_speech_provider=GoogleSpeechProvider(client=client, settings=settings),
+                google_speech_provider=google_speech_provider,
+                tts_service=TtsGatewayService(
+                    settings=settings,
+                    google_provider=google_speech_provider,
+                    vbee_provider=VbeeTtsProvider(client=client, settings=settings),
+                ),
             )
             logger.info("AI gateway runtime initialized on port %s", settings.APP_PORT)
             yield
@@ -52,7 +58,17 @@ def create_app(settings: GatewaySettings | None = None) -> FastAPI:
             allow_credentials=True,
             allow_methods=["*"],
             allow_headers=["*"],
-            expose_headers=["X-Request-Id", "X-Process-Time-Ms", "X-Latency-Ms", "X-Provider", "WWW-Authenticate"],
+            expose_headers=[
+                "X-Request-Id",
+                "X-Process-Time-Ms",
+                "X-Latency-Ms",
+                "X-Provider",
+                "X-Audio-Encoding",
+                "X-Voice-Name",
+                "X-Language-Code",
+                "X-Tts-Fallback-From",
+                "WWW-Authenticate",
+            ],
         )
 
     app.include_router(runtime_router)

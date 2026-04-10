@@ -5,6 +5,7 @@ from dataclasses import dataclass
 
 from ai_gateway.auth import AuthenticatedChild
 from ai_gateway.providers import GeminiProvider, GeminiResult, GoogleSpeechProvider, SttResult, TtsResult
+from ai_gateway.services.tts_gateway_service import TtsGatewayService
 
 
 @dataclass(slots=True)
@@ -14,9 +15,15 @@ class TimedResult:
 
 
 class RuntimeGatewayService:
-    def __init__(self, gemini_provider: GeminiProvider, google_speech_provider: GoogleSpeechProvider) -> None:
+    def __init__(
+        self,
+        gemini_provider: GeminiProvider,
+        google_speech_provider: GoogleSpeechProvider,
+        tts_service: TtsGatewayService,
+    ) -> None:
         self.gemini_provider = gemini_provider
         self.google_speech_provider = google_speech_provider
+        self.tts_service = tts_service
 
     async def generate_response(
         self,
@@ -78,7 +85,7 @@ class RuntimeGatewayService:
     ) -> TimedResult:
         del child
         started_at = time.perf_counter()
-        value = await self.google_speech_provider.synthesize_speech(
+        value = await self.tts_service.synthesize_speech(
             text=text,
             voice_name=voice_name,
             language_code=language_code,

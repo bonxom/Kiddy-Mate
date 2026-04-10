@@ -25,6 +25,11 @@ DEFAULT_AI_GATEWAY_ALLOWED_ORIGIN_REGEX = (
     r")$"
 )
 
+DEFAULT_VBEE_TTS_VOICE_MAP = {
+    "vi-VN-Standard-A": "n_hanoi_female_thaomaii_children_vc",
+    "vi-VN-Neural2-A": "n_hanoi_female_thaomaii_children_vc",
+}
+
 
 class GatewaySettings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
@@ -57,6 +62,22 @@ class GatewaySettings(BaseSettings):
     GOOGLE_TTS_AUDIO_ENCODING: str = "MP3"
     GOOGLE_TTS_SPEAKING_RATE: float = 1.0
     GOOGLE_TTS_PITCH: float = 0.0
+
+    AI_GATEWAY_TTS_PRIMARY_PROVIDER: str = "vbee"
+    AI_GATEWAY_TTS_ENABLE_FALLBACK: bool = True
+    AI_GATEWAY_TTS_FALLBACK_PROVIDER: str = "google"
+
+    VBEE_TTS_BASE_URL: str = "https://vbee.vn/api/v1/tts"
+    VBEE_TTS_APP_ID: str | None = None
+    VBEE_TTS_BEARER_TOKEN: str | None = None
+    VBEE_TTS_CALLBACK_URL: str = "https://kiddymate.invalid/vbee/callback"
+    VBEE_TTS_DEFAULT_VOICE_CODE: str = "n_hanoi_female_thaomaii_children_vc"
+    VBEE_TTS_VOICE_MAP_JSON: str = json.dumps(DEFAULT_VBEE_TTS_VOICE_MAP, separators=(",", ":"))
+    VBEE_TTS_AUDIO_TYPE: str = "mp3"
+    VBEE_TTS_BITRATE: int = 128
+    VBEE_TTS_SPEED_RATE: float = 1.0
+    VBEE_TTS_POLL_INTERVAL_SECONDS: float = 1.0
+    VBEE_TTS_MAX_POLL_ATTEMPTS: int = 30
 
     @property
     def allowed_origins(self) -> list[str]:
@@ -110,6 +131,67 @@ class GatewaySettings(BaseSettings):
         if not isinstance(payload, dict):
             raise ValueError("GOOGLE_SERVICE_ACCOUNT_JSON_B64 did not decode to a JSON object.")
         return payload
+
+    @property
+    def is_google_stt_configured(self) -> bool:
+        return self.google_service_account_info is not None
+
+    @property
+    def is_google_tts_configured(self) -> bool:
+        return self.google_service_account_info is not None
+
+    @property
+    def is_vbee_tts_configured(self) -> bool:
+        return bool(
+            self.VBEE_TTS_BASE_URL.strip()
+            and (self.VBEE_TTS_APP_ID or "").strip()
+            and (self.VBEE_TTS_BEARER_TOKEN or "").strip()
+        )
+
+    @property
+    def vbee_tts_voice_map(self) -> dict[str, str]:
+        raw = self.VBEE_TTS_VOICE_MAP_JSON.strip()
+        if not raw:
+            return {}
+
+        try:
+            payload = json.loads(raw)
+        except json.JSONDecodeError as exc:
+            raise ValueError("VBEE_TTS_VOICE_MAP_JSON must be valid JSON.") from exc
+
+        if not isinstance(payload, dict):
+            raise ValueError("VBEE_TTS_VOICE_MAP_JSON must decode to a JSON object.")
+
+        return {
+            str(key).strip(): str(value).strip()
+            for key, value in payload.items()
+            if str(key).strip() and str(value).strip()
+        }
+
+    @property
+    def tts_primary_provider(self) -> str:
+        normalized = self.AI_GATEWAY_TTS_PRIMARY_PROVIDER.strip().lower()
+        return normalized if normalized in {"vbee", "google"} else "vbee"
+
+    @property
+    def tts_fallback_provider(self) -> str | None:
+        if not self.AI_GATEWAY_TTS_ENABLE_FALLBACK:
+            return None
+
+        normalized = self.AI_GATEWAY_TTS_FALLBACK_PROVIDER.strip().lower()
+        if normalized not in {"vbee", "google"}:
+            return None
+        if normalized == self.tts_primary_provider:
+            return None
+        return normalized
+
+    @property
+    def tts_provider_chain(self) -> list[str]:
+        providers = [self.tts_primary_provider]
+        fallback_provider = self.tts_fallback_provider
+        if fallback_provider:
+            providers.append(fallback_provider)
+        return providers
 
 
 @lru_cache(maxsize=1)
